@@ -5,6 +5,7 @@ import { initPlay, enterPlay, setBoard } from './play.js';
 import { initVote, setState, getState, focusVoted } from './vote.js';
 import { renderDevelop } from './develop.js';
 import { initTheme } from './theme.js';
+import { initGamePage, enterGame, leaveGame } from './gamepage.js';
 import * as store from './store.js';
 
 const show = name => { open(null); location.hash = name; };
@@ -13,6 +14,7 @@ renderHeaders();
 initHome({ show });
 initTheme();
 initPlay();
+initGamePage();
 setBoard({ html: () => '<h3>留言板<small>0 則</small></h3><div class="cms"></div>', mount: () => {} });
 initVote({
   onPick: code => { setState({ ...getState(), myVote: code }); focusVoted(); },
@@ -27,7 +29,8 @@ function route() {
     const played = new Set(store.get('played', []));
     played.add(arg); store.set('played', [...played]);
     document.querySelector('#pg-game .back').href = `#play/${arg}`;
-  }
+    enterGame(arg);
+  } else leaveGame();
   document.body.dataset.pg = page;
   if (page === 'play') enterPlay(arg, prev === 'game');
   else if (page === 'vote') setState(getState());
