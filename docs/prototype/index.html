@@ -1,0 +1,894 @@
+<title>PVD計畫子頁原型</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&display=swap">
+<style>
+/* Layout: 首頁(已定案)是一張 1920x1080 舞台等比縮放; 子頁(試玩/投票)一屏不捲動, 開發頁可捲動, WebGame 頁只有返回 bar + 16:9 遊戲 */
+/* 這版只做亮色主題, 刻意不跟系統深色 */
+:root {
+  --bg: #ffffff; --fg: #2d2144; --ink: #2d2144; --muted: #6c6582; --chip: #f1eff6; --line: #e2dfea; --faint: #c9c4d6;
+  --red: #f5554a; --teal: #2fc9ed; --yellow: #f5e291;
+  --font: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  --paper: #ffffff; --bar: #ffffff; --page: #fbf8f1; --hard: #2d2144; --on-ink: #ffffff; --dk: #2d2144; --hov: #f7fdff; --selbg: #ddf6fc;
+  color-scheme: light;
+}
+/* 暗色主題 (AB 測試另一組): 深海藍, 與暗色版影片同底色 */
+:root.dark {
+  --bg: #0f1d33; --fg: #eef3fb; --ink: #eef3fb; --muted: #9fb0c9; --chip: #1a2c4a; --line: #2a3d5c; --faint: #3f5578;
+  --paper: #172a48; --bar: #0b1628; --page: #0f1d33; --hard: #050b16; --on-ink: #0f1d33; --hov: #1b3152; --selbg: #173d5a;
+  color-scheme: dark;
+}
+/* 暗色的內容區 (首頁介紹 + 子頁): 降低文字與框線亮度, 三種底色方案; 首頁舞台維持與暗色影片一致, 不套用 */
+:root.dark :is(.page, .intro) { --fg: #d3dae6; --ink: #b9c4d8; --muted: #8b98b0; --hard: #04070d; color: var(--fg); }
+:root.dark.da :is(.page, .intro) { --bar: #0f1d33; --page: #0b1526; --paper: #15233a; --chip: #1b2b45; --line: #24354f; --faint: #34486a; --hov: #1a2a44; --selbg: #16354d; --on-ink: #0b1526; }
+:root.dark.db :is(.page, .intro) { --bar: #0f1d33; --page: #18181d; --paper: #222128; --chip: #2a2931; --line: #34333c; --faint: #4a4855; --hov: #27262e; --selbg: #1d3640; --on-ink: #18181d; --fg: #eeece8; --ink: #77737f; --muted: #a8a5ae; }
+/* 炭灰: 文字用乾淨的米白 (不帶灰), 框線退成中灰讓卡片不刺眼; 「墨色鈕」(送出、首頁 hover) 改用亮字色 */
+:root.dark.db :is(.page, .intro) :is(.homebtn, .back, .links a, .gotry, .cform input, .psheet .x) { color: var(--fg); }
+:root.dark.db :is(.page, .intro) :is(.cform button, .homebtn:hover, .back:hover, .links a:hover, .badge) { background: var(--fg); color: var(--on-ink); }
+:root.dark.dc :is(.page, .intro) { --bar: #0f1d33; --page: #1a1429; --paper: #241c37; --chip: #2c2342; --line: #362c4f; --faint: #4d4170; --hov: #2a2140; --selbg: #22304e; --on-ink: #1a1429; --fg: #dcd5ea; --ink: #c0b7d6; --muted: #958cab; }
+/* 暗色下品牌色塊壓暗, 避免刺眼 */
+:root.dark .page :is(.icon, .pl, .startbtn, .tag-played, .vnote, .win, .gi.sel .gh, .psheet .ph, .vr.on .rd, .rr.first .bar i, .av, .badge),
+:root.dark .avpop .av, :root.dark .intro .plate { filter: var(--dimf, none); }
+/* 色塊兩種比較: db1 原色不動 / db2 稍暗但飽和度不降 (降飽和會顯得髒) */
+:root.dark.db2 { --dimf: brightness(.88) saturate(1.1); }
+/* 暗色的試玩鈕: 大面積紅太刺眼, 換成較深但不灰的紅 */
+.dev h2 span { color: var(--dk); } /* 黃色編號塊上的數字固定深色 */
+:root.dark .page .startbtn:not(.off) { background: #c9403a; color: #fdf3f1; filter: none; }
+:root.dark .page .cd.live .n.sec b { color: #26a3bf; }
+:root.dark .page :is(.gi.sel .gh, .psheet .ph) .icon { filter: none; } /* 外層已壓暗, 不重複壓 */
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font); }
+p { margin: 0; }
+button { font: inherit; color: inherit; }
+
+/* ---------- 首頁舞台 (與定案版相同) ---------- */
+.home { background: var(--bg); }
+.hero { position: relative; height: 100vh; height: 100svh; overflow: hidden; }
+body.lock { overflow: hidden; }
+.more { position: absolute; left: 50%; bottom: calc(28px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); color: var(--muted); font: 500 .9rem/1 var(--font); text-decoration: none; white-space: nowrap; }
+.more:hover { color: var(--fg); }
+.playing .more { display: none; }
+.intro { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 72px 120px; border-top: 1px solid var(--line); }
+.intro-in { max-width: 640px; margin: 0 auto; display: grid; gap: 28px; }
+.intro .tagm { justify-self: start; font: 700 .75rem/1 var(--font); letter-spacing: .08em; color: var(--muted); border: 1px dashed var(--line); border-radius: 999px; padding: 6px 10px; }
+.intro h2 { font: 900 clamp(1.8rem, 5vw, 2.6rem)/1.25 var(--font); margin: 0; text-wrap: balance; }
+.intro p { margin: 0; font-size: 1.05rem; line-height: 1.85; }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 20px; }
+.steps li { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 16px; align-items: start; }
+.steps .plate { width: 56px; height: 56px; border-radius: 10px; font-size: 38px; }
+.steps b { display: block; font-size: 1.15rem; margin-bottom: 2px; }
+.steps span { color: var(--muted); line-height: 1.7; }
+.intro .btn { justify-self: start; }
+.stage { position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px; margin: -540px 0 0 -960px; transform: scale(var(--s, .5)); }
+.title { position: absolute; left: var(--x0, 424px); top: 435px; height: 210px; display: flex; align-items: center; gap: 22px; transition: opacity .25s; }
+/* 手機直排: 每列置中, 展開時色塊+字一起撐寬, 所以往左右兩側長 */
+.title.col { flex-direction: column; align-items: center; left: 0; width: 1920px; top: var(--cy); height: auto; gap: var(--g); }
+.title.col .rest { position: static; transform: none; }
+.title.col .plate { width: var(--p); height: var(--p); border-radius: calc(var(--p) * .17); font-size: calc(var(--p) * .714); }
+.title.col .rest { font-size: calc(var(--p) * .714); }
+.title.col .key.open .rest { max-width: calc(var(--p) * 7); }
+.go { display: none; }
+.title.col .go { display: inline-flex; align-items: center; gap: .18em; margin-left: .25em; font-size: .3em; vertical-align: middle; pointer-events: auto; cursor: pointer; }
+.go i { font-style: normal; color: var(--muted); }
+.go b { font: 700 1em/1 var(--font); background: var(--fg); color: var(--bg); border-radius: 999px; padding: .45em .8em; }
+.title.col .plan { font-size: calc(var(--p) * .62); margin: calc(var(--g) * .6) 0 0; }
+.key { position: relative; display: flex; align-items: center; text-decoration: none; color: inherit; cursor: pointer; border-radius: 40px; outline: none; transition: opacity .25s; }
+.key.open { z-index: 2; }
+.title > * { transition: opacity .25s; }
+.title.focus > :not(.open) { opacity: .12; }
+.plate { width: 210px; height: 210px; border-radius: 36px; background: var(--c); color: #fff; display: grid; place-items: center; font: 900 150px/1 var(--font); flex: none; transition: transform .2s; }
+.plate b { font-weight: 900; margin-top: -.06em; }
+.key[data-k="develop"] .plate { color: var(--dk); }
+.rest { pointer-events: none; position: absolute; left: 100%; top: 50%; transform: translateY(-50%); font: 900 150px/1 var(--font); color: var(--fg); max-width: 0; overflow: hidden; white-space: nowrap; padding: .12em 0 .16em; transition: max-width .35s cubic-bezier(.2,.8,.2,1), padding-left .35s; }
+.key.open .rest { max-width: 640px; padding-left: .04em; }
+.key:focus-visible .plate { box-shadow: 0 0 0 10px var(--bg), 0 0 0 18px var(--fg); }
+.plan { font: 900 176px/1 var(--font); color: var(--fg); margin-left: 34px; white-space: nowrap; }
+.film { position: absolute; inset: 0; width: 1920px; height: 1080px; opacity: 0; pointer-events: none; background: var(--bg); }
+.playing .film { opacity: 1; }
+.playing .title { opacity: 0; transition: none; }
+.closing .film { transition: opacity .3s; }
+.btn { font: 700 1rem/1 var(--font); border: 2px solid var(--fg); color: var(--fg); background: var(--bg); border-radius: 999px; padding: .7em 1.2em; cursor: pointer; }
+.btn:hover { background: var(--fg); color: var(--bg); }
+.btn:focus-visible { outline: 3px solid var(--teal); outline-offset: 3px; }
+.what { display: inline-flex; align-items: center; gap: .45em; }
+.what svg { width: 1.25em; height: 1.25em; flex: none; }
+.what { position: absolute; right: calc(24px + env(safe-area-inset-right, 0px)); bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
+.close { position: fixed; left: calc(20px + env(safe-area-inset-left, 0px)); top: calc(20px + env(safe-area-inset-top, 0px)); }
+.home:not(.playing) .close, .home.playing .what { display: none; }
+@media (max-width: 640px) {
+  .what { right: auto; left: 50%; transform: translateX(-50%); bottom: calc(64px + env(safe-area-inset-bottom, 0px)); white-space: nowrap; }
+  .more { bottom: calc(22px + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* ---------- 頁面切換 ---------- */
+.page { display: none; }
+body[data-pg="play"] #pg-play, body[data-pg="vote"] #pg-vote, body[data-pg="develop"] #pg-dev, body[data-pg="game"] #pg-game { display: flex; }
+body:not([data-pg="home"]) #home { display: none; }
+.page { flex-direction: column; height: 100vh; height: 100svh; overflow: hidden; padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); box-sizing: border-box; }
+#pg-dev { height: auto; min-height: 100svh; overflow: visible; }
+/* 太矮的視窗塞不下一屏版型, 退回可捲動 */
+@media (max-height: 560px) and (min-width: 721px), (max-width: 720px) and (max-height: 600px) {
+  #pg-play, #pg-vote { height: auto; min-height: 100svh; overflow: visible; }
+}
+
+/* ---------- 子頁頁首: 首頁鈕 + P/V/D 頁籤, 目前頁的色塊展開成字當標題 ---------- */
+.sh { flex: none; height: 84px; display: flex; align-items: center; gap: 14px; padding: 0 32px; }
+.homebtn { display: inline-flex; align-items: center; gap: 6px; border: 2px solid var(--ink); border-radius: 999px; padding: 8px 14px 8px 11px; font: 700 14px/1 var(--font); text-decoration: none; color: var(--ink); background: var(--paper); flex: none; }
+.homebtn svg { width: 16px; height: 16px; }
+.homebtn:hover { background: var(--ink); color: var(--on-ink); }
+.sh .sep { width: 2px; height: 28px; background: var(--line); flex: none; }
+.tabs { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.tab { display: flex; align-items: center; text-decoration: none; color: var(--ink); border-radius: 10px; outline: none; }
+.tab .pl { width: 36px; height: 36px; border-radius: 7px; background: var(--c); color: #fff; display: grid; place-items: center; font: 900 25px/1 var(--font); flex: none; transition: transform .15s; }
+.tab[data-k="develop"] .pl { color: var(--dk); }
+.tab.cur .pl { box-shadow: 0 0 0 3px var(--bar), 0 0 0 5px var(--ink); }
+/* 投票結束: V 頁籤右上角掛一個小「結束」標籤 */
+.tab { position: relative; }
+.tab .badge { display: none; position: absolute; top: -9px; right: -12px; z-index: 1; background: var(--ink); color: var(--on-ink); border: 2px solid var(--bar); border-radius: 999px; padding: 2px 5px; font: 900 10px/1 var(--font); white-space: nowrap; pointer-events: none; }
+body.vend .tab[data-k="vote"] .badge { display: block; }
+/* 投票結束: 試玩頁頂端提醒 */
+.vnote { display: none; flex: none; align-items: center; gap: 8px; margin: 0 32px 14px; padding: 10px 14px; background: var(--yellow); color: var(--dk); border: 2px solid var(--ink); border-radius: 12px; font: 700 15px/1.3 var(--font); }
+.vnote svg { width: 20px; height: 20px; flex: none; }
+body.vend .vnote { display: flex; }
+@media (max-width: 720px) { .vnote { margin: 0 16px 10px; padding: 8px 12px; font-size: 13px; } .vnote svg { width: 17px; height: 17px; } }
+/* 支援裝置圖示 */
+.devs { display: inline-flex; align-items: center; gap: 6px; vertical-align: middle; }
+.devs svg { width: 20px; height: 20px; }
+.devs small { margin-left: 2px; }
+/* 清單卡片: 時長後面接裝置圖示 */
+.gh .nm .tm { display: flex; align-items: center; gap: 12px; }
+.gh .nm .tm .devs { gap: 4px; padding-left: 12px; border-left: 2px solid currentColor; opacity: .85; }
+.gh .nm .tm .devs svg { width: 18px; height: 18px; }
+.psheet .ph .devs { margin-left: 8px; gap: 4px; }
+.psheet .ph .devs svg { width: 16px; height: 16px; }
+.psheet .ph .devs small { font: 700 12px/1 var(--font); color: inherit; }
+.tab:not(.cur):hover .pl { transform: translateY(-2px); }
+.tab:focus-visible .pl { outline: 3px solid var(--teal); outline-offset: 5px; }
+/* 投票結束示意鈕: 原型專用, 固定在左下 */
+.demo { position: fixed; z-index: 20; left: calc(12px + env(safe-area-inset-left, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px)); border: 2px dashed var(--muted); border-radius: 999px; background: var(--paper); color: var(--muted); font: 700 13px/1 var(--font); padding: 8px 12px; cursor: pointer; white-space: nowrap; }
+.sh { height: 72px; }
+/* 頁面標題: 放在頁首右側, 色塊 + 英文字 + 中文小字 (同首頁 P 展開成 Play); 左側首頁鈕與頁籤不動 */
+.ptitle { flex: none; display: flex; align-items: center; margin: 0 0 0 auto; }
+.ptitle .pl { width: 42px; height: 42px; border-radius: 8px; background: var(--c); color: #fff; display: grid; place-items: center; font: 900 30px/1 var(--font); flex: none; }
+.ptitle[data-k="develop"] .pl { color: var(--dk); }
+.ptitle b { font: 900 30px/1 var(--font); margin-left: 2px; }
+.ptitle span:last-child { font: 700 15px/1 var(--font); color: var(--muted); margin-left: 12px; padding-top: 7px; }
+body[data-pg]:not([data-pg="vote"]) .demo { display: none; }
+/* ---------- 背景: 米白, 套在首頁介紹區與子頁頁首以下 (頁首維持白) ---------- */
+.intro, #pg-play, #pg-vote, #pg-dev, #pg-game { background: var(--page); }
+.sh, .gbar { background: var(--bar); }
+.sh { border-bottom: 1px solid var(--line); margin-bottom: 16px; }
+.gbar { position: relative; z-index: 1; }
+.detail, .gi.open { background: var(--paper); }
+.demo .dl-m { display: none; }
+.demo:hover { border-color: var(--ink); color: var(--ink); }
+
+/* 共用小元件 */
+.icon { flex: none; border-radius: 22px; border: 3px solid var(--ink); background: var(--c); color: var(--fc, var(--ink)); display: grid; place-items: center; font-weight: 900; line-height: 1; box-sizing: border-box; }
+.av { width: 32px; height: 32px; flex: none; border-radius: 50%; border: 2px solid var(--ink); background: var(--c); box-sizing: border-box; display: block; overflow: hidden; }
+.av svg { display: block; width: 100%; height: 100%; }
+/* 留言框左邊的頭像鈕 → 跳出頭像選擇彈窗 */
+.cform .avbtn { flex: none; display: flex; align-items: center; gap: 2px; background: none; border: 0; padding: 0 2px 0 0; margin-left: -6px; border-radius: 999px; cursor: pointer; color: var(--muted); }
+.cform .avbtn::after { content: "▾"; font: 700 11px/1 var(--font); }
+.cform .avbtn:hover .av { transform: scale(1.08); }
+.cform .avbtn:focus-visible { outline: 3px solid var(--teal); outline-offset: 2px; }
+/* 頭像小彈窗: 浮在頭像鈕正上方, 不壓黑背景; 位置由 JS 依按鈕算 */
+.avpop { position: fixed; z-index: 40; display: none; background: var(--paper); border: 2px solid var(--ink); border-radius: 16px; box-shadow: 4px 4px 0 var(--hard); padding: 12px; }
+.avpop.on { display: grid; gap: 10px; }
+.avpop::after { content: ""; position: absolute; left: var(--ax, 18px); bottom: -8px; width: 12px; height: 12px; background: var(--paper); border-right: 2px solid var(--ink); border-bottom: 2px solid var(--ink); transform: rotate(45deg); }
+.avpop small { font: 700 12px/1 var(--font); color: var(--muted); }
+.avgrid { display: grid; grid-template-columns: repeat(4, 40px); gap: 10px; }
+.avgrid button { width: 40px; height: 40px; padding: 0; border: 0; background: none; border-radius: 50%; cursor: pointer; }
+.avgrid .av { width: 100%; height: 100%; transition: transform .12s; }
+.avgrid button:hover .av { transform: scale(1.1); }
+.avgrid button.cur { box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--ink); }
+.avgrid button:focus-visible { outline: 3px solid var(--teal); outline-offset: 3px; }
+.cm { display: flex; gap: 10px; align-items: flex-start; }
+.cm .t { background: var(--paper); border-radius: 4px 14px 14px 14px; padding: 9px 13px; font-size: 15px; line-height: 1.55; overflow-wrap: anywhere; }
+.cform { display: flex; align-items: center; gap: 8px; background: var(--paper); border: 2px solid var(--ink); border-radius: 14px; padding: 6px 6px 6px 14px; }
+.cform input { flex: 1; min-width: 0; border: 0; outline: 0; font: 500 15px/1.4 var(--font); color: var(--ink); background: none; padding: 4px 0; }
+.cform input::placeholder { color: var(--muted); }
+.cform button { border: 0; background: var(--ink); color: var(--on-ink); border-radius: 10px; padding: 9px 14px; font: 700 13px/1 var(--font); cursor: pointer; }
+.cform:focus-within { box-shadow: 0 0 0 3px var(--teal); }
+.clock { flex: none; text-align: center; font: 700 14px/1.4 var(--font); color: var(--muted); padding: 12px 0 4px; border-top: 2px dashed var(--line); }
+.startbtn { display: flex; align-items: center; justify-content: center; gap: 10px; background: var(--red); color: #fff; border: 3px solid var(--ink); border-radius: 18px; padding: 20px; font: 900 24px/1 var(--font); text-decoration: none; box-shadow: 0 6px 0 var(--hard); transition: transform .1s, box-shadow .1s; }
+.startbtn:hover { transform: translateY(2px); box-shadow: 0 4px 0 var(--hard); }
+.startbtn.off { background: var(--chip); color: var(--muted); box-shadow: none; border-style: dashed; border-color: var(--faint); pointer-events: none; font-size: 18px; }
+.tag-played { background: #aaefd5; color: var(--dk); border-radius: 999px; padding: 7px 14px; font: 700 15px/1 var(--font); white-space: nowrap; }
+.tag-un { border: 2px dashed var(--faint); border-radius: 999px; padding: 5px 12px; font: 700 15px/1 var(--font); color: var(--muted); white-space: nowrap; }
+.gotry { font: 700 14px/1 var(--font); color: var(--ink); white-space: nowrap; }
+.gotry:hover { color: var(--red); }
+
+/* ---------- 試玩頁 (1b): 左清單 + 右詳情; 手機改手風琴 ---------- */
+.pmain { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(280px, 420px) minmax(0, 1fr); gap: 28px; padding: 4px 32px 32px; }
+.glist { display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+.gi { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.gh { flex: 1; width: 100%; min-height: 72px; border: 3px solid var(--ink); border-radius: 20px; background: var(--paper); display: flex; align-items: center; gap: 18px; padding: 0 20px 0 16px; cursor: pointer; text-align: left; transition: transform .2s, box-shadow .2s, background .2s; box-sizing: border-box; }
+.gh .icon { width: clamp(56px, 10.5vh, 96px); height: clamp(56px, 10.5vh, 96px); font-size: clamp(32px, 6vh, 54px); }
+.gh .nm { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.gh .nm b { font: 900 26px/1 var(--font); }
+.gh .nm span { font: 700 15px/1 var(--font); color: var(--muted); }
+.gh .arr { font: 900 26px/1 var(--font); color: var(--faint); }
+.gh .pm { display: none; }
+.gh:hover { transform: translateX(6px); }
+.gi.sel .gh { background: var(--c); transform: translateX(14px); box-shadow: 6px 6px 0 var(--hard); }
+.gi.sel .gh .icon { background: #fff; color: var(--dk); }
+.gi.sel .gh .nm span, .gi.sel .gh .arr { color: var(--fc); }
+.gi.sel .gh .nm b { color: var(--fc); }
+.gh:focus-visible { outline: 3px solid var(--teal); outline-offset: 3px; }
+.gb { display: none; }
+.psheet { position: fixed; inset: 0; z-index: 30; display: none; }
+.psheet .bd { position: absolute; inset: 0; background: rgba(45,33,68,.35); animation: fade .2s; }
+.psheet .pn { position: absolute; left: 0; right: 0; bottom: 0; background: var(--paper); border-top: 3px solid var(--ink); border-radius: 24px 24px 0 0; display: flex; flex-direction: column; overflow: hidden; animation: up .28s cubic-bezier(.2,.8,.2,1); }
+.psheet .ph { flex: none; background: var(--c); border-bottom: 3px solid var(--ink); display: flex; align-items: center; gap: 14px; padding: 22px 16px 14px; position: relative; }
+.psheet .ph::before { content: ""; position: absolute; top: 8px; left: 50%; width: 40px; height: 4px; margin-left: -20px; border-radius: 2px; background: rgba(45,33,68,.35); }
+.psheet .ph .icon { width: 60px; height: 60px; border-radius: 14px; font-size: 34px; background: #fff; color: var(--dk); }
+.psheet .ph .nm { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 7px; color: var(--fc); }
+.psheet .ph .nm b { font: 900 22px/1 var(--font); }
+.psheet .ph .nm span { font: 700 13px/1 var(--font); }
+.psheet .x { width: 34px; height: 34px; flex: none; border-radius: 50%; border: 2px solid var(--ink); background: var(--paper); font: 900 15px/1 var(--font); cursor: pointer; }
+.psheet .gb { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px)); }
+@keyframes up { from { transform: translateY(100%); } }
+@keyframes fade { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .psheet .pn, .psheet .bd { animation: none; } }
+.detail { border: 3px solid var(--ink); border-radius: 24px; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); overflow: hidden; min-height: 0; }
+.dl { padding: 32px; display: flex; flex-direction: column; gap: 20px; min-height: 0; overflow: auto; }
+.dl .hd { display: flex; align-items: center; gap: 16px; }
+.dl .hd .icon { width: 72px; height: 72px; border-radius: 16px; font-size: 40px; }
+.dl .hd b { font: 900 clamp(30px, 3.4vw, 44px)/1 var(--font); }
+.meta { display: grid; grid-template-columns: auto 1fr; gap: 10px 18px; font: 700 15px/1.4 var(--font); }
+.meta dt { color: var(--muted); }
+.meta dd { margin: 0; }
+.meta small { font-weight: 500; color: var(--muted); font-size: 14px; }
+.dl p { font-size: 17px; line-height: 1.85; text-wrap: pretty; }
+.dl .startbtn { margin-top: auto; }
+.dr { background: var(--chip); border-left: 3px solid var(--ink); padding: 26px 24px; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+.dr h3, .gb h3 { margin: 0; font: 900 18px/1 var(--font); }
+.dr h3 small, .gb h3 small { font: 700 14px/1 var(--font); color: var(--muted); margin-left: 4px; }
+.cms { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 12px; padding-right: 4px; scrollbar-width: thin; scrollbar-color: var(--faint) transparent; }
+
+@media (max-width: 720px) {
+  .sh { height: 58px; padding: 0 16px; gap: 10px; }
+  .ptitle .pl { width: 30px; height: 30px; border-radius: 6px; font-size: 22px; }
+  .ptitle b { font-size: 22px; }
+  .ptitle span:last-child { display: none; }
+  .homebtn { padding: 7px 11px 7px 9px; font-size: 13px; }
+  .homebtn svg { width: 14px; height: 14px; }
+  .sh .sep { height: 22px; }
+  .tabs { gap: 9px; }
+  .tab .pl { width: 32px; height: 32px; border-radius: 6px; font-size: 22px; }
+  .demo { padding: 7px 9px; font-size: 12px; }
+  .demo .dl-d { display: none; }
+  .demo .dl-m { display: inline; }
+
+  .pmain { display: flex; flex-direction: column; padding: 0 16px calc(20px + env(safe-area-inset-bottom, 0px)); gap: 0; }
+  .detail { display: none; }
+  .glist { flex: 1; gap: 12px; }
+  .gh { gap: 16px; padding: 0 18px 0 14px; }
+  .gh:hover { transform: none; }
+  .gh .arr { display: none; }
+  .gh .pm { display: grid; width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--ink); background: var(--paper); place-items: center; font: 900 18px/1 var(--font); flex: none; color: var(--ink); }
+  .gh .nm b { font-size: 24px; }
+  .gh .nm span { font-size: 14px; }
+  .gi.sel .gh { transform: none; box-shadow: none; background: var(--paper); }
+  .gi.sel .gh .icon { background: var(--c); color: var(--fc); }
+  .gi.sel .gh .nm b, .gi.sel .gh .nm span { color: inherit; }
+  .gi.sel .gh .nm span { color: var(--muted); }
+  /* 展開一款: 它撐滿剩餘高度, 其他收成矮條 */
+  /* 手機: 點一款從底部拉出抽屜 (方案 1a), 清單本身不變 */
+  .psheet.on { display: block; }
+  .psheet .pn { height: min(88svh, 760px); }
+  .gb p { font-size: 14px; line-height: 1.7; }
+  .gb .startbtn { border-radius: 999px; padding: 12px; font-size: 17px; box-shadow: none; }
+  .gb .startbtn.off { font-size: 14px; }
+  .gb h3 { font-size: 14px; margin-top: 4px; }
+  .gb .cms { gap: 8px; }
+  .gb .av { width: 26px; height: 26px; }
+  .gb .cform .av { width: 30px; height: 30px; }
+  .gb .cform .avbtn { margin-left: -10px; }
+  .gb .cm { gap: 8px; }
+  .gb .cm .t { background: var(--chip); border-radius: 4px 12px 12px 12px; padding: 6px 10px; font-size: 13px; line-height: 1.5; }
+  .gb .cform { border-radius: 999px; padding: 4px 4px 4px 14px; }
+  .gb .cform input { font-size: 16px; } /* iOS 字小於 16px 會自動放大畫面 */
+  .gb .cform button { border-radius: 999px; }
+}
+
+/* ---------- 投票頁 (3b): 左倒數(垂直一行一個) + 右選票; 結束後左勝出看板 + 右票數長條 ---------- */
+.vmain { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(280px, 360px) minmax(0, 1fr); gap: 28px; padding: 4px 32px 32px; }
+.cd { background: var(--teal); border: 3px solid var(--ink); border-radius: 24px; padding: 28px 30px; display: flex; flex-direction: column; gap: 16px; min-height: 0; }
+.cd > .lb { font: 900 18px/1 var(--font); }
+.cd .nums { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; gap: clamp(4px, 1.6vh, 16px); }
+.cd .n { display: flex; align-items: baseline; gap: 10px; }
+.cd .n b { font: 900 clamp(44px, 10.5vh, 100px)/1 var(--font); font-variant-numeric: tabular-nums; min-width: 1.25em; }
+.cd .n i { font: 900 22px/1 var(--font); font-style: normal; }
+.cd .n.sec b { color: #fff; -webkit-text-stroke: 3px var(--ink); paint-order: stroke fill; }
+.cd .note { font: 700 15px/1.4 var(--font); color: var(--muted); white-space: nowrap; }
+/* 進行中: 倒數不要底色與外框, 跟選票只用一條分隔線隔開, 欄寬縮窄 */
+#pg-vote:not(.end) .vmain { grid-template-columns: auto minmax(0, 1fr); gap: 36px; }
+.cd.live .n.sec b { color: var(--teal); }
+.demo { left: auto !important; right: calc(12px + env(safe-area-inset-right, 0px)); }
+/* 主題切換: 原型專用 (正式版由 AB 分組決定), 固定左下 */
+.thm { position: fixed; z-index: 20; left: calc(12px + env(safe-area-inset-left, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px)); border: 2px dashed var(--muted); border-radius: 999px; background: var(--paper); color: var(--muted); font: 700 13px/1 var(--font); padding: 8px 12px; cursor: pointer; white-space: nowrap; }
+.thm:hover { border-color: var(--ink); color: var(--ink); }
+.home.playing ~ .thm { display: none; }
+body[data-pg="vote"] .thm { left: auto; right: calc(12px + env(safe-area-inset-right, 0px)); bottom: calc(52px + env(safe-area-inset-bottom, 0px)); } /* 左下是截止日, 投票頁改疊在右下 */
+.rr .bar i { background: var(--faint) !important; }
+.rr.first .bar i { background: var(--red) !important; }
+.cd.live { background: none; border: 0; border-radius: 0; border-right: 2px solid var(--faint); padding: 6px 36px 6px 4px; }
+.vright { display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+.vright h2 { margin: 0 0 4px; font: 900 30px/1.2 var(--font); }
+.vright h2 small { font: 700 16px/1 var(--font); color: var(--muted); margin-left: 6px; }
+.vr { flex: 1; min-height: 64px; border: 3px solid var(--ink); border-radius: 20px; display: flex; align-items: center; gap: 22px; padding: 0 26px 0 22px; cursor: pointer; background: var(--paper); transition: background .15s; box-sizing: border-box; }
+.vr:hover { background: var(--hov); }
+.vr:focus-visible { outline: 3px solid var(--teal); outline-offset: 3px; }
+.vr.on { background: var(--selbg); }
+.vr .rd { width: 50px; height: 50px; flex: none; border-radius: 50%; border: 3px solid var(--ink); background: var(--paper); display: grid; place-items: center; box-sizing: border-box; }
+.vr .rd svg { width: 26px; height: 26px; display: none; }
+.vr.on .rd { background: var(--red); transform: rotate(-10deg); animation: stamp .25s cubic-bezier(.3,1.6,.5,1); }
+.vr.on .rd svg { display: block; }
+@keyframes stamp { from { transform: scale(1.6) rotate(-10deg); } to { transform: scale(1) rotate(-10deg); } }
+.vr .icon { width: clamp(56px, 10vh, 88px); height: clamp(56px, 10vh, 88px); border-radius: 20px; font-size: clamp(30px, 5.6vh, 50px); }
+.vr .nm { flex: 1; min-width: 0; display: flex; align-items: center; gap: 14px; justify-content: space-between; }
+.vr .nm b { font: 900 30px/1 var(--font); white-space: nowrap; }
+.vr .st { display: flex; gap: 10px; align-items: center; }
+/* 結束狀態 */
+.win { background: var(--yellow); color: var(--dk); }
+.win .wi { width: 150px; height: 150px; border-radius: 32px; font-size: 86px; box-shadow: 8px 8px 0 var(--hard); }
+.win .body { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 22px; min-height: 0; }
+.win .body b { font: 900 56px/1 var(--font); }
+.win .body .vs { font: 700 18px/1 var(--font); }
+.win .todev { display: flex; justify-content: center; background: var(--ink); color: var(--on-ink); border-radius: 999px; padding: 15px; font: 900 17px/1 var(--font); text-decoration: none; }
+.win .todev:hover { background: var(--red); }
+.rr { cursor: default; gap: 20px; }
+.rr:hover { background: var(--paper); }
+.rr .rk { width: 34px; font: 900 34px/1 var(--font); text-align: center; flex: none; }
+.rr .icon { width: clamp(52px, 8.5vh, 72px); height: clamp(52px, 8.5vh, 72px); border-radius: 16px; font-size: clamp(28px, 4.8vh, 40px); }
+.rr .rn { width: 120px; font: 900 26px/1 var(--font); flex: none; }
+.rr .bar { flex: 1; height: 34px; background: var(--chip); border-radius: 10px; overflow: hidden; }
+.rr .bar i { display: block; height: 100%; width: 0; background: #c9c4d6; border-right: 3px solid var(--ink); border-radius: 10px; box-sizing: border-box; transition: width .8s cubic-bezier(.2,.8,.2,1); }
+.rr.first { box-shadow: 6px 6px 0 var(--hard); }
+.rr.first .bar i { background: var(--red); }
+.rr .vc { width: 120px; text-align: right; flex: none; }
+.rr .vc b { font: 900 30px/1 var(--font); font-variant-numeric: tabular-nums; }
+.rr .vc small { font: 700 13px/1 var(--font); color: var(--muted); }
+.vmain .ended { display: none; }
+#pg-vote.end .vmain .live { display: none; }
+#pg-vote.end .vmain .ended { display: flex; }
+
+@media (max-width: 720px) {
+  .vmain { display: flex; flex-direction: column; gap: 12px; padding: 0 16px calc(20px + env(safe-area-inset-bottom, 0px)); }
+  .cd { flex-direction: row; align-items: stretch; padding: 14px 16px; gap: 16px; border-radius: 20px; flex: none; }
+  .cd .nums { flex: none; gap: 2px; }
+  .cd .n { gap: 6px; }
+  .cd .n b { font-size: 34px; }
+  .cd .n i { font-size: 15px; }
+  .cd .n.sec b { -webkit-text-stroke: 2px var(--ink); }
+  .cd .side { flex: 1; display: flex; flex-direction: column; justify-content: space-between; gap: 10px; }
+  .cd .note { font-size: 13px; }
+  /* 手機: 倒數橫排一列, 上方一行「投票倒數 … 截止日」 */
+  .cd.live { flex-direction: column; border-right: 0; border-bottom: 2px solid var(--faint); padding: 0 2px 14px; gap: 8px; }
+  .cd.live .side { order: -1; flex-direction: row; justify-content: space-between; align-items: baseline; }
+  .cd.live .nums { flex-direction: row; justify-content: space-between; gap: 6px; }
+  .cd.live .n { gap: 4px; }
+  .cd.live .n b { font-size: 40px; min-width: 0; }
+  .cd > .lb { display: none; }
+  .vright { flex: 1; gap: 10px; }
+  .vright h2 { font-size: 19px; margin: 2px 0 0; }
+  .vr { gap: 12px; padding: 8px 12px 8px 10px; border-radius: 16px; }
+  .vr .rd { width: 36px; height: 36px; border-width: 2px; }
+  .vr .rd svg { width: 19px; height: 19px; }
+  .vr .icon { width: 52px; height: 52px; border-radius: 13px; font-size: 28px; }
+  .vr .nm { flex-direction: column; align-items: flex-start; gap: 7px; }
+  .vr .nm b { font-size: 19px; }
+  .tag-played { padding: 4px 10px; font-size: 12px; }
+  .tag-un { padding: 3px 9px; font-size: 12px; }
+  .gotry { font-size: 12.5px; }
+  .vr .st { gap: 8px; }
+  .win { flex-direction: row; align-items: center; padding: 14px 16px; }
+  .win > .lb { display: none; }
+  .win .wi { width: 72px; height: 72px; border-radius: 16px; font-size: 40px; box-shadow: 4px 4px 0 var(--hard); }
+  .win .body { gap: 6px 16px; flex-direction: row; align-items: center; }
+  .win .body .k { font: 700 12px/1 var(--font); }
+  .win .body b { font-size: 26px; }
+  .win .body .vs { font-size: 13px; }
+  .rr .vc { order: 1; }
+  .rr .bar { order: 2; }
+  .win .todev { background: none; color: var(--ink); padding: 0; justify-content: flex-start; font-size: 13px; text-decoration: underline; }
+  .win .todev:hover { background: none; color: var(--red); }
+  .rr { flex-wrap: wrap; gap: 6px 10px; padding: 10px 14px; align-content: center; }
+  .rr .rk { width: auto; font-size: 18px; }
+  .rr .icon { width: 30px; height: 30px; border-radius: 8px; border-width: 2px; font-size: 17px; }
+  .rr .rn { flex: 1; width: auto; font-size: 16px; }
+  .rr .vc { width: auto; }
+  .rr .vc b { font-size: 19px; }
+  .rr .bar { flex: 0 0 100%; height: 12px; border-radius: 6px; }
+  .rr .bar i { border-right-width: 2px; border-radius: 6px; }
+  .rr.first { box-shadow: 4px 4px 0 var(--hard); }
+}
+@media (min-width: 721px) { .cd .side { display: contents; } .cd .side .lb, .win .body .k { display: none; } }
+
+/* ---------- 開發頁 (4a): 單欄日誌, 可捲動 ---------- */
+.dev { padding: 56px max(16px, 32px) 100px; border-top: 1px solid var(--line); }
+.dev-in { max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 44px; }
+.dev .upd { font: 700 14px/1 var(--font); color: var(--muted); }
+.dev h1 { margin: 16px 0 0; font: 900 44px/1.25 var(--font); text-wrap: balance; }
+.dev section { display: flex; flex-direction: column; gap: 14px; }
+.dev h2 { margin: 0; display: flex; align-items: center; gap: 12px; font: 900 24px/1.2 var(--font); }
+.dev h2 span { width: 34px; height: 34px; border-radius: 7px; background: var(--yellow); display: grid; place-items: center; font-size: 18px; flex: none; }
+.dev p { font-size: 17px; line-height: 1.9; }
+.studio { border-top: 2px dashed var(--line); padding-top: 40px; display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 22px; align-items: start; }
+.logo { width: 96px; height: 96px; border-radius: 20px; border: 3px dashed var(--faint); display: grid; place-items: center; font: 900 14px/1 var(--font); color: var(--muted); box-sizing: border-box; }
+.studio .who { display: flex; flex-direction: column; gap: 8px; }
+.studio .who small { font: 700 14px/1 var(--font); color: var(--muted); }
+.studio .who b { font: 900 22px/1.3 var(--font); }
+.studio .who p { font-size: 16px; line-height: 1.8; }
+.links { display: flex; gap: 12px; flex-wrap: wrap; }
+.links a { border: 2px solid var(--ink); border-radius: 999px; padding: 11px 20px; font: 700 15px/1 var(--font); text-decoration: none; color: var(--ink); }
+.links a:hover { background: var(--ink); color: var(--on-ink); }
+@media (max-width: 720px) {
+  .dev { padding: 28px 16px 72px; }
+  .dev-in { gap: 32px; }
+  .dev h1 { font-size: 30px; }
+  .dev h2 { font-size: 20px; }
+  .dev h2 span { width: 28px; height: 28px; font-size: 15px; }
+  .dev p { font-size: 15.5px; line-height: 1.85; }
+  .studio { grid-template-columns: 64px minmax(0, 1fr); gap: 14px; padding-top: 28px; }
+  .logo { width: 64px; height: 64px; border-radius: 14px; font-size: 12px; }
+  .studio .who b { font-size: 18px; }
+  .studio .who p { font-size: 14.5px; }
+  .links a { padding: 10px 16px; font-size: 14px; }
+}
+
+/* ---------- WebGame 遊玩頁: 返回 bar + 16:9 遊戲; 手機直拿擋住並要求轉橫 ---------- */
+#pg-game { background: var(--paper); }
+.gbar { flex: none; height: 56px; display: flex; align-items: center; padding: 0 16px; border-bottom: 2px solid var(--ink); box-sizing: border-box; }
+.back { display: inline-flex; align-items: center; gap: 4px; border: 2px solid var(--ink); border-radius: 999px; padding: 7px 14px 7px 10px; font: 700 14px/1 var(--font); text-decoration: none; color: var(--ink); background: var(--paper); white-space: nowrap; }
+.back:hover { background: var(--ink); color: var(--on-ink); }
+.gwrap { flex: 1; min-height: 0; container-type: size; display: grid; place-items: center; }
+.scr { position: relative; width: min(100cqw, 100cqh * 16 / 9); aspect-ratio: 16 / 9; background: #c6ecf8; overflow: hidden; touch-action: none; overscroll-behavior: contain; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.scr .ground { position: absolute; left: 0; right: 0; bottom: 0; height: 20%; background: #aaefd5; border-top: 2px solid var(--ink); }
+.scr .plat { position: absolute; height: 3.2%; background: var(--yellow); border: 2px solid var(--ink); border-radius: 6px; box-sizing: border-box; }
+.scr .hero2 { position: absolute; width: 5%; aspect-ratio: 1; background: #f29cac; border: 2px solid var(--ink); border-radius: 22%; box-sizing: border-box; }
+.scr .lbl { position: absolute; top: 4%; left: 50%; transform: translateX(-50%); background: #fff; border-radius: 999px; padding: 6px 14px; font: 700 13px/1 var(--font); white-space: nowrap; }
+.rot { display: none; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 24px; text-align: center; }
+.rot svg { width: 150px; height: 150px; animation: tilt 2.4s ease-in-out infinite; }
+@keyframes tilt { 0%, 30% { transform: rotate(0); } 55%, 85% { transform: rotate(-90deg); } 100% { transform: rotate(0); } }
+.rot b { font: 900 24px/1.3 var(--font); }
+.rot span { font: 500 14px/1.6 var(--font); color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { .rot svg { animation: none; } }
+/* 直拿 (窄且直): 遊戲不載入, 只顯示轉向提示 */
+@media (orientation: portrait) and (max-width: 720px) {
+  #pg-game .gwrap { display: none; }
+  #pg-game .rot { display: flex; }
+  .gbar { border-bottom: 0; padding-top: env(safe-area-inset-top, 0px); height: calc(56px + env(safe-area-inset-top, 0px)); }
+}
+/* 手機橫拿: 高度太珍貴, bar 改成左側細條 */
+@media (orientation: landscape) and (max-height: 500px) {
+  #pg-game { flex-direction: row; }
+  .gbar { width: 84px; height: auto; flex-direction: column; justify-content: flex-start; padding: 12px 0; border-bottom: 0; border-right: 2px solid var(--ink); }
+  .back { padding: 7px 10px 7px 8px; font-size: 13px; }
+}
+</style>
+
+<main class="home" id="home">
+ <div class="hero" id="hero">
+  <div class="stage" id="stage">
+    <nav class="title" id="title" aria-label="PVD計畫">
+      <a class="key" data-k="play" href="#play" aria-label="Play 試玩"><span class="plate" style="--c:var(--red)"><b>P</b></span><span class="rest">lay<span class="go"><i>→</i><b>試玩頁</b></span></span></a>
+      <a class="key" data-k="vote" href="#vote" aria-label="Vote 投票"><span class="plate" style="--c:var(--teal)"><b>V</b></span><span class="rest">ote<span class="go"><i>→</i><b>投票頁</b></span></span></a>
+      <a class="key" data-k="develop" href="#develop" aria-label="Develop 開發日誌"><span class="plate" style="--c:var(--yellow)"><b>D</b></span><span class="rest">evelop<span class="go"><i>→</i><b>開發日誌</b></span></span></a>
+      <span class="plan">計畫</span>
+    </nav>
+    <video class="film" id="film" playsinline preload="auto" src="media/pvd-light.mp4"></video>
+  </div>
+  <button class="btn what" id="what"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 8l6 4-6 4z" fill="currentColor"/></svg>PVD計畫是什麼?</button>
+  <a class="more" href="#about" id="more">往下看介紹 ↓</a>
+ </div>
+  <section class="intro" id="about">
+    <div class="intro-in">
+      <span class="tagm">示意文案・正式版待提供</span>
+      <h2>一起決定下一款遊戲要長什麼樣子</h2>
+      <p>PVD 計畫是一場和玩家一起做遊戲的實驗。我們先做出幾款小小的玩法原型，請你直接在網頁上玩；你覺得哪一款最有趣，它就有機會被做成完整的遊戲。</p>
+      <ol class="steps">
+        <li><span class="plate" style="--c:var(--red)"><b>P</b></span><div><b>Play 試玩</b><span>四款玩法原型，每款大約 5 到 15 分鐘，打開網頁就能玩。</span></div></li>
+        <li><span class="plate" style="--c:var(--teal)"><b>V</b></span><div><b>Vote 投票</b><span>玩完之後，投給你覺得機制最有趣的那一款。經過幾輪投票，選出最受歡迎的玩法。</span></div></li>
+        <li><span class="plate" style="--c:var(--yellow);color:var(--dk)"><b>D</b></span><div><b>Develop 開發</b><span>接下來由我們把它做得更好、更完整、更有故事性，開發過程會持續在開發日誌分享，最後上架 Steam。</span></div></li>
+      </ol>
+      <p>這款遊戲，獻給一同參與開發的你們。</p>
+      <button class="btn" data-go="play">開始試玩 ›</button>
+    </div>
+  </section>
+  <button class="btn close" id="close">✕ 關閉影片</button>
+</main>
+
+<section class="page" id="pg-play" aria-label="試玩">
+  <header class="sh" data-cur="play"></header>
+  <div class="vnote" role="status"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M12 7v6M12 16.5v.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>投票已結束，但遊戲仍可以試玩</div>
+  <div class="pmain">
+    <div class="glist" id="glist"></div>
+    <div class="detail" id="detail"></div>
+  </div>
+  <div class="psheet" id="psheet"></div>
+</section>
+
+<section class="page" id="pg-vote" aria-label="投票">
+  <header class="sh" data-cur="vote"></header><button class="demo" id="demo"></button>
+  <div class="vmain">
+    <div class="cd live">
+      <span class="lb">投票倒數</span>
+      <div class="nums" id="cdnums" aria-live="off"></div>
+      <div class="side">
+        <span class="lb" style="font:900 15px/1 var(--font)">投票倒數</span>
+        <span class="note">11/8(日) 20:00 截止</span>
+      </div>
+    </div>
+    <div class="vright live">
+      <h2>哪一款遊戲你希望開發者繼續做完?</h2>
+      <div id="vrows" role="radiogroup" aria-label="投票" style="display:contents"></div>
+    </div>
+    <div class="cd win ended" id="winbox"></div>
+    <div class="vright ended" id="ranked"></div>
+  </div>
+</section>
+
+<section class="page" id="pg-dev" aria-label="開發日誌">
+  <header class="sh" data-cur="develop"></header>
+  <article class="dev">
+    <div class="dev-in">
+      <div><span class="upd">最後更新 2026/10/20</span><h1>遊戲 C 的完整版，開工了</h1></div>
+      <section>
+        <h2><span>1</span>目前開發狀況</h2>
+        <p>第一輪投票由遊戲 C 勝出。我們正在把原型整理成正式專案：重畫角色與場景、改寫關卡流程，並補上存檔與設定選單。目前大約完成三成，核心玩法已經可以從頭玩到第一章結尾。</p>
+        <p>大家在留言板提到「敵人移動太好猜」，這部分我們加了兩種新的敵人行為，正在調整難度。</p>
+      </section>
+      <section>
+        <h2><span>2</span>近期開發目標</h2>
+        <p><b>11 月：</b>完成前三章的關卡與過場。<br><b>12 月：</b>開放第一次封閉測試，名額會在 Discord 公布。<br><b>明年初：</b>Steam 商店頁上線，開放加入願望清單。</p>
+      </section>
+      <div class="studio">
+        <div class="logo">LOGO</div>
+        <div class="who"><small>開發者</small><b>小島遊戲工作室（暫名）</b><p>四個人的獨立團隊，喜歡做規則簡單、越玩越有深度的小遊戲。PVD 計畫是我們第一次讓玩家從第一天就參與決定。</p></div>
+      </div>
+      <div class="links"><a href="#develop">Threads ↗</a><a href="#develop">Facebook ↗</a><a href="#develop">Discord ↗</a></div>
+    </div>
+  </article>
+</section>
+
+<section class="page" id="pg-game" aria-label="遊玩">
+  <div class="gbar"><a class="back" href="#play">‹ 返回</a></div>
+  <div class="gwrap">
+    <div class="scr" id="scr">
+      <div class="ground"></div>
+      <div class="plat" style="left:26%;top:55%;width:14%"></div>
+      <div class="plat" style="left:54%;top:40%;width:14%"></div>
+      <div class="hero2" style="left:58.5%;top:31.5%"></div>
+      <span class="lbl" id="glbl">遊戲畫面 16:9（佔位）</span>
+    </div>
+  </div>
+  <div class="rot">
+    <svg viewBox="0 0 120 120" aria-hidden="true"><rect x="38" y="14" width="44" height="92" rx="9" fill="#fff" stroke="#2d2144" stroke-width="4"/><rect x="45" y="24" width="30" height="66" rx="3" fill="#c6ecf8"/><rect x="45" y="72" width="30" height="18" fill="#aaefd5"/><path d="M98 40a40 40 0 0 1-8 46" fill="none" stroke="#f5554a" stroke-width="5" stroke-linecap="round"/><path d="M84 82l7 6 3-9" fill="none" stroke="#f5554a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <b>把手機轉成橫向</b>
+    <span>這款遊戲是橫式畫面，<br>轉過來就會開始。</span>
+  </div>
+</section>
+
+<script>
+const START = 0.8; // 影片 0.8 秒時標題已定格在畫面中央, 從這裡接才無縫
+const home = document.getElementById('home'), stage = document.getElementById('stage'),
+      film = document.getElementById('film'), keys = [...document.querySelectorAll('.key')];
+const title = document.getElementById('title');
+let s = 1, col = false;
+function fit() {
+  if (document.body.dataset.pg !== 'home') return;
+  if (home.classList.contains('playing') || home.classList.contains('moving')) return;
+  const H = document.getElementById('hero').clientHeight;
+  s = Math.min(innerWidth / 1920, H / 1080);
+  stage.style.setProperty('--s', s);
+  title.classList.remove('col');
+  title.style.setProperty('--x0', (1920 - title.offsetWidth) / 2 + 'px');
+  col = H > innerWidth * 1.1;
+  if (!col) return;
+  let p = Math.min(innerWidth * .24, (H - 240) / 4.6) / s;
+  const setP = () => { title.style.setProperty('--p', p + 'px'); title.style.setProperty('--g', p * .16 + 'px'); };
+  setP();
+  title.classList.add('col');
+  // 以展開 Develop (含右邊按鈕) 後的寬度為準; 太寬就整體縮小, 展開時才不會超出兩側
+  const widest = () => Math.max(...keys.map(k => k.offsetWidth + k.querySelector('.rest').scrollWidth), title.querySelector('.plan').offsetWidth);
+  const room = (innerWidth - 32) / s;
+  const W = widest();
+  if (W > room) { p *= room / W; setP(); }
+  title.style.setProperty('--cy', 540 - title.offsetHeight / 2 + 'px');
+}
+addEventListener('resize', fit);
+function flip(change, dur = 450) {
+  const els = [...title.children], a = els.map(e => e.getBoundingClientRect());
+  change();
+  const b = els.map(e => e.getBoundingClientRect());
+  els.forEach((e, i) => {
+    e.style.transition = 'none'; e.style.transformOrigin = '0 0';
+    e.style.transform = `translate(${(a[i].left - b[i].left) / s}px, ${(a[i].top - b[i].top) / s}px) scale(${a[i].height / b[i].height})`;
+  });
+  title.offsetWidth;
+  els.forEach(e => { e.style.transition = `transform ${dur}ms cubic-bezier(.4,0,.2,1)`; e.style.transform = ''; });
+  setTimeout(() => els.forEach(e => { e.style.transition = ''; e.style.transformOrigin = ''; }), dur + 30);
+}
+let lastPointer = 'mouse';
+keys.forEach(k => {
+  k.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') open(k); });
+  k.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') open(null); });
+  k.addEventListener('pointerdown', e => { lastPointer = e.pointerType; });
+  k.addEventListener('focus', () => { if (k.matches(':focus-visible')) open(k); });
+  k.addEventListener('blur', () => open(null));
+  k.addEventListener('click', e => {
+    e.preventDefault();
+    if (e.target.closest('.go')) return show(k.dataset.k);
+    if (lastPointer !== 'mouse' && !k.classList.contains('open')) { open(k); return; }
+    show(k.dataset.k);
+  });
+});
+document.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse' && !e.target.closest('.key')) open(null); });
+function open(k) { keys.forEach(x => x.classList.toggle('open', x === k)); title.classList.toggle('focus', !!k); }
+document.getElementById('what').addEventListener('click', () => {
+  open(null);
+  scrollTo(0, 0); document.body.classList.add('lock');
+  film.currentTime = START;
+  const reveal = () => { home.classList.remove('moving'); home.classList.add('playing'); };
+  if (col) {
+    home.classList.add('moving');
+    flip(() => title.classList.remove('col'));
+    setTimeout(reveal, 470);
+  } else if (film.requestVideoFrameCallback) film.requestVideoFrameCallback(reveal);
+  else film.addEventListener('playing', reveal, { once: true });
+  film.play().catch(() => {});
+});
+function restore() {
+  home.classList.remove('playing'); document.body.classList.remove('lock');
+  if (col) flip(() => title.classList.add('col')); else fit();
+}
+function stopFilm() {
+  film.pause();
+  home.classList.add('closing'); restore();
+  setTimeout(() => home.classList.remove('closing'), 320);
+}
+document.getElementById('close').addEventListener('click', stopFilm);
+film.addEventListener('ended', restore);
+document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => show(b.dataset.go)));
+document.getElementById('more').addEventListener('click', e => { e.preventDefault(); document.getElementById('about').scrollIntoView({ behavior: 'smooth' }); });
+
+/* ===================== 子頁 ===================== */
+// 假資料 (沿用 Claude Design 方案)
+const G = [
+  { k: 'A', name: '遊戲 A', time: '5–10 分鐘', bg: '#f29cac', fg: '#2d2144', mobile: true, count: 38, votes: 1284,
+    intro: '用一條線把畫面上的方塊全部串起來。線會越畫越短，每一筆都要想清楚。',
+    cm: [['#aaefd5', '第五關卡了好久，解開那一刻超爽'], ['#f5e291', '希望可以有提示按鈕'], ['#2fc9ed', '音效好療癒'], ['#f29cac', '線條手感很好'], ['#4776c3', '最後一關想了半小時'], ['#e0c64f', '畫錯可以回上一步嗎？'], ['#aaefd5', '第三關的解法太妙了'],
+         ['#2fc9ed', '跟家人輪流玩，大家都卡在不同關'], ['#f5e291', '顏色好舒服'], ['#f29cac', '希望之後有每日挑戰'], ['#4776c3', '線越來越短的設計很有壓力 XD'],
+         ['#aaefd5', '手機上玩也很順'], ['#e0c64f', '可以加排行榜嗎'], ['#2fc9ed', '已經玩第三次了'], ['#f5e291', '這款投它！']] },
+  { k: 'B', name: '遊戲 B', time: '10–15 分鐘', bg: '#aaefd5', fg: '#2d2144', mobile: false, count: 21, votes: 862,
+    intro: '兩個角色共用同一組按鍵，一個往左另一個就往右。想辦法讓他們同時抵達終點。',
+    cm: [['#f29cac', '腦袋要分成兩半才玩得動 XD'], ['#4776c3', '機關設計很聰明，想了五分鐘才懂'], ['#e0c64f', '可以出手機版嗎？'], ['#2fc9ed', '跟朋友一起看著玩超好笑']] },
+  { k: 'C', name: '遊戲 C', time: '5–8 分鐘', bg: '#4776c3', fg: '#ffffff', mobile: true, count: 52, votes: 2047,
+    intro: '每回合你只能走一步，敵人也是。看準牠們的路線，在對的時機出手。',
+    cm: [['#f5e291', '一不小心就玩了一小時'], ['#f29cac', '敵人的移動規則很好預測，但還是會被抓'], ['#aaefd5', '最喜歡這款！'], ['#e0c64f', '希望有更多關卡']] },
+  { k: 'D', name: '遊戲 D', time: '8–12 分鐘', bg: '#e0c64f', fg: '#2d2144', mobile: false, count: 17, votes: 731,
+    intro: '地圖每天都會縮小一圈。在剩下的土地上蓋房子、種田，撐到最後一天。',
+    cm: [['#2fc9ed', '最後一天好緊張'], ['#f29cac', '想要更多種建築'], ['#4776c3', '節奏剛好']] },
+];
+// 頭像 = 底色 x 表情; 留言資料存 [底色, 內容, 表情編號]
+const AVC = ['#f29cac', '#aaefd5', '#f5e291', '#2fc9ed', '#4776c3', '#e0c64f'];
+const FACES = [
+  '<circle cx="7.5" cy="9.5" r="1.3"/><circle cx="12.5" cy="9.5" r="1.3"/>',
+  '<circle cx="7.5" cy="9" r="1.3"/><circle cx="12.5" cy="9" r="1.3"/><path d="M7.5 12.3q2.5 2.4 5 0" fill="none" stroke="#2d2144" stroke-width="1.3" stroke-linecap="round"/>',
+  '<path d="M6 10l1.5-1.6L9 10M11 10l1.5-1.6L14 10" fill="none" stroke="#2d2144" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="10" cy="13" r="1"/>',
+];
+// 頭像最多 8 個 (底色, 表情)
+const AV = [['#f29cac', 0], ['#aaefd5', 1], ['#f5e291', 2], ['#2fc9ed', 0], ['#4776c3', 1], ['#e0c64f', 2], ['#f5554a', 1], ['#aaefd5', 2]];
+const avHtml = (c, f = 0) => `<span class="av" style="--c:${c}"><svg viewBox="0 0 20 20" fill="#2d2144" aria-hidden="true">${FACES[f]}</svg></span>`;
+const store = { get(k, d) { try { const v = localStorage.getItem('pvd-' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+                set(k, v) { try { localStorage.setItem('pvd-' + k, JSON.stringify(v)); } catch {} } };
+const played = new Set(store.get('played', ['A', 'C']));
+let voted = store.get('voted', null);
+const esc = t => t.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const mobileQ = matchMedia('(max-width: 720px)');
+const touchQ = matchMedia('(hover: none) and (pointer: coarse)');
+const ico = (g, cls = '') => `<span class="icon ${cls}" style="--c:${g.bg};--fc:${g.fg}">${g.k}</span>`;
+
+// 頁首: 首頁鈕 + P/V/D 頁籤
+const TABS = [['play', 'P', 'lay', '試玩', 'var(--red)'], ['vote', 'V', 'ote', '投票', 'var(--teal)'], ['develop', 'D', 'evelop', '開發日誌', 'var(--yellow)']];
+document.querySelectorAll('.sh').forEach(h => {
+  const cur = h.dataset.cur;
+  h.insertAdjacentHTML('afterbegin',
+    `<a class="homebtn" href="#"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/></svg>首頁</a><span class="sep"></span>
+     <nav class="tabs" aria-label="分頁">${TABS.map(([k, l, w, zh, c]) =>
+      `<a class="tab${k === cur ? ' cur' : ''}" data-k="${k}" href="#${k}" ${k === cur ? 'aria-current="page"' : ''} aria-label="${zh}"><span class="pl" style="--c:${c}">${l}</span>${k === 'vote' ? '<span class="badge">End</span>' : ''}</a>`).join('')}</nav>`);
+  const [, l, w, zh, c] = TABS.find(t => t[0] === cur);
+  h.insertAdjacentHTML('beforeend', `<h1 class="ptitle" data-k="${cur}" aria-label="${zh}"><span class="pl" style="--c:${c}">${l}</span><b>${w}</b><span>${zh}</span></h1>`);
+});
+
+// ---- 試玩頁 ----
+let sel = mobileQ.matches ? null : 0;
+const glist = document.getElementById('glist'), detail = document.getElementById('detail'), psheet = document.getElementById('psheet');
+// 支援裝置只用圖示; 不支援的提示交給試玩按鈕 (手機上變「僅支援電腦遊玩」)
+const DEV_PC = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4" width="19" height="12.5" rx="2" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M9 20.5h6M12 16.5v4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
+const DEV_PH = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M10.5 18.2h3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
+const devHtml = g => `<span class="devs" role="img" aria-label="${g.mobile ? '支援電腦與手機' : '僅支援電腦遊玩'}">${DEV_PC}${g.mobile ? DEV_PH : ''}</span>`;
+const startBtn = g => (!g.mobile && touchQ.matches)
+  ? `<span class="startbtn off">僅支援電腦遊玩</span>`
+  : `<a class="startbtn" href="#game/${g.k}">▶ 開始試玩</a>`;
+const cmList = g => g.cm.map(([c, t, f]) => `<div class="cm">${avHtml(c, f)}<div class="t">${esc(t)}</div></div>`).join('');
+let myAv = store.get('av', -1); // 預設隨機, 選過就記住
+if (!(myAv >= 0 && myAv < AV.length)) myAv = Math.floor(Math.random() * AV.length);
+// 後台鎖住留言的遊戲: 輸入區拿掉, 只留一行說明 (示意: 遊戲 D 已鎖)
+G[3].locked = true;
+const cform = i => G[i].locked ? `<p class="clock">留言功能暫時無法使用</p>` : `<form class="cform" data-i="${i}"><button type="button" class="avbtn" aria-label="選擇頭像" aria-haspopup="dialog">${avHtml(...AV[myAv])}</button><input maxlength="120" placeholder="留一句話給這款遊戲…" aria-label="留言"><button>送出</button></form>`;
+
+// 頭像小彈窗: 跳在按鈕正上方
+document.body.insertAdjacentHTML('beforeend', `<div class="avpop" id="avpop" role="dialog" aria-label="選擇頭像"><small>選頭像</small>
+  <div class="avgrid">${AV.map((a, i) => `<button type="button" data-a="${i}" aria-label="頭像 ${i + 1}">${avHtml(...a)}</button>`).join('')}</div></div>`);
+const avpop = document.getElementById('avpop');
+let avOpener = null;
+function openAv(btn) {
+  avOpener = btn;
+  avpop.querySelectorAll('[data-a]').forEach(b => b.classList.toggle('cur', +b.dataset.a === myAv));
+  avpop.classList.add('on');
+  const r = btn.getBoundingClientRect(), w = avpop.offsetWidth;
+  const left = Math.max(8, Math.min(r.left - 6, innerWidth - w - 8));
+  avpop.style.left = left + 'px';
+  avpop.style.bottom = innerHeight - r.top + 12 + 'px';
+  avpop.style.setProperty('--ax', r.left + r.width / 2 - left - 8 + 'px'); // 小箭頭對準按鈕
+  avpop.querySelector('.cur').focus();
+}
+function closeAv(refocus) { if (!avpop.classList.contains('on')) return; avpop.classList.remove('on'); if (refocus) avOpener?.focus(); }
+document.addEventListener('click', e => {
+  const b = e.target.closest('.avbtn');
+  if (b) return avpop.classList.contains('on') && avOpener === b ? closeAv() : openAv(b);
+  const a = e.target.closest('#avpop [data-a]');
+  if (a) {
+    myAv = +a.dataset.a; store.set('av', myAv);
+    document.querySelectorAll('.avbtn').forEach(x => x.innerHTML = avHtml(...AV[myAv])); // 不重畫表單, 保留已打的字
+    return closeAv(true);
+  }
+  if (!e.target.closest('#avpop')) closeAv();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAv(true); });
+addEventListener('resize', () => closeAv());
+document.addEventListener('scroll', () => closeAv(), true);
+function renderPlay() {
+  const mob = mobileQ.matches;
+  glist.innerHTML = G.map((g, i) => `
+    <div class="gi${!mob && i === sel ? ' sel' : ''}" style="--c:${g.bg};--fc:${g.fg}">
+      <button class="gh" data-i="${i}" ${mob ? 'aria-haspopup="dialog"' : `aria-pressed="${i === sel}"`}>${ico(g)}
+        <span class="nm"><b>${g.name}</b><span class="tm">${g.time}<span class="devs" role="img" aria-label="${g.mobile ? '支援電腦與手機' : '僅支援電腦'}">${DEV_PC}${g.mobile ? DEV_PH : ''}</span></span></span>
+        <span class="arr">›</span><span class="pm">+</span></button>
+    </div>`).join('');
+  // 手機: 底部抽屜
+  const open = mob && sel != null;
+  psheet.classList.toggle('on', open);
+  if (open) {
+    const g = G[sel];
+    psheet.innerHTML = `<div class="bd"></div>
+      <div class="pn" role="dialog" aria-modal="true" aria-label="${g.name}" style="--c:${g.bg};--fc:${g.fg}">
+        <div class="ph">${ico(g)}<span class="nm"><b>${g.name}</b><span>${g.time}${devHtml(g)}</span></span><button class="x" aria-label="關閉">✕</button></div>
+        <div class="gb"><p>${g.intro}</p>${startBtn(g)}
+          <h3>留言板<small>· ${g.count} 則</small></h3><div class="cms">${cmList(g)}</div>${cform(sel)}</div>
+      </div>`;
+  }
+  if (!mob && sel != null) {
+    const g = G[sel];
+    detail.innerHTML = `
+      <div class="dl">
+        <div class="hd">${ico(g)}<b>${g.name}</b></div>
+        <dl class="meta"><dt>時長</dt><dd>${g.time}</dd><dt>裝置</dt><dd>${devHtml(g)}</dd></dl>
+        <p>${g.intro}</p>
+        ${startBtn(g)}
+      </div>
+      <div class="dr"><h3>留言板<small>${g.count} 則</small></h3><div class="cms">${cmList(g)}</div>${cform(sel)}</div>`;
+  }
+}
+glist.addEventListener('click', e => {
+  const b = e.target.closest('.gh'); if (!b) return;
+  const i = +b.dataset.i;
+  sel = i;
+  renderPlay();
+  psheet.querySelector('.x')?.focus();
+});
+function closeSheet() { if (!mobileQ.matches || sel == null) return; const i = sel; sel = null; renderPlay(); glist.querySelector(`[data-i="${i}"]`)?.focus(); }
+psheet.addEventListener('click', e => { if (e.target.closest('.x') || e.target.classList.contains('bd')) closeSheet(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !avpop.classList.contains('on')) closeSheet(); });
+document.addEventListener('submit', e => {
+  const f = e.target.closest('.cform'); if (!f) return;
+  e.preventDefault();
+  const inp = f.querySelector('input'), t = inp.value.trim(); if (!t) return;
+  const g = G[+f.dataset.i];
+  g.cm.unshift([AV[myAv][0], t, AV[myAv][1]]); g.count++;
+  renderPlay();
+  const box = (mobileQ.matches ? psheet : detail).querySelector('.cms'); if (box) box.scrollTop = 0;
+});
+mobileQ.addEventListener('change', () => { if (!mobileQ.matches && sel == null) sel = 0; renderPlay(); });
+
+// ---- 投票頁 ----
+const DEADLINE = Date.now() + ((3 * 24 + 14) * 60 + 22) * 60000 + 9000;
+const cdnums = document.getElementById('cdnums'), vrows = document.getElementById('vrows');
+const pad = n => String(n).padStart(2, '0');
+cdnums.innerHTML = [['d', '天'], ['h', '時'], ['m', '分'], ['s', '秒']].map(([k, u]) => `<div class="n${k === 's' ? ' sec' : ''}"><b data-u="${k}">00</b><i>${u}</i></div>`).join('');
+function tick() {
+  const r = Math.max(0, DEADLINE - Date.now()) / 1000;
+  const v = { d: Math.floor(r / 86400), h: Math.floor(r / 3600) % 24, m: Math.floor(r / 60) % 60, s: Math.floor(r) % 60 };
+  cdnums.querySelectorAll('b').forEach(b => b.textContent = pad(v[b.dataset.u]));
+}
+tick(); setInterval(tick, 1000);
+const CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+function renderVote() {
+  vrows.innerHTML = G.map(g => `
+    <div class="vr${voted === g.k ? ' on' : ''}" role="radio" tabindex="0" aria-checked="${voted === g.k}" data-k="${g.k}">
+      <span class="rd">${CHECK}</span>${ico(g)}
+      <span class="nm"><b>${g.name}</b><span class="st">${played.has(g.k)
+        ? '<span class="tag-played">✓ 玩過了</span>'
+        : `<span class="tag-un">還沒玩過</span><a class="gotry" href="#play/${g.k}">去試玩 ›</a>`}</span></span>
+    </div>`).join('');
+  const total = G.reduce((a, g) => a + g.votes, 0), rk = [...G].sort((a, b) => b.votes - a.votes), w = rk[0];
+  document.getElementById('winbox').innerHTML = `
+    <span class="lb">投票結束 · 勝出</span>
+    <div class="body">${ico(w, 'wi')}<div style="display:flex;flex-direction:column;gap:inherit"><span class="k">投票結束 · 勝出</span><b>${w.name}</b><span class="vs">${w.votes.toLocaleString()} 票 · 佔 ${Math.round(w.votes / total * 100)}%</span></div></div>`;
+  document.getElementById('ranked').innerHTML = `<h2>最終票數<small>共 ${total.toLocaleString()} 票</small></h2>` + rk.map((g, i) => `
+    <div class="vr rr${i === 0 ? ' first' : ''}"><span class="rk">${i + 1}</span>${ico(g)}<span class="rn">${g.name}</span>
+      <span class="bar"><i data-w="${g.votes / w.votes * 100}%"></i></span>
+      <span class="vc"><b>${g.votes.toLocaleString()}</b><small> 票</small></span></div>`).join('');
+}
+const pickVote = el => { voted = el.dataset.k; store.set('voted', voted); renderVote(); vrows.querySelector('.vr.on')?.focus(); };
+vrows.addEventListener('click', e => { if (e.target.closest('.gotry')) return; const r = e.target.closest('.vr'); if (r) pickVote(r); });
+vrows.addEventListener('keydown', e => { const r = e.target.closest('.vr'); if (r && (e.key === ' ' || e.key === 'Enter')) { e.preventDefault(); pickVote(r); } });
+const pgVote = document.getElementById('pg-vote'), demo = document.getElementById('demo');
+// 投票結束是全站狀態: 投票頁換結果、V 頁籤掛「結束」、試玩頁頂端提醒
+function setEnd(end) {
+  pgVote.classList.toggle('end', end);
+  document.body.classList.toggle('vend', end);
+  store.set('end', end);
+  demo.innerHTML = end ? '<span class="dl-d">示意：回到進行中</span><span class="dl-m">示意:進行中</span>' : '<span class="dl-d">示意：看投票結束</span><span class="dl-m">示意:結束</span>';
+  if (end) requestAnimationFrame(() => requestAnimationFrame(() => document.querySelectorAll('#ranked .bar i').forEach(i => i.style.width = i.dataset.w)));
+  else document.querySelectorAll('#ranked .bar i').forEach(i => i.style.width = '0');
+}
+demo.addEventListener('click', () => setEnd(!pgVote.classList.contains('end')));
+renderVote(); setEnd(store.get('end', false));
+
+// ---- 主題 (原型用切換鈕; 正式版依 AB 分組) ----
+document.body.insertAdjacentHTML('beforeend', '<button class="thm" id="thm"></button>');
+const thm = document.getElementById('thm');
+// 亮色 → 暗色 A/B/C 輪流切 (B、C 只差在內容區底色)
+// 暗色定案為 B 炭灰; A、C 保留在樣式裡但不再輪到
+const THEMES = { light: '亮色主題', db: '暗色主題' }, TK = Object.keys(THEMES); // 暗色定案: 炭灰 + 色塊原色 (db2 稍暗版未採用)
+let theme;
+function setTheme(t) {
+  if (!THEMES[t]) t = t === 'light' ? 'light' : 'db';
+  theme = t;
+  const dark = t !== 'light', cl = document.documentElement.classList;
+  cl.toggle('dark', dark); cl.toggle('db', dark); cl.toggle('db2', t === 'db2');
+  thm.textContent = `示意：${THEMES[t]} ⇄`;
+  const src = `media/pvd-${dark ? 'dark' : 'light'}.mp4`;
+  if (!film.src.endsWith(src)) film.src = src;
+  store.set('theme', t);
+}
+setTheme(new URLSearchParams(location.search).get('theme') ?? store.get('theme', 'light'));
+thm.addEventListener('click', () => setTheme(TK[(TK.indexOf(theme) + 1) % TK.length]));
+
+// ---- 路由: #play, #play/B, #vote, #develop, #game/B, 其他回首頁 ----
+function route() {
+  const [pg, arg] = location.hash.slice(1).split('/');
+  const prev = document.body.dataset.pg;
+  if (pg === 'play') {
+    const i = G.findIndex(g => g.k === arg);
+    if (i >= 0) sel = i; else if (prev !== 'game' && mobileQ.matches) sel = null;
+    document.body.dataset.pg = 'play'; renderPlay();
+  } else if (pg === 'vote') { document.body.dataset.pg = 'vote'; renderVote(); setEnd(arg === 'end' || pgVote.classList.contains('end')); }
+  else if (pg === 'develop') document.body.dataset.pg = 'develop';
+  else if (pg === 'game' && G.some(g => g.k === arg)) {
+    played.add(arg); store.set('played', [...played]);
+    document.getElementById('glbl').textContent = `${G.find(g => g.k === arg).name} 畫面 16:9（佔位）`;
+    document.querySelector('#pg-game .back').href = `#play/${arg}`;
+    document.body.dataset.pg = 'game';
+  } else { document.body.dataset.pg = 'home'; fit(); }
+  if (prev !== document.body.dataset.pg) scrollTo(0, 0);
+}
+function show(name) { open(null); location.hash = name; }
+
+addEventListener('hashchange', route);
+route(); document.fonts.ready.then(fit);
+</script>
