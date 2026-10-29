@@ -1,0 +1,16 @@
+{
+  "name": "pvd-website",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test \"test/unit/*.test.js\"",
+    "e2e": "node --test --test-concurrency=1 \"test/e2e/*.test.js\"",
+    "dev": "wrangler pages dev site --port 8788",
+    "db:local": "wrangler d1 migrations apply pvd --local",
+    "sync-games": "node tools/sync-games.mjs"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.64.1",
+    "wrangler": "^4.155.0"
+  }
+}
