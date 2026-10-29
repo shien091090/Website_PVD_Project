@@ -12,3 +12,6 @@ export async function readJson(request, maxBytes = 4096) {
   if (new TextEncoder().encode(text).length > maxBytes) throw new HttpError(400, 'bad_json');
   try { return JSON.parse(text); } catch { throw new HttpError(400, 'bad_json'); }
 }
+
+// 測試可以在 context.data 注入 now / verify; 正式環境用預設
+export const nowOf = ctx => (ctx.data?.now ? ctx.data.now() : Date.now());
