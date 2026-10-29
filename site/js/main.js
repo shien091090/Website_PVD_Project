@@ -6,6 +6,7 @@ import { initVote, setState, getState, focusVoted } from './vote.js';
 import { renderDevelop } from './develop.js';
 import { initTheme } from './theme.js';
 import { initGamePage, enterGame, leaveGame } from './gamepage.js';
+import { board, initComments } from './comments.js';
 import * as store from './store.js';
 
 const show = name => { open(null); location.hash = name; };
@@ -15,7 +16,8 @@ initHome({ show });
 initTheme();
 initPlay();
 initGamePage();
-setBoard({ html: () => '<h3>留言板<small>0 則</small></h3><div class="cms"></div>', mount: () => {} });
+setBoard(board);
+initComments();
 initVote({
   onPick: code => { setState({ ...getState(), myVote: code }); focusVoted(); },
 });
