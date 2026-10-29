@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PVD計畫｜梅拉利卡工作室</title>
+<meta name="description" content="和玩家一起決定下一款遊戲：在網頁上試玩 4 款小遊戲原型，投票選出最想看到做完的一款。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&display=swap">
+<link rel="stylesheet" href="css/site.css">
+<script>try{if(localStorage.getItem('pvd:theme')==='"dark"')document.documentElement.classList.add('dark')}catch(e){}</script>
+</head>
+<body data-pg="home">
+<main class="home" id="home">
+ <div class="hero" id="hero">
+  <div class="stage" id="stage">
+    <nav class="title" id="title" aria-label="PVD計畫">
+      <a class="key" data-k="play" href="#play" aria-label="Play 試玩"><span class="plate" style="--c:var(--red)"><b>P</b></span><span class="rest">lay<span class="go"><i>→</i><b>試玩頁</b></span></span></a>
+      <a class="key" data-k="vote" href="#vote" aria-label="Vote 投票"><span class="plate" style="--c:var(--teal)"><b>V</b></span><span class="rest">ote<span class="go"><i>→</i><b>投票頁</b></span></span></a>
+      <a class="key" data-k="develop" href="#develop" aria-label="Develop 開發日誌"><span class="plate" style="--c:var(--yellow)"><b>D</b></span><span class="rest">evelop<span class="go"><i>→</i><b>開發日誌</b></span></span></a>
+      <span class="plan">計畫</span>
+    </nav>
+    <video class="film" id="film" playsinline preload="auto"></video>
+  </div>
+  <button class="btn what" id="what"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 8l6 4-6 4z" fill="currentColor"/></svg>PVD計畫是什麼?</button>
+  <a class="more" href="#about" id="more">往下看介紹 ↓</a>
+ </div>
+  <section class="intro" id="about">
+    <div class="intro-in">
+      <span class="tagm">示意文案・正式版待提供</span>
+      <h2>一起決定下一款遊戲要長什麼樣子</h2>
+      <p>PVD 計畫是一場和玩家一起做遊戲的實驗。我們先做出幾款小小的玩法原型，請你直接在網頁上玩；你覺得哪一款最有趣，它就有機會被做成完整的遊戲。</p>
+      <ol class="steps">
+        <li><span class="plate" style="--c:var(--red)"><b>P</b></span><div><b>Play 試玩</b><span>四款玩法原型，每款大約 5 到 15 分鐘，打開網頁就能玩。</span></div></li>
+        <li><span class="plate" style="--c:var(--teal)"><b>V</b></span><div><b>Vote 投票</b><span>玩完之後，投給你覺得機制最有趣的那一款。經過幾輪投票，選出最受歡迎的玩法。</span></div></li>
+        <li><span class="plate" style="--c:var(--yellow);color:var(--dk)"><b>D</b></span><div><b>Develop 開發</b><span>接下來由我們把它做得更好、更完整、更有故事性，開發過程會持續在開發日誌分享，最後上架 Steam。</span></div></li>
+      </ol>
+      <p>這款遊戲，獻給一同參與開發的你們。</p>
+      <button class="btn" data-go="play">開始試玩 ›</button>
+    </div>
+  </section>
+  <button class="btn close" id="close">✕ 關閉影片</button>
+</main>
+
+<section class="page" id="pg-play" aria-label="試玩">
+  <header class="sh" data-cur="play"></header>
+  <div class="vnote" role="status"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M12 7v6M12 16.5v.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>投票已結束，但遊戲仍可以試玩</div>
+  <div class="pmain">
+    <div class="glist" id="glist"></div>
+    <div class="detail" id="detail"></div>
+  </div>
+  <div class="psheet" id="psheet"></div>
+</section>
+
+<section class="page" id="pg-vote" aria-label="投票">
+  <header class="sh" data-cur="vote"></header>
+  <div class="vmain">
+    <div class="cd live">
+      <span class="lb">投票倒數</span>
+      <div class="nums" id="cdnums" aria-live="off"></div>
+      <div class="side">
+        <span class="lb" style="font:900 15px/1 var(--font)">投票倒數</span>
+        <span class="note" id="deadline"></span>
+      </div>
+    </div>
+    <div class="vright live">
+      <h2>哪一款遊戲你希望開發者繼續做完?</h2>
+      <div id="vrows" role="radiogroup" aria-label="投票" style="display:contents"></div>
+    </div>
+    <div class="cd win ended" id="winbox"></div>
+    <div class="vright ended" id="ranked"></div>
+  </div>
+</section>
+
+<section class="page" id="pg-dev" aria-label="開發日誌">
+  <header class="sh" data-cur="develop"></header>
+  <article class="dev"><div class="dev-in" id="devin"></div></article>
+</section>
+
+<section class="page" id="pg-game" aria-label="遊玩">
+  <div class="gbar"><a class="back" href="#play">‹ 返回</a></div>
+  <div class="gwrap">
+    <div class="scr" id="scr">
+      <div class="ground"></div>
+      <div class="plat" style="left:26%;top:55%;width:14%"></div>
+      <div class="plat" style="left:54%;top:40%;width:14%"></div>
+      <div class="hero2" style="left:58.5%;top:31.5%"></div>
+      <span class="lbl" id="glbl">遊戲畫面 16:9（佔位）</span>
+    </div>
+  </div>
+  <div class="rot">
+    <svg viewBox="0 0 120 120" aria-hidden="true"><rect x="38" y="14" width="44" height="92" rx="9" fill="#fff" stroke="#2d2144" stroke-width="4"/><rect x="45" y="24" width="30" height="66" rx="3" fill="#c6ecf8"/><rect x="45" y="72" width="30" height="18" fill="#aaefd5"/><path d="M98 40a40 40 0 0 1-8 46" fill="none" stroke="#f5554a" stroke-width="5" stroke-linecap="round"/><path d="M84 82l7 6 3-9" fill="none" stroke="#f5554a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <b>把手機轉成橫向</b>
+    <span>這款遊戲是橫式畫面，<br>轉過來就會開始。</span>
+  </div>
+</section>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
