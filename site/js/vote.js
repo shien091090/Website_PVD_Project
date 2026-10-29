@@ -32,6 +32,7 @@ function tick() {
 export function render() {
   const end = state.phase === 'ended';
   pg.classList.toggle('end', end);
+  pg.classList.toggle('pending', end && !!state.results?.pending);
   pg.classList.toggle('none', state.phase === 'none' || state.phase === 'loading');
   document.getElementById('deadline').textContent = state.phase === 'live' ? deadlineLabel(state.round.endsAt) : '';
   const played = new Set(store.get('played', []));

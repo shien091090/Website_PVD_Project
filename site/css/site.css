@@ -450,3 +450,12 @@ img.logo { border: 0; object-fit: contain; }
 .verr, .cerr { margin: 0; font: 700 14px/1.4 var(--font); color: var(--red); }
 .cmsg { color: var(--muted); font-size: 14px; }
 .cerr[hidden] { display: none; }
+
+/* 結果名次的遊戲名稱不換行(名稱上限 8 字) */
+.rr .rn { width: auto; min-width: 120px; max-width: 9em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 720px) { .rr .rn { min-width: 0; max-width: none; } }
+/* 同票未定: 只有一張「結果統計中」卡, 置中 */
+#pg-vote.pending .vmain { display: flex; align-items: center; justify-content: center; }
+#pg-vote.pending #ranked { display: none; }
+#pg-vote.pending .win { flex: none; width: min(100%, 520px); min-height: 240px; }
+@media (min-width: 721px) and (max-width: 1000px) { .rr { gap: 12px; padding: 0 16px; } .rr .rn { min-width: 0; max-width: 6em; font-size: 22px; } .rr .vc { width: auto; } .rr .bar { min-width: 40px; } }
