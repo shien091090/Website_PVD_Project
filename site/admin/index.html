@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>PVD計畫後台</title>
+<style>
+  :root { --fg: #2d2144; --muted: #6c6582; --line: #e2dfea; --bg: #fbf8f1; --red: #f5554a; --teal: #2fc9ed; font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif; color: var(--fg); }
+  body { margin: 0; background: var(--bg); }
+  header { display: flex; align-items: center; gap: 16px; padding: 14px 20px; background: #fff; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  header b { font-size: 18px; }
+  header small { color: var(--muted); margin-left: auto; }
+  nav button { border: 2px solid var(--fg); background: #fff; border-radius: 999px; padding: 6px 14px; font: inherit; font-weight: 700; cursor: pointer; }
+  nav button.on { background: var(--fg); color: #fff; }
+  main { max-width: 860px; margin: 0 auto; padding: 20px 16px 80px; }
+  section[hidden] { display: none; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+  select, input, button.b { font: inherit; padding: 7px 10px; border: 1px solid #b9b4c6; border-radius: 8px; background: #fff; }
+  button.b { cursor: pointer; font-weight: 700; }
+  button.b.danger { border-color: var(--red); color: var(--red); }
+  button.b.danger.arm { background: var(--red); color: #fff; }
+  table { width: 100%; border-collapse: collapse; background: #fff; }
+  td, th { border-bottom: 1px solid var(--line); padding: 8px; text-align: left; vertical-align: top; font-size: 14px; }
+  tr.del td { color: #aaa; text-decoration: line-through; }
+  td.t { overflow-wrap: anywhere; }
+  .msg { color: var(--muted); font-size: 14px; }
+  .err { color: var(--red); font-weight: 700; }
+  .out { display: block; width: 100%; box-sizing: border-box; font-family: monospace; margin-top: 8px; }
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+  .bars div { display: flex; gap: 8px; align-items: center; font-size: 14px; margin: 4px 0; }
+  .bars span:first-child { width: 160px; }
+</style>
+</head>
+<body>
+<header><b>PVD計畫後台</b><nav><button data-tab="comments" class="on">留言</button> <button data-tab="vote">投票</button> <button data-tab="links">連結產生</button></nav><small id="who"></small></header>
+<main>
+  <section id="tab-comments">
+    <div class="row"><label>遊戲 <select id="cgame"></select></label><label><input type="checkbox" id="lock"> 鎖住這款的留言</label><span class="msg" id="cstat"></span></div>
+    <table><thead><tr><th>時間</th><th>內容</th><th></th></tr></thead><tbody id="clist"></tbody></table>
+  </section>
+  <section id="tab-vote" hidden><div id="vbox"></div></section>
+  <section id="tab-links" hidden>
+    <p class="msg">每個平台、每篇貼文各產生一條連結，PostHog 就能分開看效果。只能用英文小寫、數字與連字號。</p>
+    <div class="row"><label>平台 <input id="usrc" placeholder="threads" list="srcs"></label>
+      <datalist id="srcs"><option value="threads"><option value="facebook"><option value="bahamut"><option value="discord"><option value="instagram"></datalist>
+      <label>活動 <input id="ucamp" value="pvd-round1"></label><label>貼文代號 <input id="ucont" placeholder="post-0101-short"></label></div>
+    <div class="row"><label>開到 <select id="upage"><option value="">首頁</option><option value="play">試玩頁</option><option value="vote">投票頁</option><option value="develop">開發頁</option></select></label>
+      <button class="b" id="ucopy">複製連結</button><span class="msg" id="umsg"></span></div>
+    <input class="out" id="uout" readonly>
+  </section>
+</main>
+<script type="module" src="admin.js"></script>
+</body>
+</html>
