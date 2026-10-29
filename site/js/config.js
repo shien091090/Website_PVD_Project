@@ -10,5 +10,4 @@ export const SITE = {
   turnstileSiteKey: '1x00000000000000000000BB',
   posthogKey: '',
   posthogHost: 'https://us.i.posthog.com',
-  themeToggle: true,
 };

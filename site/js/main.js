@@ -8,17 +8,28 @@ import { renderDevelop } from './develop.js';
 import { initTheme } from './theme.js';
 import { initGamePage, enterGame, leaveGame } from './gamepage.js';
 import { board, initComments } from './comments.js';
+import { initAnalytics, track, trackPage, setTheme, initEngage } from './analytics.js';
 import * as store from './store.js';
 
 const show = name => { open(null); location.hash = name; };
 
+// 數據: 主題決定後才送第一個頁面瀏覽, 讓每個事件都帶主題分組
+let themeReady = false, firstPage = null;
+const flag = new Promise(res => initAnalytics({ onFlags: res }));
+initTheme(flag, ({ theme, source }) => {
+  setTheme(theme, source);
+  themeReady = true;
+  if (firstPage) trackPage(firstPage);
+});
+const pageView = page => (themeReady ? trackPage(page) : (firstPage = page));
+initEngage(() => document.body.dataset.pg);
+
 renderHeaders();
-initHome({ show });
-initTheme();
-initPlay();
-initGamePage();
+initHome({ show, onVideo: what => track(what === 'play' ? 'video_play' : 'video_complete') });
+initPlay({ onOpen: game => track('game_detail_open', { game }) });
+initGamePage({ onFinish: game => track('game_finish', { game }) });
 setBoard(board);
-initComments();
+initComments({ onPosted: game => track('comment_post', { game }) });
 initVote({ onZero: () => loadState(), onPick: pickVote });
 
 // 投票狀態以伺服器為準; 倒數歸零、進投票頁、分頁回到前景都重抓; 失敗每 5 秒重試
@@ -38,6 +49,7 @@ async function pickVote(code) {
     const token = await turnstileToken();
     const r = await postJSON('/api/vote', { game: code, token });
     setState({ ...getState(), myVote: r.myVote, now: undefined });
+    track('vote_cast', { game: code, changed: !!before.myVote });
   } catch (e) {
     setState({ ...before, now: undefined });
     if (e.code === 'ended' || e.code === 'no_round') return loadState();
@@ -47,21 +59,26 @@ async function pickVote(code) {
 loadState();
 document.addEventListener('visibilitychange', () => { if (!document.hidden) loadState(); });
 
+let playing = null;
 function route() {
   const { page, arg } = parse(location.hash);
   const prev = document.body.dataset.pg;
+  if (playing && !(page === 'game' && arg === playing)) {
+    track('game_leave', { game: playing, seconds: leaveGame() });
+    playing = null;
+  }
   if (page === 'game') {
     const played = new Set(store.get('played', []));
     played.add(arg); store.set('played', [...played]);
     document.querySelector('#pg-game .back').href = `#play/${arg}`;
-    enterGame(arg);
-  } else leaveGame();
+    if (playing !== arg) { enterGame(arg); playing = arg; track('game_start', { game: arg }); }
+  }
   document.body.dataset.pg = page;
-  if (page === 'play') enterPlay(arg, prev === 'game');
+  if (page === 'play') { enterPlay(arg, prev === 'game'); if (prev !== 'play') track('play_page_view'); }
   else if (page === 'vote') { setState({ ...getState(), now: undefined }); loadState(); }
   else if (page === 'develop') renderDevelop();
   else fit();
-  if (prev !== page) scrollTo(0, 0);
+  if (prev !== page) { scrollTo(0, 0); pageView(page); }
 }
 addEventListener('hashchange', route);
 route();

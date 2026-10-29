@@ -9,7 +9,15 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&display=swap">
 <link rel="stylesheet" href="css/site.css">
-<script>try{if(localStorage.getItem('pvd:theme')==='"dark"')document.documentElement.classList.add('dark')}catch(e){}</script>
+<style>html.pvd-wait body { visibility: hidden; }</style>
+<script>
+/* 首屏前先套主題, 避免閃色: 測試網址 ?theme= 或已分組就直接套; 第一次來先藏頁面, 等分組決定(最多 1.5 秒) */
+(function () {
+  var c = document.documentElement.classList, t = null;
+  try { t = new URLSearchParams(location.search).get('theme') || JSON.parse(localStorage.getItem('pvd:theme')); } catch (e) {}
+  if (t === 'dark') c.add('dark'); else if (t !== 'light') { c.add('pvd-wait'); setTimeout(function () { c.remove('pvd-wait'); }, 3000); }
+})();
+</script>
 </head>
 <body data-pg="home">
 <main class="home" id="home">
