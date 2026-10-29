@@ -53,3 +53,15 @@ test('鎖不存在的遊戲 404', async () => {
   const db = makeD1();
   assert.equal((await run(adminLocks.onRequestPut, ctxOf(db, 'PUT', '/api/admin/locks', { game: 'nope', locked: true }))).status, 404);
 });
+
+test('後台會改資料的請求: 非 JSON 或跨站來源一律 403', async () => {
+  const next = async () => new Response('ok');
+  const env = { ADMIN_DEV_EMAIL: 'd@l' };
+  const mk = (method, headers) => ({ request: new Request('http://localhost:8788/api/admin/rounds', { method, headers, body: method === 'GET' ? undefined : '{}' }), env, data: {}, next });
+  assert.equal((await guard(mk('POST', { 'Content-Type': 'text/plain' }))).status, 403);
+  assert.equal((await guard(mk('POST', { 'Content-Type': 'application/json', Origin: 'https://evil.example' }))).status, 403);
+  assert.equal((await guard(mk('POST', { 'Content-Type': 'application/json', 'Sec-Fetch-Site': 'cross-site' }))).status, 403);
+  assert.equal(await (await guard(mk('POST', { 'Content-Type': 'application/json', Origin: 'http://localhost:8788' }))).text(), 'ok');
+  assert.equal(await (await guard(mk('DELETE', {}))).status, 403, 'DELETE 也要 JSON 標頭');
+  assert.equal(await (await guard(mk('GET', {}))).text(), 'ok');
+});

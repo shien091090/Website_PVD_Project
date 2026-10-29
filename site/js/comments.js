@@ -13,6 +13,9 @@ const ERR = {
   bad_body: '留言內容不能是空白，最多 120 字',
 };
 let onPosted = () => {};
+// 每款的輸入草稿、送出中、錯誤訊息存在這裡, 不綁在畫面元素上:
+// 留言板隨時可能重畫(讀取完成、手機轉向切版面), 重畫後照這些狀態畫回來
+const drafts = {}, sending = {}, errors = {};
 
 function html(code) {
   const c = cache[code];
@@ -22,7 +25,7 @@ function html(code) {
     : c.error ? '<p class="cmsg">留言暫時讀不到，請稍後再試。</p>'
     : c.comments.map(m => `<div class="cm">${avHtml(m.avatar)}<div class="t">${esc(m.body)}</div></div>`).join('');
   const form = c?.locked ? '<p class="clock">留言功能暫時無法使用</p>'
-    : `<form class="cform"><button type="button" class="avbtn" aria-label="選擇頭像" aria-haspopup="dialog">${avHtml(myAv)}</button><input maxlength="120" placeholder="留一句話給這款遊戲…" aria-label="留言"><button>送出</button></form><p class="cerr" role="alert" hidden></p>`;
+    : `<form class="cform"><button type="button" class="avbtn" aria-label="選擇頭像" aria-haspopup="dialog">${avHtml(myAv)}</button><input maxlength="120" placeholder="留一句話給這款遊戲…" aria-label="留言" value="${esc(drafts[code] || '')}"><button${sending[code] ? ' disabled' : ''}>送出</button></form><p class="cerr" role="alert"${errors[code] ? '' : ' hidden'}>${esc(errors[code] || '')}</p>`;
   return head + `<div class="cms">${list}</div>` + form;
 }
 
@@ -32,7 +35,7 @@ function mount(el, code) {
   fetching[code] = getJSON(`/api/comments?game=${code}`)
     .then(d => { cache[code] = d; })
     .catch(() => { if (!cache[code]) cache[code] = { error: true, count: 0, comments: [], locked: false }; })
-    .finally(() => { fetching[code] = null; redraw(code, true); });
+    .finally(() => { fetching[code] = null; redraw(code); });
 }
 // 重畫時不要再觸發讀取, 讀取只在使用者打開某款時做
 let skipFetch = false;
@@ -40,45 +43,44 @@ export const board = {
   html,
   mount: (el, code) => { if (!skipFetch) mount(el, code); },
 };
-// keepInput: 讀取完成時重畫, 保留使用者已經打的字與游標(送出成功時則要清空)
-function redraw(code, keepInput = false) {
-  const kept = keepInput ? [...document.querySelectorAll(`.board[data-code="${code}"] .cform input`)].map(i => ({ v: i.value, f: i === document.activeElement })) : [];
+function redraw(code) {
+  const focused = document.activeElement?.matches?.(`.board[data-code="${code}"] .cform input`);
   skipFetch = true;
   try { rerenderBoard(code); } finally { skipFetch = false; }
-  document.querySelectorAll(`.board[data-code="${code}"] .cform input`).forEach((i, n) => {
-    if (!kept[n]) return;
-    i.value = kept[n].v;
-    if (kept[n].f) i.focus();
-  });
+  if (focused) document.querySelector(`.board[data-code="${code}"] .cform input`)?.focus();
 }
 
-async function submit(form) {
-  const el = form.closest('.board'), code = el.dataset.code;
-  const input = form.querySelector('input'), btn = form.querySelector('button:not(.avbtn)'), err = el.querySelector('.cerr');
-  const text = input.value.trim();
-  if (!text || btn.disabled) return;
-  btn.disabled = true; err.hidden = true;
+async function submit(code) {
+  const text = (drafts[code] || '').trim();
+  if (!text || sending[code]) return;
+  sending[code] = true; errors[code] = '';
+  redraw(code);
   try {
     const token = await turnstileToken();
     const { comment } = await postJSON('/api/comments', { game: code, avatar: myAv, body: text, token });
-    const c = cache[code] || (cache[code] = { count: 0, comments: [], locked: false });
+    const c = cache[code] && !cache[code].error ? cache[code] : (cache[code] = { count: 0, comments: [], locked: false });
     c.comments.unshift(comment); c.count++;
-    redraw(code);
-    document.querySelectorAll(`.board[data-code="${code}"] .cms`).forEach(b => { b.scrollTop = 0; });
+    drafts[code] = '';
     onPosted(code);
   } catch (e) {
-    if (e.code === 'locked') { cache[code].locked = true; redraw(code); return; }
-    err.textContent = ERR[e.code] || '送出失敗，請稍後再試';
-    err.hidden = false;
-    btn.disabled = false;
+    if (e.code === 'locked') (cache[code] ||= { count: 0, comments: [], locked: false }).locked = true;
+    else errors[code] = ERR[e.code] || '送出失敗，請稍後再試';
+  } finally {
+    sending[code] = false;
+    redraw(code);
+    if (!errors[code]) document.querySelectorAll(`.board[data-code="${code}"] .cms`).forEach(b => { b.scrollTop = 0; });
   }
 }
 
 export function initComments(opts = {}) {
   onPosted = opts.onPosted || onPosted;
+  document.addEventListener('input', e => {
+    const i = e.target.closest?.('.board .cform input'); if (!i) return;
+    drafts[i.closest('.board').dataset.code] = i.value;
+  });
   document.addEventListener('submit', e => {
     const f = e.target.closest('.board .cform'); if (!f) return;
     e.preventDefault();
-    submit(f);
+    submit(f.closest('.board').dataset.code);
   });
 }

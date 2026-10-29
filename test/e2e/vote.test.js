@@ -86,3 +86,20 @@ test('手機版投票頁倒數橫排', async () => {
   assert.ok(Math.max(...boxes) - Math.min(...boxes) < 5, '四個數字在同一列');
   await ctx.close();
 });
+
+test('快速連點兩款: 畫面打勾與伺服器記錄一致, 不出現錯誤', async () => {
+  round(-60000, 3600000);
+  const ctx = await browser.newContext(PC);
+  const page = await ctx.newPage();
+  await page.goto(srv.url + '#vote');
+  await page.locator('#deadline:has-text("截止")').waitFor();
+  await page.click('.vr[data-k="slime-tetris"]');
+  await page.click('.vr[data-k="ghost-echo"]');
+  await page.waitForTimeout(6000);
+  const shown = await page.locator('.vr.on').getAttribute('data-k');
+  assert.equal(await page.locator('.verr:visible').count(), 0);
+  await page.reload();
+  await page.locator('.vr.on').waitFor();
+  assert.equal(await page.locator('.vr.on').getAttribute('data-k'), shown);
+  await ctx.close();
+});

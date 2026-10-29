@@ -5,7 +5,7 @@ export const fmt = ms => new Date(ms).toLocaleString('zh-TW', { timeZone: 'Asia/
 export const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
 export async function api(path, method = 'GET', body) {
-  const r = await fetch('/api/admin/' + path, { method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
+  const r = await fetch('/api/admin/' + path, { method, headers: method === 'GET' ? {} : { 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
   const d = await r.json().catch(() => null);
   if (r.status === 401) { document.querySelector('main').innerHTML = '<p class="err">沒有後台權限，請用指定的 email 登入。</p>'; throw new Error('401'); }
   if (!r.ok) throw new Error(d?.error?.code || r.status);
@@ -88,7 +88,7 @@ async function loadVote() {
     (d.rounds.map(r => `
     <div class="card" data-id="${r.id}"><b>第 ${r.id} 輪</b>・${PHASE[r.phase]}・共 ${r.total} 票${r.winner ? `・勝出：${esc(nameOf(r.winner))}（後台指定）` : ''}
       <div class="row" style="margin-top:8px"><label>開始 <input type="datetime-local" class="rs" value="${toInput(r.startsAt)}"></label>
-        <label>截止 <input type="datetime-local" class="re" value="${toInput(r.endsAt)}"></label><button class="b rsave">儲存時間</button><span class="msg rmsg"></span></div>
+        <label>截止 <input type="datetime-local" class="re" value="${toInput(r.endsAt)}"></label><button class="b rsave">儲存時間</button><button class="b danger rdel">刪除這一輪</button><span class="msg rmsg"></span></div>
       <div class="bars">${GAMES.map(g => `<div><span>${esc(g.name)}</span><span style="display:inline-block;height:12px;background:#2fc9ed;width:${r.counts[g.code] / max(r) * 240}px"></span><span>${r.counts[g.code]}</span></div>`).join('')}</div>
       ${r.phase === 'ended' && r.tie ? `<div class="row" style="margin-top:8px"><span class="err">同票，請指定勝出：</span>
         <select class="wsel">${GAMES.filter(g => !r.total || r.counts[g.code] === max(r)).map(g => `<option value="${g.code}" ${r.winner === g.code ? 'selected' : ''}>${esc(g.name)}</option>`).join('')}</select>
@@ -103,6 +103,17 @@ async function loadVote() {
     card.querySelector('.rsave').addEventListener('click', async () => {
       try { await api('rounds', 'PUT', { id, startsAt: fromInput(card.querySelector('.rs').value), endsAt: fromInput(card.querySelector('.re').value) }); loadVote(); }
       catch (e) { card.querySelector('.rmsg').innerHTML = `<span class="err">${e.message === 'bad_times' ? '截止要晚於開始' : esc(e.message)}</span>`; }
+    });
+    // 刪除輪次(連同票)也用兩段式按鈕
+    card.querySelector('.rdel').addEventListener('click', async e => {
+      const b = e.target;
+      if (!b.classList.contains('arm')) {
+        b.classList.add('arm'); b.textContent = '確定刪除這一輪和它的票？';
+        setTimeout(() => { b.classList.remove('arm'); b.textContent = '刪除這一輪'; }, 3000);
+        return;
+      }
+      try { await api('rounds?id=' + id, 'DELETE'); loadVote(); }
+      catch (err) { card.querySelector('.rmsg').innerHTML = `<span class="err">${esc(err.message)}</span>`; }
     });
     card.querySelector('.wset')?.addEventListener('click', async () => {
       try { await api('winner', 'PUT', { roundId: id, game: card.querySelector('.wsel').value }); loadVote(); }

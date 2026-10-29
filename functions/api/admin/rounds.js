@@ -32,3 +32,15 @@ export async function onRequestPut(ctx) {
   if (!r.meta.changes) throw new HttpError(404, 'not_found');
   return json({ id: Number(body.id), startsAt, endsAt });
 }
+
+// 刪除輪次(連同這輪的票), 例如測完的測試輪
+export async function onRequestDelete(ctx) {
+  const id = Number(new URL(ctx.request.url).searchParams.get('id'));
+  const db = ctx.env.DB;
+  const [, r] = await db.batch([
+    db.prepare('DELETE FROM votes WHERE round_id = ?').bind(id),
+    db.prepare('DELETE FROM rounds WHERE id = ?').bind(id),
+  ]);
+  if (!r.meta.changes) throw new HttpError(404, 'not_found');
+  return json({ ok: true });
+}

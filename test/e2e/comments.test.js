@@ -79,3 +79,33 @@ test('手機抽屜裡也能留言', async () => {
   await page.waitForFunction(() => document.querySelector('.psheet .cms .cm .t')?.textContent === '手機留言', null, { timeout: 15000 });
   await ctx.close();
 });
+
+test('送出途中留言板重畫, 錯誤訊息仍看得到且保留文字', async () => {
+  const ctx = await browser.newContext(PC);
+  const page = await ctx.newPage();
+  await page.route('**/api/comments?game=*', async r => { await new Promise(res => setTimeout(res, 2500)); r.continue(); });
+  await page.route('**/api/comments', r => r.request().method() === 'POST'
+    ? r.fulfill({ status: 429, contentType: 'application/json', body: '{"error":{"code":"too_fast"}}' }) : r.continue());
+  await page.goto(srv.url + '#play/bubble-catcher');
+  await page.fill('.board .cform input', '讀取中送出');
+  await page.click('.board .cform button:has-text("送出")');
+  await page.waitForFunction(() => !document.querySelector('.board .cmsg')?.textContent.includes('讀取中'), null, { timeout: 15000 });
+  await page.waitForTimeout(300);
+  assert.ok(await page.locator('.cerr:has-text("留言太快了")').isVisible());
+  assert.equal(await page.locator('.board .cform input').inputValue(), '讀取中送出');
+  assert.equal(await page.locator('.board .cform button:has-text("送出")').isDisabled(), false);
+  await ctx.close();
+});
+
+test('手機打到一半轉成電腦版面, 文字還在', async () => {
+  const ctx = await browser.newContext(PHONE);
+  const page = await ctx.newPage();
+  await page.goto(srv.url + '#play');
+  await page.click('.gh:has-text("捕泡手")');
+  await page.locator('.psheet .cform input').waitFor();
+  await page.fill('.psheet .cform input', '轉向前打的字');
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.locator('.detail .cform input').waitFor();
+  assert.equal(await page.locator('.detail .cform input').inputValue(), '轉向前打的字');
+  await ctx.close();
+});

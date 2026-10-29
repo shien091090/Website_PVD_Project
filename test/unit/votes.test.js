@@ -137,3 +137,14 @@ test('後台新增與修改輪次, 結束時間要晚於開始', async () => {
   assert.equal((await s.state()).body.round.endsAt, T0 + 9 * H);
   assert.equal((await s.call(roundsApi.onRequestPut, 'PUT', '/api/admin/rounds', { id: 9, startsAt: T0, endsAt: T0 + H })).status, 404);
 });
+
+test('後台刪除輪次連同票一起刪, 前台回到上一輪或沒有輪次', async () => {
+  const s = setup();
+  await s.round(T0 - 3 * H, T0 - 2 * H);
+  await s.round(T0 - H, T0 - 1);
+  await s.db.prepare('INSERT INTO votes VALUES (2, ?, ?, ?, ?, ?)').bind('v1', 'slime-tetris', 'h', 1, 1).run();
+  assert.equal((await s.call(roundsApi.onRequestDelete, 'DELETE', '/api/admin/rounds?id=2')).status, 200);
+  assert.equal(await s.db.prepare('SELECT COUNT(*) AS n FROM votes WHERE round_id = 2').first('n'), 0);
+  assert.equal((await s.state()).body.round.id, 1);
+  assert.equal((await s.call(roundsApi.onRequestDelete, 'DELETE', '/api/admin/rounds?id=2')).status, 404);
+});

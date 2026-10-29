@@ -24,25 +24,35 @@ async function send(path, init) {
 export const getJSON = path => call(path);
 export const postJSON = (path, body) => call(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 
-// Turnstile 隱形驗證: 送出留言或投票前取一次 token, 用完就 reset
-let ready = null, widget = null, waiting = null;
+// Turnstile 隱形驗證: 送出留言或投票前取一次 token。
+// 同時多次呼叫時依序處理, 各拿各的 token; 沒跳出手動驗證就 8 秒逾時,
+// 跳出手動驗證(App 內瀏覽器、VPN 常見)就不計時, 等玩家點完
+let ready = null, widget = null, current = null, chain = Promise.resolve();
+const fail = () => new ApiError(0, 'turnstile');
+
 function loadTurnstile() {
+  if (window.turnstile) return Promise.resolve(window.turnstile);
   if (ready) return ready;
   ready = new Promise((resolve, reject) => {
     window.__pvdTs = () => resolve(window.turnstile);
     const s = document.createElement('script');
     s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=__pvdTs';
     s.async = true;
-    s.onerror = () => { ready = null; reject(new ApiError(0, 'turnstile')); };
+    s.onerror = () => { ready = null; reject(fail()); };
     document.head.appendChild(s);
   });
   return ready;
 }
 
-export async function turnstileToken() {
-  const timeout = new Promise((_, rej) => setTimeout(() => rej(new ApiError(0, 'turnstile')), 8000));
-  const get = (async () => {
-    const ts = await loadTurnstile();
+async function getOne() {
+  const ts = await Promise.race([loadTurnstile(), new Promise((_, rej) => setTimeout(() => rej(fail()), 8000))]);
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => { current = null; reject(fail()); }, 8000);
+    current = {
+      done: t => { clearTimeout(timer); current = null; resolve(t); },
+      error: () => { clearTimeout(timer); current = null; reject(fail()); },
+      interactive: () => clearTimeout(timer),
+    };
     if (widget == null) {
       const box = document.createElement('div');
       box.id = 'ts';
@@ -50,11 +60,17 @@ export async function turnstileToken() {
       document.body.appendChild(box);
       widget = ts.render(box, {
         sitekey: SITE.turnstileSiteKey, execution: 'execute', appearance: 'interaction-only',
-        callback: t => waiting?.resolve(t),
-        'error-callback': () => waiting?.reject(new ApiError(0, 'turnstile')),
+        callback: t => current?.done(t),
+        'error-callback': () => current?.error(),
+        'before-interactive-callback': () => current?.interactive(),
       });
     } else ts.reset(widget);
-    return new Promise((resolve, reject) => { waiting = { resolve, reject }; ts.execute(widget); });
-  })();
-  try { return await Promise.race([get, timeout]); } finally { waiting = null; }
+    ts.execute(widget);
+  });
+}
+
+export function turnstileToken() {
+  const p = chain.then(getOne, getOne);
+  chain = p.catch(() => {});
+  return p;
 }
