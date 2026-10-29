@@ -7,7 +7,7 @@ import * as store from './store.js';
 const pg = document.getElementById('pg-vote'), cdnums = document.getElementById('cdnums'), vrows = document.getElementById('vrows');
 const pad = n => String(n).padStart(2, '0');
 const CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
-let state = { phase: 'none' }, offset = 0, onZero = () => {}, onPick = () => {}, zeroFired = false;
+let state = { phase: 'loading' }, offset = 0, onZero = () => {}, onPick = () => {}, zeroFired = false;
 
 export const serverNow = () => Date.now() + offset;
 
@@ -32,10 +32,10 @@ function tick() {
 export function render() {
   const end = state.phase === 'ended';
   pg.classList.toggle('end', end);
-  pg.classList.toggle('none', state.phase === 'none');
+  pg.classList.toggle('none', state.phase === 'none' || state.phase === 'loading');
   document.getElementById('deadline').textContent = state.phase === 'live' ? deadlineLabel(state.round.endsAt) : '';
   const played = new Set(store.get('played', []));
-  vrows.innerHTML = state.phase === 'none' ? '<p class="vmsg">投票尚未開放</p>' : GAMES.map(g => `
+  vrows.innerHTML = state.phase === 'loading' ? '' : state.phase === 'none' ? '<p class="vmsg">投票尚未開放</p>' : GAMES.map(g => `
     <div class="vr${state.myVote === g.code ? ' on' : ''}" role="radio" tabindex="0" aria-checked="${state.myVote === g.code}" data-k="${g.code}">
       <span class="rd">${CHECK}</span>${ico(g)}
       <span class="nm"><b>${esc(g.name)}</b><span class="st">${played.has(g.code)

@@ -4,7 +4,15 @@ export class ApiError extends Error {
   constructor(status, code) { super(code); this.status = status; this.code = code; }
 }
 
-async function call(path, init) {
+// 第一次造訪時, 第一個請求的回應才會帶回訪客編號 cookie; 其他請求要等它回來,
+// 否則同時發出的請求會各自拿到不同編號, 投票可能記到別的編號上
+let first = null;
+function call(path, init) {
+  if (!first) { first = send(path, init); return first; }
+  return first.catch(() => {}).then(() => send(path, init));
+}
+
+async function send(path, init) {
   let r;
   try { r = await fetch(path, { credentials: 'same-origin', ...init }); } catch { throw new ApiError(0, 'network'); }
   let data = null;
