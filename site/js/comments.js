@@ -32,7 +32,7 @@ function mount(el, code) {
   fetching[code] = getJSON(`/api/comments?game=${code}`)
     .then(d => { cache[code] = d; })
     .catch(() => { if (!cache[code]) cache[code] = { error: true, count: 0, comments: [], locked: false }; })
-    .finally(() => { fetching[code] = null; redraw(code); });
+    .finally(() => { fetching[code] = null; redraw(code, true); });
 }
 // 重畫時不要再觸發讀取, 讀取只在使用者打開某款時做
 let skipFetch = false;
@@ -40,7 +40,17 @@ export const board = {
   html,
   mount: (el, code) => { if (!skipFetch) mount(el, code); },
 };
-function redraw(code) { skipFetch = true; try { rerenderBoard(code); } finally { skipFetch = false; } }
+// keepInput: 讀取完成時重畫, 保留使用者已經打的字與游標(送出成功時則要清空)
+function redraw(code, keepInput = false) {
+  const kept = keepInput ? [...document.querySelectorAll(`.board[data-code="${code}"] .cform input`)].map(i => ({ v: i.value, f: i === document.activeElement })) : [];
+  skipFetch = true;
+  try { rerenderBoard(code); } finally { skipFetch = false; }
+  document.querySelectorAll(`.board[data-code="${code}"] .cform input`).forEach((i, n) => {
+    if (!kept[n]) return;
+    i.value = kept[n].v;
+    if (kept[n].f) i.focus();
+  });
+}
 
 async function submit(form) {
   const el = form.closest('.board'), code = el.dataset.code;
