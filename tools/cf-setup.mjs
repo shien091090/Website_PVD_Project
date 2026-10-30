@@ -1,7 +1,6 @@
-// Cloudflare 一次性設定: D1(正式與測試環境各一)、Turnstile、Access(後台)、Pages 的秘密變數。可重跑: 已存在的就沿用
+// Cloudflare 一次性設定: Pages 專案(連 GitHub)、D1(正式與測試環境各一)、Turnstile、Access(後台)、Pages 的秘密變數。可重跑: 已存在的就沿用
 // 用法: node tools/cf-setup.mjs [--dry-run]
 // 需要 .secrets.env: CLOUDFLARE_API_TOKEN、CLOUDFLARE_ACCOUNT_ID、ACCESS_TEAM、ADMIN_EMAIL
-// Pages 專案要先在 Cloudflare 網頁上「連接 GitHub」建立(見 docs/部署說明.md), 名稱 pvd-project
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
@@ -14,15 +13,16 @@ for (const k of ['CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ACCOUNT_ID', 'ACCESS_TEAM',
   if (!env[k] && !DRY) { console.error(`.secrets.env 缺少 ${k}`); process.exit(1); }
 const A = env.CLOUDFLARE_ACCOUNT_ID || '<ACCOUNT_ID>';
 
-// 試跑時查詢一律回「不存在」, 建立一律回假值
-async function cf(method, path, body) {
+// 試跑時查詢一律回「不存在」, 建立一律回假值。orNull: 查無(404)時回 null 而不是報錯
+async function cf(method, path, body, { orNull = false } = {}) {
   const url = `https://api.cloudflare.com/client/v4/accounts/${A}${path}`;
   if (DRY) {
     console.log(method, url, body ? JSON.stringify(body) : '');
-    return method === 'GET' ? [] : { id: '<id>', uuid: '<uuid>', sitekey: '<sitekey>', secret: '<secret>', aud: '<aud>' };
+    return method === 'GET' ? (orNull ? null : []) : { id: '<id>', uuid: '<uuid>', sitekey: '<sitekey>', secret: '<secret>', aud: '<aud>' };
   }
   const r = await fetch(url, { method, headers: { Authorization: `Bearer ${env.CLOUDFLARE_API_TOKEN}`, 'Content-Type': 'application/json' }, body: body && JSON.stringify(body) });
   const d = await r.json();
+  if (orNull && r.status === 404) return null;
   if (!d.success) throw new Error(`${method} ${path}: ${JSON.stringify(d.errors)}`);
   return d.result;
 }
@@ -32,6 +32,15 @@ const wrangler = args => {
     { stdio: 'inherit', env: { ...process.env, CLOUDFLARE_API_TOKEN: env.CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID: A } });
 };
 const saveToml = toml => { console.log('寫入 wrangler.toml'); if (DRY) console.log(toml); else writeFileSync('wrangler.toml', toml); };
+
+// 0. Pages 專案: 網頁介面已不提供建立 Pages, 改用 API 建立並連接 GitHub(需先在網頁上授權過 Cloudflare 的 GitHub App)
+if (!await cf('GET', `/pages/projects/${PROJECT}`, null, { orNull: true })) {
+  await cf('POST', '/pages/projects', {
+    name: PROJECT, production_branch: 'main', build_config: { build_command: '', destination_dir: 'site' },
+    source: { type: 'github', config: { owner: 'shien091090', repo_name: 'Website_PVD_Project', production_branch: 'main',
+      deployments_enabled: true, production_deployments_enabled: true, preview_deployment_setting: 'all' } },
+  });
+}
 
 // 1. D1: 正式(pvd)與測試環境(pvd-preview, 預覽網址用)各一個; 沿用或新建 →
 //    先把 id 寫進 wrangler.toml → 才套資料表(wrangler 要讀到正確 id)

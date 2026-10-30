@@ -22,3 +22,8 @@ test('設定腳本: 測試環境(預覽網址)用另一個資料庫, 一樣套�
   assert.match(out, /\[env\.preview\.vars\][\s\S]*ACCESS_AUD/);
   assert.match(out, /migrations apply pvd-preview --remote --env preview/);
 });
+test('設定腳本: Pages 專案不存在時用 API 建立並連接 GitHub', () => {
+  assert.match(out, /GET .*\/pages\/projects\/pvd-project/);
+  assert.match(out, /POST .*\/pages\/projects .*"name":"pvd-project".*"production_branch":"main".*"destination_dir":"site".*"type":"github".*"owner":"shien091090".*"repo_name":"Website_PVD_Project"/);
+  assert.ok(out.indexOf('POST https://api.cloudflare.com/client/v4/accounts/<ACCOUNT_ID>/pages/projects ') < out.indexOf('PATCH'), '先建專案才設秘密');
+});
