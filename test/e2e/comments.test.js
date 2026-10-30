@@ -158,3 +158,16 @@ test('點進留言框就先做驗證, 按送出時不用再等驗證', async () 
   assert.equal(await page.evaluate(() => window.__ex), 1, '沒有再驗證一次');
   await ctx.close();
 });
+
+test('打開留言板就先做驗證, 不用等點進留言框', async () => {
+  const ctx = await browser.newContext(PC);
+  const page = await ctx.newPage();
+  await page.route('**/turnstile/v0/api.js*', r => r.fulfill({ contentType: 'text/javascript', body: SLOW_TS }));
+  await page.goto(srv.url + '#play');
+  await page.click('.gh:has-text("幽影接力")');
+  await page.waitForFunction(() => window.__ex === 1, null, { timeout: 5000 });
+  await page.click('.gh:has-text("捕泡手")');
+  await page.waitForTimeout(500);
+  assert.equal(await page.evaluate(() => window.__ex), 1, '備用的驗證還沒用掉, 換一款不再驗證');
+  await ctx.close();
+});

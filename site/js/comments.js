@@ -31,6 +31,8 @@ function html(code) {
 
 const fetching = {};
 function mount(el, code) {
+  // 驗證冷啟動要 5 秒多, 打開留言板就先做, 看留言、打字的時間就驗證完了(鎖住的不用)
+  if (!cache[code]?.locked) prefetchToken();
   if (fetching[code]) return;
   fetching[code] = getJSON(`/api/comments?game=${code}`)
     .then(d => { cache[code] = d; })
