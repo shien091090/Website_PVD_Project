@@ -5,8 +5,12 @@ compatibility_date = "2026-10-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "pvd"
-database_id = "local-placeholder"
+database_id = "9665405b-5756-486c-8693-057989fc7c33"
 migrations_dir = "migrations"
+
+[vars]
+ACCESS_TEAM = "meraklika"
+ACCESS_AUD = "18c7f42cd76e0aabc1ed536f8c78d25ea49c3cae01815d7d6bea7dfbd62fa1d4"
 
 # 預覽網址(測試環境)用另一個資料庫, 測試的留言與投票不會進正式站
 [env.preview]
@@ -14,5 +18,9 @@ migrations_dir = "migrations"
 [[env.preview.d1_databases]]
 binding = "DB"
 database_name = "pvd-preview"
-database_id = "local-preview-placeholder"
+database_id = "4993583e-f489-4a30-8398-6448dcf2282c"
 migrations_dir = "migrations"
+
+[env.preview.vars]
+ACCESS_TEAM = "meraklika"
+ACCESS_AUD = "18c7f42cd76e0aabc1ed536f8c78d25ea49c3cae01815d7d6bea7dfbd62fa1d4"

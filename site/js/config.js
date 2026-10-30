@@ -5,11 +5,12 @@ export const VIDEO = {
   dark: { landscape: { src: 'media/pvd-dark.mp4', start: 0.8, titleTop: 435 }, portrait: null },
 };
 
-// 公開金鑰(不是秘密)。turnstileSiteKey 目前是 Cloudflare 的測試鍵, 上線前換成正式的
+// 公開金鑰(不是秘密)。本機開發用 Cloudflare 的測試鍵(搭配 .dev.vars 的測試秘密)
 // analyticsHosts: 只有這些網址送數據, 預覽網址(測試環境)不送; 之後綁自訂網域要加進來
+const LOCAL = typeof location !== 'undefined' && location.hostname === 'localhost';
 export const SITE = {
-  turnstileSiteKey: '1x00000000000000000000BB',
-  posthogKey: '',
+  turnstileSiteKey: LOCAL ? '1x00000000000000000000BB' : '0x4AAAAAAFs6CZTmU8e8OaYt',
+  posthogKey: 'phc_p7DoFzypCWkAw29bz5zqhSSct6DkbdshjconoK7dyeBe',
   posthogHost: 'https://us.i.posthog.com',
   analyticsHosts: ['pvd-project.pages.dev'],
 };
