@@ -16,3 +16,9 @@ test('設定腳本: 秘密同時設到正式與預覽環境, 後台登入 cookie
   assert.match(out, /PATCH .*\/pages\/projects\/pvd-project .*"production".*"preview"/);
   assert.match(out, /"same_site_cookie_attribute":"strict"/);
 });
+test('設定腳本: 測試環境(預覽網址)用另一個資料庫, 一樣套資料表', () => {
+  assert.match(out, /GET .*\/d1\/database\?name=pvd-preview/);
+  assert.match(out, /\[env\.preview\][\s\S]*\[\[env\.preview\.d1_databases\]\][\s\S]*database_name = "pvd-preview"/);
+  assert.match(out, /\[env\.preview\.vars\][\s\S]*ACCESS_AUD/);
+  assert.match(out, /migrations apply pvd-preview --remote --env preview/);
+});

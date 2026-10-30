@@ -7,3 +7,12 @@ binding = "DB"
 database_name = "pvd"
 database_id = "local-placeholder"
 migrations_dir = "migrations"
+
+# 預覽網址(測試環境)用另一個資料庫, 測試的留言與投票不會進正式站
+[env.preview]
+
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "pvd-preview"
+database_id = "local-preview-placeholder"
+migrations_dir = "migrations"

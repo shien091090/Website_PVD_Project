@@ -10,9 +10,9 @@ for (const k of ['POSTHOG_PERSONAL_KEY', 'POSTHOG_PROJECT_ID', 'POSTHOG_HOST'])
   if (!env[k] && !DRY) { console.error(`.secrets.env 缺少 ${k}`); process.exit(1); }
 const BASE = `${env.POSTHOG_HOST || 'https://us.posthog.com'}/api/projects/${env.POSTHOG_PROJECT_ID || '<PROJECT_ID>'}`;
 
-async function ph(path, body) {
-  if (DRY) { console.log('POST', BASE + path, JSON.stringify(body)); return { id: '<id>' }; }
-  const r = await fetch(BASE + path, { method: 'POST', headers: { Authorization: `Bearer ${env.POSTHOG_PERSONAL_KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+async function ph(path, body, method = 'POST') {
+  if (DRY) { console.log(method, BASE + path, body ? JSON.stringify(body) : ''); return { id: '<id>', api_token: '<phc_key>' }; }
+  const r = await fetch(BASE + path, { method, headers: { Authorization: `Bearer ${env.POSTHOG_PERSONAL_KEY}`, 'Content-Type': 'application/json' }, body: body && JSON.stringify(body) });
   const d = await r.json();
   if (!r.ok) throw new Error(`${path}: ${JSON.stringify(d)}`);
   return d;
@@ -66,4 +66,6 @@ WHERE event = 'game_leave' AND timestamp > now() - INTERVAL 30 DAY
 GROUP BY 遊戲 ORDER BY 遊玩次數 DESC` } },
 });
 
-console.log('完成: 儀表板「PVD計畫」');
+// 專案金鑰(phc_ 開頭, 公開的)給網頁用
+const project = await ph('/', null, 'GET');
+console.log(`完成: 儀表板「PVD計畫」\n請把 site/js/config.js 的 posthogKey 改成: ${project.api_token}`);

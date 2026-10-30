@@ -1,4 +1,4 @@
-// Cloudflare 一次性設定: D1、Turnstile、Access(後台)、Pages 的秘密變數。可重跑: 已存在的就沿用
+// Cloudflare 一次性設定: D1(正式與測試環境各一)、Turnstile、Access(後台)、Pages 的秘密變數。可重跑: 已存在的就沿用
 // 用法: node tools/cf-setup.mjs [--dry-run]
 // 需要 .secrets.env: CLOUDFLARE_API_TOKEN、CLOUDFLARE_ACCOUNT_ID、ACCESS_TEAM、ADMIN_EMAIL
 // Pages 專案要先在 Cloudflare 網頁上「連接 GitHub」建立(見 docs/部署說明.md), 名稱 pvd-project
@@ -33,11 +33,19 @@ const wrangler = args => {
 };
 const saveToml = toml => { console.log('寫入 wrangler.toml'); if (DRY) console.log(toml); else writeFileSync('wrangler.toml', toml); };
 
-// 1. D1: 沿用或新建 → 先把 id 寫進 wrangler.toml → 才套資料表(wrangler 要讀到正確 id)
-const db = (await cf('GET', '/d1/database?name=pvd')).find(d => d.name === 'pvd') || await cf('POST', '/d1/database', { name: 'pvd' });
-let toml = readFileSync('wrangler.toml', 'utf8').replace(/database_id = ".*"/, `database_id = "${db.uuid}"`);
-saveToml(toml);
+// 1. D1: 正式(pvd)與測試環境(pvd-preview, 預覽網址用)各一個; 沿用或新建 →
+//    先把 id 寫進 wrangler.toml → 才套資料表(wrangler 要讀到正確 id)
+const findOrMakeDb = async name => (await cf('GET', `/d1/database?name=${name}`)).find(d => d.name === name) || await cf('POST', '/d1/database', { name });
+const db = await findOrMakeDb('pvd'), previewDb = await findOrMakeDb('pvd-preview');
+const head = readFileSync('wrangler.toml', 'utf8').split('\n[[d1_databases]]')[0];
+const d1 = (prefix, name, id) => `\n[[${prefix}d1_databases]]\nbinding = "DB"\ndatabase_name = "${name}"\ndatabase_id = "${id}"\nmigrations_dir = "migrations"\n`;
+const vars = (prefix, aud) => `\n[${prefix}vars]\nACCESS_TEAM = "${env.ACCESS_TEAM}"\nACCESS_AUD = "${aud}"\n`;
+// 上層 = 正式環境; [env.preview] = 預覽網址。Pages 規定環境裡覆寫了資料庫, 變數也要一起寫
+const buildToml = aud => head + d1('', 'pvd', db.uuid) + vars('', aud)
+  + '\n# 預覽網址(測試環境)用另一個資料庫, 測試的留言與投票不會進正式站\n[env.preview]\n' + d1('env.preview.', 'pvd-preview', previewDb.uuid) + vars('env.preview.', aud);
+saveToml(buildToml(''));
 wrangler(['d1', 'migrations', 'apply', 'pvd', '--remote']);
+wrangler(['d1', 'migrations', 'apply', 'pvd-preview', '--remote', '--env', 'preview']);
 
 // 2. Turnstile: 隱形模式, 只允許本站網域(含預覽網址)
 const widgets = await cf('GET', '/challenges/widgets');
@@ -57,8 +65,7 @@ if (!app) {
 }
 
 // 4. 非秘密設定進 wrangler.toml; 秘密同時設到正式與預覽環境(每個階段都在預覽網址測)
-toml = toml.replace(/\n\[vars\][\s\S]*$/, '') + `\n[vars]\nACCESS_TEAM = "${env.ACCESS_TEAM}"\nACCESS_AUD = "${app.aud}"\n`;
-saveToml(toml);
+saveToml(buildToml(app.aud));
 const secrets = { TURNSTILE_SECRET: { type: 'secret_text', value: ts.secret }, IP_SALT: { type: 'secret_text', value: randomBytes(24).toString('hex') } };
 await cf('PATCH', `/pages/projects/${PROJECT}`, { deployment_configs: { production: { env_vars: secrets }, preview: { env_vars: secrets } } });
 

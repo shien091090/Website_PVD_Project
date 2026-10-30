@@ -6,8 +6,10 @@ export const VIDEO = {
 };
 
 // 公開金鑰(不是秘密)。turnstileSiteKey 目前是 Cloudflare 的測試鍵, 上線前換成正式的
+// analyticsHosts: 只有這些網址送數據, 預覽網址(測試環境)不送; 之後綁自訂網域要加進來
 export const SITE = {
   turnstileSiteKey: '1x00000000000000000000BB',
   posthogKey: '',
   posthogHost: 'https://us.i.posthog.com',
+  analyticsHosts: ['pvd-project.pages.dev'],
 };

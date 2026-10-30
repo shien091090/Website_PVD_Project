@@ -20,7 +20,7 @@ async function open(flag, url = '?utm_source=threads&utm_content=p1#play') {
   const page = await ctx.newPage();
   await page.route('**/js/config.js', async r => {
     const res = await r.fetch();
-    r.fulfill({ response: res, body: (await res.text()).replace("posthogKey: ''", "posthogKey: 'phc_test'") });
+    r.fulfill({ response: res, body: (await res.text()).replace("posthogKey: ''", "posthogKey: 'phc_test'").replace('analyticsHosts: [', "analyticsHosts: ['localhost', ") });
   });
   await page.route('**/static/array.full.js', r => r.fulfill({ contentType: 'text/javascript', body: FAKE(flag) }));
   await page.goto(srv.url + url);
@@ -44,12 +44,30 @@ test('第一次來依旗標分組, 主題先註冊再送頁面瀏覽, 重新整�
   await ctx.close();
 });
 
-test('旗標沒回來: 1.5 秒內頁面出現並隨機分組', async () => {
+test('不在正式網址(預覽網址)時不載入數據服務, 頁面照常出現', async () => {
   const ctx = await browser.newContext(PC);
   const page = await ctx.newPage();
   await page.route('**/js/config.js', async r => {
     const res = await r.fetch();
     r.fulfill({ response: res, body: (await res.text()).replace("posthogKey: ''", "posthogKey: 'phc_test'") });
+  });
+  let loaded = false;
+  await page.route('**/static/array.full.js', r => { loaded = true; r.fulfill({ contentType: 'text/javascript', body: FAKE('dark') }); });
+  await page.goto(srv.url + '#play');
+  await page.waitForFunction(() => !document.documentElement.classList.contains('pvd-wait') && localStorage.getItem('pvd:theme'));
+  await page.click('.gh:has-text("史萊姆擴張")');
+  await page.waitForTimeout(500);
+  assert.equal(loaded, false);
+  assert.equal(await page.evaluate(() => window.posthog), undefined);
+  await ctx.close();
+});
+
+test('旗標沒回來: 1.5 秒內頁面出現並隨機分組', async () => {
+  const ctx = await browser.newContext(PC);
+  const page = await ctx.newPage();
+  await page.route('**/js/config.js', async r => {
+    const res = await r.fetch();
+    r.fulfill({ response: res, body: (await res.text()).replace("posthogKey: ''", "posthogKey: 'phc_test'").replace('analyticsHosts: [', "analyticsHosts: ['localhost', ") });
   });
   await page.route('**/static/array.full.js', () => {}); // 永遠不回應
   const t0 = Date.now();
