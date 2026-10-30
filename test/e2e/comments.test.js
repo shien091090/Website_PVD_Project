@@ -115,3 +115,46 @@ test('手機打到一半轉成電腦版面, 文字還在', async () => {
   assert.equal(await page.locator('.detail .cform input').inputValue(), '轉向前打的字');
   await ctx.close();
 });
+
+test('送出後按鈕立刻顯示送出中', async () => {
+  const ctx = await browser.newContext(PC);
+  const page = await ctx.newPage();
+  await page.route('**/api/comments', async r => {
+    if (r.request().method() !== 'POST') return r.continue();
+    await new Promise(res => setTimeout(res, 2000)); r.continue();
+  });
+  await page.goto(srv.url + '#play/ghost-echo');
+  await page.locator('.board .cms').waitFor();
+  await page.fill('.board .cform input', '等一下');
+  await page.click('.board .cform button:has-text("送出")');
+  const btn = page.locator('.board .cform button:not(.avbtn)');
+  await page.waitForFunction(() => document.querySelector('.board .cform button:not(.avbtn)')?.textContent === '送出中…', null, { timeout: 500 });
+  assert.equal(await btn.isDisabled(), true);
+  await page.waitForFunction(() => document.querySelector('.board .cms .cm .t')?.textContent === '等一下', null, { timeout: 15000 });
+  assert.equal(await btn.textContent(), '送出');
+  await ctx.close();
+});
+
+// 假的驗證: 每次驗證要 1.5 秒, 記下驗證了幾次
+const SLOW_TS = `window.__ex = 0; window.turnstile = {
+  render(el, o) { this.o = o; return 'w'; }, reset() {},
+  execute() { window.__ex++; setTimeout(() => this.o.callback('XXXX.DUMMY.TOKEN.XXXX'), 1500); } };
+window.__pvdTs();`;
+
+test('點進留言框就先做驗證, 按送出時不用再等驗證', async () => {
+  const ctx = await browser.newContext(PC);
+  const page = await ctx.newPage();
+  await page.route('**/turnstile/v0/api.js*', r => r.fulfill({ contentType: 'text/javascript', body: SLOW_TS }));
+  await page.goto(srv.url + '#play/slime-tetris'); // 前面的測試鎖了 dungeon-zoo
+  await page.locator('.board .cms').waitFor();
+  await page.click('.board .cform input');
+  await page.waitForFunction(() => window.__ex === 1);
+  await page.waitForTimeout(1700);
+  await page.fill('.board .cform input', '很快');
+  const t0 = Date.now();
+  await page.click('.board .cform button:has-text("送出")');
+  await page.waitForFunction(() => document.querySelector('.board .cms .cm .t')?.textContent === '很快', null, { timeout: 15000 });
+  assert.ok(Date.now() - t0 < 1400, `送出花了 ${Date.now() - t0}ms`);
+  assert.equal(await page.evaluate(() => window.__ex), 1, '沒有再驗證一次');
+  await ctx.close();
+});

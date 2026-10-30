@@ -69,8 +69,24 @@ async function getOne() {
   });
 }
 
-export function turnstileToken() {
+function next() {
   const p = chain.then(getOne, getOne);
   chain = p.catch(() => {});
   return p;
+}
+
+// 預先驗證: 點進留言框時先拿一個 token 備用, 按送出時就不用再等驗證。
+// token 5 分鐘內有效且只能用一次, 備用的超過 4 分鐘就不用; 備用的失敗了就當場重拿
+let spare = null;
+const fresh = () => spare && Date.now() - spare.at < 240000;
+export function prefetchToken() {
+  if (fresh()) return;
+  const p = next();
+  p.catch(() => {});
+  spare = { p, at: Date.now() };
+}
+export function turnstileToken() {
+  if (fresh()) { const { p } = spare; spare = null; return p.catch(() => next()); }
+  spare = null;
+  return next();
 }

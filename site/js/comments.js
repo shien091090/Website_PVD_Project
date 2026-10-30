@@ -1,4 +1,4 @@
-import { getJSON, postJSON, turnstileToken } from './api.js';
+import { getJSON, postJSON, turnstileToken, prefetchToken } from './api.js';
 import { avHtml } from './avatars.js';
 import { esc } from './format.js';
 import { mobileQ, myAv, rerenderBoard } from './play.js';
@@ -25,7 +25,7 @@ function html(code) {
     : c.error ? '<p class="cmsg">留言暫時讀不到，請稍後再試。</p>'
     : c.comments.map(m => `<div class="cm">${avHtml(m.avatar)}<div class="t">${esc(m.body)}</div></div>`).join('');
   const form = c?.locked ? '<p class="clock">留言功能暫時無法使用</p>'
-    : `<form class="cform"><button type="button" class="avbtn" aria-label="選擇頭像" aria-haspopup="dialog">${avHtml(myAv)}</button><input maxlength="120" placeholder="留一句話給這款遊戲…" aria-label="留言" value="${esc(drafts[code] || '')}"><button${sending[code] ? ' disabled' : ''}>送出</button></form><p class="cerr" role="alert"${errors[code] ? '' : ' hidden'}>${esc(errors[code] || '')}</p>`;
+    : `<form class="cform"><button type="button" class="avbtn" aria-label="選擇頭像" aria-haspopup="dialog">${avHtml(myAv)}</button><input maxlength="120" placeholder="留一句話給這款遊戲…" aria-label="留言" value="${esc(drafts[code] || '')}"><button${sending[code] ? ' disabled' : ''}>${sending[code] ? '送出中…' : '送出'}</button></form><p class="cerr" role="alert"${errors[code] ? '' : ' hidden'}>${esc(errors[code] || '')}</p>`;
   return head + `<div class="cms">${list}</div>` + form;
 }
 
@@ -78,6 +78,7 @@ export function initComments(opts = {}) {
     const i = e.target.closest?.('.board .cform input'); if (!i) return;
     drafts[i.closest('.board').dataset.code] = i.value;
   });
+  document.addEventListener('focusin', e => { if (e.target.closest?.('.board .cform input')) prefetchToken(); });
   document.addEventListener('submit', e => {
     const f = e.target.closest('.board .cform'); if (!f) return;
     e.preventDefault();
