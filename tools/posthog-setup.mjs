@@ -53,4 +53,17 @@ FROM (
 ) GROUP BY theme ORDER BY theme` } },
 });
 
+// 各遊戲遊玩時間: 每次離開遊玩頁(含直接關分頁)一筆; 超過 2 小時視為分頁擺著沒玩, 不計
+await ph('/insights/', {
+  name: '各遊戲平均遊玩時間', dashboards: [dash.id],
+  query: { kind: 'DataVisualizationNode', source: { kind: 'HogQLQuery', query: `
+SELECT toString(properties.game) AS 遊戲, count() AS 遊玩次數,
+  round(avg(toFloat(properties.seconds)) / 60, 1) AS 平均分鐘,
+  round(median(toFloat(properties.seconds)) / 60, 1) AS 中位數分鐘
+FROM events
+WHERE event = 'game_leave' AND timestamp > now() - INTERVAL 30 DAY
+  AND toFloat(properties.seconds) BETWEEN 0 AND 7200
+GROUP BY 遊戲 ORDER BY 遊玩次數 DESC` } },
+});
+
 console.log('完成: 儀表板「PVD計畫」');

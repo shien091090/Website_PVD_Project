@@ -6,7 +6,7 @@ import { initVote, setState, getState, focusVoted, setVoteError } from './vote.j
 import { getJSON, postJSON, turnstileToken } from './api.js';
 import { renderDevelop } from './develop.js';
 import { initTheme } from './theme.js';
-import { initGamePage, enterGame, leaveGame } from './gamepage.js';
+import { initGamePage, enterGame, leaveGame, lapGame } from './gamepage.js';
 import { board, initComments } from './comments.js';
 import { initAnalytics, track, trackPage, setTheme, initEngage } from './analytics.js';
 import * as store from './store.js';
@@ -80,5 +80,8 @@ function route() {
   else fit();
   if (prev !== page) { scrollTo(0, 0); pageView(page); }
 }
+// 玩到一半關分頁: 用 sendBeacon 送離開事件; 從返回快取回來時重新計時, 之後離開再記一次
+addEventListener('pagehide', () => { if (playing) track('game_leave', { game: playing, seconds: lapGame() }, { transport: 'sendBeacon' }); });
+addEventListener('pageshow', e => { if (e.persisted) lapGame(); });
 addEventListener('hashchange', route);
 route();

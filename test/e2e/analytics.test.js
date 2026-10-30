@@ -76,6 +76,27 @@ test('點遊戲、開始玩、離開都有事件', async () => {
   await ctx.close();
 });
 
+test('玩到一半關分頁也送離開事件, 從返回快取回來後重新計時', async () => {
+  const { ctx, page, calls } = await open('light', '#play');
+  await page.waitForFunction(() => window.posthog?.calls.some(c => c[1] === '$pageview'));
+  await page.click('.gh:has-text("捕泡手")');
+  await page.click('.detail .startbtn');
+  await page.waitForFunction(() => location.hash === '#game/bubble-catcher');
+  await page.evaluate(() => dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true })));
+  const leaves = async () => events(await calls()).filter(c => c[1] === 'game_leave');
+  const [first] = await leaves();
+  assert.ok(first, '關分頁時送出');
+  assert.equal(first[2].game, 'bubble-catcher');
+  assert.equal(typeof first[2].seconds, 'number');
+  assert.deepEqual(first[3], { transport: 'sendBeacon' });
+  // 從返回快取回到遊玩頁: 之後正常離開再記一次, 秒數從回來時起算
+  await page.evaluate(() => dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })));
+  await page.click('text=‹ 返回');
+  await page.waitForFunction(() => window.posthog.calls.filter(c => c[1] === 'game_leave').length === 2);
+  assert.equal((await leaves())[1][2].game, 'bubble-catcher');
+  await ctx.close();
+});
+
 test('分頁隱藏時送 engaged 前景時間', async () => {
   const { ctx, page, calls } = await open('light', '#play');
   await page.waitForFunction(() => window.posthog?.calls.some(c => c[1] === '$pageview'));

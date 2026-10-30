@@ -38,6 +38,14 @@ export function leaveGame() {
   return Math.round((Date.now() - enteredAt) / 1000);
 }
 
+// 回傳從上次計時起的秒數並重新計時(關分頁時用, 遊戲框不拆, 從返回快取回來還能繼續玩)
+export function lapGame() {
+  if (!code) return null;
+  const now = Date.now(), s = Math.round((now - enteredAt) / 1000);
+  enteredAt = now;
+  return s;
+}
+
 export function initGamePage(opts = {}) {
   onFinish = opts.onFinish || onFinish;
   portraitQ.addEventListener('change', sync);

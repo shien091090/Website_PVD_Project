@@ -83,9 +83,15 @@ test('手機抽屜裡也能留言', async () => {
 test('送出途中留言板重畫, 錯誤訊息仍看得到且保留文字', async () => {
   const ctx = await browser.newContext(PC);
   const page = await ctx.newPage();
-  await page.route('**/api/comments?game=*', async r => { await new Promise(res => setTimeout(res, 2500)); r.continue(); });
-  await page.route('**/api/comments', r => r.request().method() === 'POST'
-    ? r.fulfill({ status: 429, contentType: 'application/json', body: '{"error":{"code":"too_fast"}}' }) : r.continue());
+  // 留言板讀取卡住, 直到送出被回應後才放行, 確保錯誤先出現、留言板後重畫(不靠驗證速度)
+  let answered;
+  const posted = new Promise(res => { answered = res; });
+  await page.route('**/api/comments?game=*', async r => { await posted; await new Promise(res => setTimeout(res, 200)); r.continue(); });
+  await page.route('**/api/comments', r => {
+    if (r.request().method() !== 'POST') return r.continue();
+    r.fulfill({ status: 429, contentType: 'application/json', body: '{"error":{"code":"too_fast"}}' });
+    answered();
+  });
   await page.goto(srv.url + '#play/bubble-catcher');
   await page.fill('.board .cform input', '讀取中送出');
   await page.click('.board .cform button:has-text("送出")');
