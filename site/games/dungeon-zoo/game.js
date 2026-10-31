@@ -3,9 +3,9 @@
    邏輯與繪製分離: update(dt) 改狀態, render() 呼叫 Art.drawXxx。 */
 
 // ───────────────────────── 基本工具 ─────────────────────────
-const CW = (Art.canvas && Art.canvas.width) || 1680;
+const CW = (Art.canvas && Art.canvas.width) || 1280;
 const CH = (Art.canvas && Art.canvas.height) || 720;
-// 畫面 1680×720 = 原本 1280×720 的設計區置中、左右各多 OX。所有畫面先平移 OX 再畫, 介面座標維持原 1280 設計值;
+// 畫面 CW×720(CW 由 art.js 依裝置決定, 1280~1680)= 1280×720 的設計區置中、左右各多 OX。所有畫面先平移 OX 再畫, 介面座標維持原 1280 設計值;
 // 兩側由美術的整面底色補滿; 地下城鏡頭可視寬 = CW, 顯示範圍是設計座標 -OX ~ DW+OX。
 const DW = 1280, OX = (CW - DW) / 2;
 const DAY_MAX = 4;
@@ -981,7 +981,7 @@ function solidAtPoint(x, y) { return solidCell(Math.floor(x / TILE), Math.floor(
 function camOf() {
   if (!D) return { x: 0, y: 0 };
   const T = D.tamer;
-  // 可視寬 CW(1680): 地圖比可視寬窄時置中(兩側露出的是地下城背景底色), 否則跟著玩家並夾在地圖範圍內
+  // 可視寬 CW: 地圖比可視寬窄時置中(兩側露出的是地下城背景底色), 否則跟著玩家並夾在地圖範圍內
   const mapW = D.W * TILE;
   const cx = mapW <= CW ? -(CW - mapW) / 2 : clamp(T.x - CW / 2, 0, mapW - CW);
   const HH = Art.hudH ? Art.hudH('dungeon') : 100;   // HUD 帶高度(放大後可能超過 100), 地圖從它下面開始
@@ -3369,7 +3369,7 @@ const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 let dpr = 1;   // 實際像素 / 邏輯像素(顯示大小 × devicePixelRatio)
 function resize() {
-  // 顯示大小由 index.html 的 CSS 決定(21:9 等比、置中、不裁切); 這裡只依實際顯示寬度配置畫布像素, 維持清晰
+  // 顯示大小由 index.html 的 CSS 決定(等比、置中、不裁切); 這裡只依實際顯示寬度配置畫布像素, 維持清晰
   const rect = canvas.getBoundingClientRect();
   const cssW = rect.width || Math.min(window.innerWidth, window.innerHeight * CW / CH) || CW;
   dpr = Math.min(Math.max(cssW * (window.devicePixelRatio || 1) / CW, 0.5), 2.5);

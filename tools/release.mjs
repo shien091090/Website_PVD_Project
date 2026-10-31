@@ -6,6 +6,7 @@ import { GAME_CODES } from '../site/js/games.js';
 const LIMIT = 25 * 1024 * 1024; // Cloudflare Pages 單檔上限
 const DOWNLOAD = /\bcreateObjectURL\b|\bdownload\s*=/;
 const COLOR = /^#[0-9a-fA-F]{6}$/;
+const RATIO = /^\d+:\d+$/, RATIO_RANGE = /^\d+:\d+(-\d+:\d+)?$/;
 const TEXT = ['code', 'name', 'intro', 'time', 'ratio'];
 
 const files = d => readdirSync(d, { withFileTypes: true })
@@ -33,6 +34,8 @@ export function checkRelease(dir) {
     for (const k of TEXT) if (typeof info[k] !== 'string' || !info[k].trim()) errors.push(`info.json 缺少 ${k}`);
     if (typeof info.mobile !== 'boolean') errors.push('info.json 的 mobile 要是 true 或 false');
     for (const k of ['color', 'textColor']) if (!COLOR.test(info[k] || '')) errors.push(`info.json 的 ${k} 要是 # 加 6 碼色碼`);
+    if (typeof info.ratio === 'string' && info.ratio.trim() && !RATIO.test(info.ratio)) errors.push('info.json 的 ratio 要寫成「16:9」這種格式');
+    if (info.mobile === true && !RATIO_RANGE.test(info.mobileRatio || '')) errors.push('手機可玩的遊戲, info.json 要有 mobileRatio, 寫成「16:9-21:9」或「16:9」');
     if (typeof info.code === 'string' && !GAME_CODES.includes(info.code)) errors.push(`網站沒有這個遊戲代號: ${info.code}`);
   }
   return { errors, info };

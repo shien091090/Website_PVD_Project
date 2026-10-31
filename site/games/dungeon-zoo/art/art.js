@@ -6,12 +6,34 @@
   // ───────────── 基本工具 ─────────────
   var FONT = '"Microsoft JhengHei","PingFang TC","Noto Sans TC","Heiti TC",sans-serif';
   var TAU = Math.PI * 2;
-  // 畫面寬 1680: 遊戲在 game.js 以 1280 為設計寬度、左右各留 200 並平移, 這裡的整面底色一律從 VX 畫到 VX+VW 填滿兩側
-  var VX = -200, VW = 1680;
-  // HUD 放大: 字與圖示乘上 hudK(); 電腦 HUD_KD 倍、觸控模式(手機)HUD_KM 倍。21:9 兩側加寬的地方拿來放放大後的 HUD:
-  // 原本 1280 設計區裡的 HUD 分成幾塊, 各自以錨點放大後貼齊畫面左緣 / 中央 / 右緣。hudPt 把原座標換成新座標(遊戲端的聚光燈、提示也用它)
+  // 畫面寬度啟動時決定一次, 高固定 720: 電腦 1280(16:9); 觸控裝置照螢幕長寬比(不分直拿橫拿)取 1280~1680(16:9~21:9)。
+  // 遊戲在 game.js 以 1280 為設計寬度置中、兩側各多 (VW-1280)/2, 這裡的整面底色一律從 VX 畫到 VX+VW 填滿兩側。
+  // 觸控判斷與 touch.js 相同; ?w=寬度 可強制指定(截圖檢查用)
+  function pickWidth() {
+    var w = 1280;
+    try {
+      var q = /[?&]w=([0-9]+)/.exec(location.search);
+      var mm = function (s) { return !!(window.matchMedia && matchMedia(s).matches); };
+      var touch = /[?&]touch=1(&|$)/.test(location.search) || mm('(pointer: coarse)') ||
+        (((navigator.maxTouchPoints || 0) > 0 || 'ontouchstart' in window) && !mm('(hover: hover)'));
+      if (q) w = +q[1];
+      else if (touch) {
+        // 螢幕比例(不分直拿橫拿)與橫拿時的可視區比例取大的
+        var a = window.screen || {}, sw = a.width || 0, sh = a.height || 0, iw = window.innerWidth || 0, ih = window.innerHeight || 0;
+        var r = sw > 0 && sh > 0 ? Math.max(sw, sh) / Math.min(sw, sh) : 0;
+        if (iw > ih && ih > 0) r = Math.max(r, iw / ih);
+        if (r > 0) w = 720 * r;
+      }
+    } catch (e) { /* 取不到就用 1280 */ }
+    return Math.round(Math.max(1280, Math.min(1680, w || 1280)) / 2) * 2;
+  }
+  var VW = pickWidth(), VX = -(VW - 1280) / 2;
+  try { document.documentElement.style.setProperty('--cw', String(VW)); } catch (e) { /* 略過 */ }
+  // HUD 放大: 字與圖示乘上 hudK(); 電腦 HUD_KD 倍、觸控模式(手機)HUD_KM 倍。畫面比 1280 寬時, 兩側多出的地方拿來放放大後的 HUD:
+  // 1280 設計區裡的 HUD 分成幾塊, 各自以錨點放大後貼齊畫面左緣 / 中央 / 右緣。hudPt 把原座標換成新座標(遊戲端的聚光燈、提示也用它)
   // 表演場的 HUD(和熱度表、時鐘排在一起)維持原大小; 地下城以外的畫面 HUD 帶高度不變(50), 放大最多 1.3 倍
-  var HUD_KD = 1.25, HUD_KM = 1.6;
+  // 手機的倍數依畫面寬度: 21:9(1680)放到 1.6, 越窄兩側越沒空間, 到 16:9(1280)和電腦一樣 1.25
+  var HUD_KD = 1.25, HUD_KM = 1.25 + 0.35 * Math.max(0, Math.min(1, (VW - 1280) / 400));
 
   var HL = VX + 24, HR = VX + VW - 24, HUD_LAST_H = 50;
   var HUD_C = null;   // 這一幀地下城 HUD 第 1 行中段的中心 x 與倍數(drawHud 算, 任務列與遊戲端的聚光燈跟著用)
@@ -36,8 +58,10 @@
   // 表演場 HUD 第 1 行: 左(天數 + 觀眾滿意度 x 20~404)、中(熱度表 + 時鐘 + 小字 x 420~1000)、右(金幣、名聲)各自放大;
   // 中段放在左右兩塊之間的正中央
   function showBand() { return Math.max(50, Math.round(48 * menuK())); }   // 時鐘圓環高 46, 放大後整個要在帶內
+  var SHOW_C = null;   // 這一幀表演場資訊列中段的中心 x 與倍數(drawHudShow 算, 熱度表、時鐘、聚光燈跟著用)
   function showPt(x, y) {
     var k = menuK(), mid = (HL + 384 * k + HR - 268 * k) / 2;
+    if (x >= 420 && x < 1000 && SHOW_C) return { x: SHOW_C.x + (x - 710) * SHOW_C.k, y: showBand() / 2 + (y - 25) * SHOW_C.k, k: SHOW_C.k };
     var nx = x < 420 ? HL + (x - 20) * k : (x < 1000 ? mid + (x - 710) * k : HR + (x - 1268) * k);
     return { x: nx, y: showBand() / 2 + (y - 25) * k, k: k };
   }
@@ -1027,7 +1051,7 @@
     }
     ctx.save();
     ctx.globalAlpha = 0.06; ctx.strokeStyle = '#8fa0c8'; ctx.lineWidth = 1;
-    for (var i = -200; i <= 1680; i += 40) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i - 200, 720); ctx.stroke(); }
+    for (var i = VX; i <= VX + VW + 200; i += 40) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i - 200, 720); ctx.stroke(); }
     ctx.restore();
     // 結算畫面: 背景壓暗, 讓面板跳出來
     if (scene === 'dresult' || scene === 'sresult' || scene === 'result') {
@@ -3524,17 +3548,24 @@
     ctx.fillStyle = '#2c3446'; ctx.fillRect(VX, SB - 2, VW, 2);
     HUD_LAST_H = SB;
     var day = Math.floor(N(s.day, 1)), dmax = Math.floor(N(s.dayMax, 4));
+    var satT = '觀眾滿意度 ' + Math.max(0, Math.floor(N(s.sat, 0))), goldT = String(Math.floor(N(s.gold, 0))), repT = String(Math.floor(N(s.rep, 0)));
+    ctx.save(); ctx.font = 'bold 19px ' + FONT; var sw = Math.min(230, ctx.measureText(satT).width);
+    ctx.font = 'bold 20px ' + FONT; var gw = Math.min(106, ctx.measureText(goldT).width), rw = Math.min(120, ctx.measureText(repT).width); ctx.restore();
+    // 右塊靠右緣 1268 由右往左排: 名聲字、名聲星、金幣字、金幣
+    var repX = 1268 - rw, goldX = repX - 16 - 11 - 16 - gw, rStart = goldX - 16 - 10;
     showGrp(ctx, 20, 25, function () {
       T(ctx, day <= 0 ? '見習日' : '第 ' + day + ' / ' + dmax + ' 天', 20, 25, { size: 20, align: 'left', color: day <= 0 ? P.select : P.text, maxW: 118 });
       satFace(ctx, 158, 25, 10);
-      T(ctx, '觀眾滿意度 ' + Math.max(0, Math.floor(N(s.sat, 0))), 174, 25, { size: 19, align: 'left', color: P.sat, maxW: 230 });
+      T(ctx, satT, 174, 25, { size: 19, align: 'left', color: P.sat, maxW: 230 });
     });
     showGrp(ctx, 1268, 25, function () {
-      coinIcon(ctx, 1000, 25, 10);
-      T(ctx, String(Math.floor(N(s.gold, 0))), 1016, 25, { size: 20, align: 'left', color: P.gold, maxW: 106 });
-      repIcon(ctx, 1132, 25, 11);
-      T(ctx, String(Math.floor(N(s.rep, 0))), 1148, 25, { size: 20, align: 'left', color: P.rep, maxW: 120 });
+      coinIcon(ctx, goldX - 16, 25, 10);
+      T(ctx, goldT, goldX, 25, { size: 20, align: 'left', color: P.gold, maxW: 106 });
+      repIcon(ctx, repX - 16, 25, 11);
+      T(ctx, repT, repX, 25, { size: 20, align: 'left', color: P.rep, maxW: 120 });
     });
+    var k0 = menuK(), lx = HL + (174 + sw - 20) * k0, rx = HR + (rStart - 1268) * k0;
+    SHOW_C = { x: (lx + rx) / 2, k: Math.max(0.75, Math.min(k0, ((rx - lx) / 2 - 14) / 290)) };
     var msg = S(s.message, '');
     if (msg) showGrp(ctx, 932, 25, function () {
       ctx.save(); ctx.beginPath(); ctx.rect(932, 0, 62, 50); ctx.clip(); richLine(ctx, msg, 932, 25, { size: 14, align: 'left', color: P.textDim, maxW: 62 }); ctx.restore();
@@ -4684,7 +4715,7 @@
 
   // ───────────── 匯出 ─────────────
   window.Art = {
-    canvas: { width: 1680, height: 720 },
+    canvas: { width: VW, height: 720 },
     palette: P,
     drawBackground: wrap(drawBackground),
     drawTitle: wrap(drawTitle),

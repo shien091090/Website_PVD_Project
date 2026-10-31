@@ -93,17 +93,19 @@ test('遊戲圖示塞滿圓角框, 不會撐出框外', async () => {
   }
 });
 
-test('遊戲框是 21:9, 電腦四周留白較多, 手機橫拿只留一點', async () => {
-  for (const [opts, gap] of [[PC, 40], [PHONE_L, 8]]) {
+test('電腦遊戲框是 16:9 四周留白 40; 手機橫拿不限比例, 填滿只留一點', async () => {
+  for (const [opts, gap, ratio] of [[PC, 40, 16 / 9], [PHONE_L, 8, null]]) {
     const ctx = await browser.newContext(opts);
     const page = await ctx.newPage();
     await page.goto(srv.url + '#game/slime-tetris');
     await page.locator('#scr iframe').waitFor();
     const area = await page.locator('.gwrap').boundingBox();
     const scr = await page.locator('#scr').boundingBox();
-    assert.ok(Math.abs(scr.width / scr.height - 21 / 9) < 0.02, `比例 ${scr.width}x${scr.height}`);
-    const side = Math.min(scr.x - area.x, area.x + area.width - scr.x - scr.width, scr.y - area.y, area.y + area.height - scr.y - scr.height);
-    assert.ok(Math.abs(side - gap) <= 1, `最窄留白 ${side}, 應為 ${gap}`);
+    const sides = [scr.x - area.x, area.x + area.width - scr.x - scr.width, scr.y - area.y, area.y + area.height - scr.y - scr.height];
+    if (ratio) {
+      assert.ok(Math.abs(scr.width / scr.height - ratio) < 0.02, `比例 ${scr.width}x${scr.height}`);
+      assert.ok(Math.abs(Math.min(...sides) - gap) <= 1, `最窄留白 ${Math.min(...sides)}, 應為 ${gap}`);
+    } else for (const s of sides) assert.ok(Math.abs(s - gap) <= 1, `四邊留白 ${sides}, 應都是 ${gap}`);
     await ctx.close();
   }
 });

@@ -1,7 +1,7 @@
 import { byCode } from './games.js';
 import * as store from './store.js';
 
-// 遊玩頁: 返回 bar + 21:9 iframe。手機直拿不載入, 轉橫才載入;
+// 遊玩頁: 返回 bar + 遊戲 iframe(電腦 16:9, 手機橫拿填滿)。手機直拿不載入, 轉橫才載入;
 // 已載入後轉回直向或分頁被切走 → 送暫停訊息, 遊戲區只是藏起來, iframe 不重新載入
 const scr = document.getElementById('scr');
 const portraitQ = matchMedia('(orientation: portrait) and (max-width: 720px)'); // 與 CSS 的直拿條件一致
