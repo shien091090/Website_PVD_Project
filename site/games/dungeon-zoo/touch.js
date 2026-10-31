@@ -18,12 +18,12 @@
     escPause: true,   // 遊戲自己沒有 Esc 暫停
     keys: { up: 'up', down: 'down', left: 'left', right: 'right', a: 'z', b: 'x', c: 'space' },
     keycaps: { 'Z': 'A', 'X': 'B', '空白': 'icon' },
-    // 開場日曆 2 秒自動翻頁、表演中玩家不操作 → 整組不畫(也避免蓋到「共 4 天」與觀眾席 / 節目單);
-    // 暫停式引導只接受 A → 只畫 A(其餘會蓋到引導卡); 繩索(空白)只在地下城有用
+    // 暫停式引導(地下城與見習表演都會出現)只接受 A → 只畫 A(其餘會蓋到引導卡), 要先判斷, 否則表演場的整組不畫會把它擋掉;
+    // 開場日曆 2 秒自動翻頁、表演中玩家不操作 → 整組不畫(也避免蓋到「共 4 天」與觀眾席 / 節目單); 繩索(空白)只在地下城有用
     visible: function () {
       var sc = typeof scene !== 'undefined' ? scene : '', guide = (typeof GD !== 'undefined' && !!GD);
-      if (sc === 'calendar' || sc === 'show') return { dpad: false, a: false, b: false, c: false };
       if (guide) return { dpad: false, a: true, b: false, c: false };
+      if (sc === 'calendar' || sc === 'show') return { dpad: false, a: false, b: false, c: false };
       return { dpad: true, a: true, b: true, c: sc === 'dungeon' };
     },
     // 地下城可以斜走
