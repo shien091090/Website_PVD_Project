@@ -170,3 +170,21 @@ test('遊玩頁擋掉雙擊放大, 離開後恢復可縮放', async () => {
   assert.deepEqual(await ta(), ['auto', 'auto']);
   await ctx.close();
 });
+
+test('遊玩頁擋掉 iPhone 的雙指縮放手勢(網頁與遊戲框內都擋)', async () => {
+  const ctx = await browser.newContext(PHONE_L);
+  const page = await ctx.newPage();
+  await page.goto(srv.url + '#game/slime-tetris');
+  const f = await (await page.waitForSelector('#pg-game iframe')).contentFrame();
+  await f.waitForLoadState();
+  await page.waitForTimeout(300);
+  const blocked = (w, type) => w.evaluate(t => { const e = new Event(t, { bubbles: true, cancelable: true }); document.body.dispatchEvent(e); return e.defaultPrevented; }, type);
+  for (const t of ['gesturestart', 'gesturechange', 'dblclick']) {
+    assert.ok(await blocked(page, t), `網頁 ${t}`);
+    assert.ok(await blocked(f, t), `遊戲框 ${t}`);
+  }
+  await page.evaluate(() => { location.hash = '#play/slime-tetris'; });
+  await page.waitForTimeout(200);
+  assert.equal(await blocked(page, 'gesturestart'), false);
+  await ctx.close();
+});

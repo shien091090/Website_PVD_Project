@@ -29,6 +29,14 @@ function lap() {
   return s;
 }
 
+// iPhone Safari 不理會網頁的禁止縮放設定, 遊戲框裡的觸控也擋不住整頁縮放: 網頁與遊戲框都直接取消縮放手勢
+function blockZoom(win, when = () => true) {
+  const stop = e => { if (when()) e.preventDefault(); };
+  for (const t of ['gesturestart', 'gesturechange', 'gestureend', 'dblclick']) win.addEventListener(t, stop, { passive: false });
+  for (const t of ['touchstart', 'touchmove']) win.addEventListener(t, e => { if (e.touches.length > 1) stop(e); }, { passive: false });
+}
+blockZoom(window, () => document.body.dataset.pg === 'game');
+
 const post = type => frame?.contentWindow?.postMessage({ type }, location.origin);
 
 function sync() {
@@ -39,7 +47,7 @@ function sync() {
     frame.title = byCode(code).name;
     frame.allow = 'autoplay; fullscreen; gamepad';
     scr.appendChild(frame);
-    frame.addEventListener('load', () => frame?.focus());
+    frame.addEventListener('load', () => { if (!frame) return; blockZoom(frame.contentWindow); frame.focus(); });
   }
   const shouldPause = portraitQ.matches || document.hidden;
   if (frame && shouldPause !== paused) { paused = shouldPause; post(paused ? 'pvd:pause' : 'pvd:resume'); }
