@@ -153,3 +153,20 @@ test('試玩頁介紹: 窄螢幕標題不壓進橫幅, 開始鈕不用捲動就�
   assert.ok(b.y + b.height <= dl.y + dl.height, `開始鈕底 ${b.y + b.height} 超出介紹區底 ${dl.y + dl.height}`);
   await ctx.close();
 });
+
+test('遊玩頁擋掉雙擊放大, 離開後恢復可縮放', async () => {
+  const ctx = await browser.newContext(PHONE_L);
+  const page = await ctx.newPage();
+  await page.goto(srv.url + '#game/slime-tetris');
+  await page.locator('#pg-game iframe').waitFor();
+  const vp = () => page.locator('meta[name=viewport]').getAttribute('content');
+  const ta = () => page.evaluate(() => [getComputedStyle(document.documentElement).touchAction, getComputedStyle(document.body).touchAction]);
+  assert.match(await vp(), /maximum-scale=1/);
+  assert.match(await vp(), /user-scalable=no/);
+  assert.deepEqual(await ta(), ['manipulation', 'manipulation']);
+  await page.evaluate(() => { location.hash = '#play/slime-tetris'; });
+  await page.waitForTimeout(200);
+  assert.doesNotMatch(await vp(), /user-scalable/);
+  assert.deepEqual(await ta(), ['auto', 'auto']);
+  await ctx.close();
+});

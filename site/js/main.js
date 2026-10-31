@@ -76,6 +76,8 @@ function route() {
   if (routed && prev !== page) engage.flush(); // 換頁: 先送上一頁的前景時間, 各頁分開算
   routed = true;
   document.body.dataset.pg = page;
+  // 遊玩中鎖住縮放, 手機快速點兩下不會把網頁放大; 其他頁照常可以雙指放大
+  document.querySelector('meta[name=viewport]').content = 'width=device-width, initial-scale=1, viewport-fit=cover' + (page === 'game' ? ', maximum-scale=1, user-scalable=no' : '');
   if (page === 'play') { enterPlay(arg, prev === 'game'); if (prev !== 'play') track('play_page_view'); }
   else if (page === 'vote') { setState({ ...getState(), now: undefined }); loadState(); }
   else if (page === 'develop') renderDevelop();

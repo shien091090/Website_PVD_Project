@@ -432,6 +432,7 @@ img.logo { border: 0; object-fit: contain; }
 
 /* ---------- WebGame 遊玩頁: 返回 bar + 21:9 遊戲; 手機直拿擋住並要求轉橫 ---------- */
 #pg-game { background: var(--paper); }
+html:has(body[data-pg="game"]), body[data-pg="game"] { touch-action: manipulation; } /* 遊玩中點兩下不放大網頁 */
 .gbar { flex: none; height: 56px; display: flex; align-items: center; padding: 0 16px; border-bottom: 2px solid var(--ink); box-sizing: border-box; }
 .back { display: inline-flex; align-items: center; gap: 4px; border: 2px solid var(--ink); border-radius: 999px; padding: 7px 14px 7px 10px; font: 700 14px/1 var(--font); text-decoration: none; color: var(--ink); background: var(--paper); white-space: nowrap; }
 .back:hover { background: var(--ink); color: var(--on-ink); }
