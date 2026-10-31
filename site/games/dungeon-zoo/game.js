@@ -3,8 +3,11 @@
    邏輯與繪製分離: update(dt) 改狀態, render() 呼叫 Art.drawXxx。 */
 
 // ───────────────────────── 基本工具 ─────────────────────────
-const CW = (Art.canvas && Art.canvas.width) || 1280;
+const CW = (Art.canvas && Art.canvas.width) || 1680;
 const CH = (Art.canvas && Art.canvas.height) || 720;
+// 畫面 1680×720 = 原本 1280×720 的設計區置中、左右各多 OX。所有畫面先平移 OX 再畫, 介面座標維持原 1280 設計值;
+// 兩側由美術的整面底色補滿; 地下城鏡頭可視寬 = CW, 顯示範圍是設計座標 -OX ~ DW+OX。
+const DW = 1280, OX = (CW - DW) / 2;
 const DAY_MAX = 4;
 const START_GOLD = 40;                     // 第 1 天開局 / 重來開局的底金(見習表演沒有金幣)
 const WAIT_SECS = 5;                       // 暗號「過 5 秒」
@@ -16,7 +19,6 @@ const ROWS = 4;                            // 暗號節目單列數
 const TIERS = ['quiet', 'clap', 'cheer', 'frenzy'];
 const LOOSE_LINE = 92;                     // 失控線(全場平均熱度 %)
 const D2R = Math.PI / 180;
-const TM = () => !!(window.PVDX && PVDX.on);   // 觸控模式(touch.js): 少數畫面的資訊要躲開虛擬按鈕, 只在這個模式下換位置
 const rnd = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const dist = (ax, ay, bx, by) => Math.hypot(ax - bx, ay - by);
@@ -477,7 +479,7 @@ const TS = {
       const c = slotCenter(i); return { x: c.x, y: c.y, hh: 55 };
     }, ok: () => stageCount() === 3 },
   9: { where: () => scene === 'setup1' && G.day === 0, text: () => '[↓] 再 [Z] 下一步', keys: () => [],
-    tgt: () => (TM() ? { x: 1085, y: 460, hh: 30 } : { x: 1070, y: 505, hh: 35 }), ok: c => !!c.flags.next },
+    tgt: () => ({ x: 1070, y: 505, hh: 35 }), ok: c => !!c.flags.next },
   10: { where: () => scene === 'setup2' && G.day === 0, text: () => '[Z] 選暗號: 什麼時候演', keys: () => [],
     tgt: () => ({ x: 280, y: 100, hh: 26 }), ok: () => !!G.rows[0].cue },
   11: { where: () => scene === 'setup2' && G.day === 0, text: () => '[→] 再 [Z] 選表演卡: 演什麼', keys: () => [],
@@ -491,7 +493,7 @@ const TS = {
     geo: () => ({ x: 812, y: 46, bx: 700, by: 110, side: 'down' }), tick: (c, dt) => { c.t += dt; },
     ok: c => c.t >= 4 || (!!S && S.heat < 75 && c.t > 0.3) },
   19: { where: () => scene === 'prep', text: () => '[←][→] 選 [Z] 決定', keys: () => [],
-    geo: () => (PL.cur === 0 ? { x: TM() ? 480 : 440, y: 165, bx: TM() ? 480 : 440, by: 105, side: 'up' } : { x: 850, y: 235, bx: 850, by: 175, side: 'up' }),
+    geo: () => (PL.cur === 0 ? { x: 440, y: 165, bx: 440, by: 105, side: 'up' } : { x: 850, y: 235, bx: 850, by: 175, side: 'up' }),
     ok: c => !!c.flags.placeChosen },
   20: { where: () => scene === 'shop', text: () => '[←][→] 換分頁', keys: () => [], tgt: () => ({ x: 640, y: 85, hh: 25 }), ok: c => !!c.flags.tab },
   // 21~25: 地下城引導卡(見 GD)
@@ -654,7 +656,7 @@ function tutGeo(c, def) {
   const ty = side === 'down' ? tg.y + tg.hh : tg.y - tg.hh;
   const top = (scene === 'dungeon' ? 100 : 50) + 52;
   const by = clamp(side === 'down' ? ty + 60 : ty - 60, top, CH - 52);
-  const bx = clamp(tg.x, 170, CW - 170);
+  const bx = clamp(tg.x, 170, DW - 170);
   return { x: tg.x, y: ty, bx, by, side };
 }
 // mode: 'below' = 只畫 HUD 之下的(地下城); 'above' = 只畫 HUD 之上的(第 18 階段); 'all' = 全部(非地下城畫面, HUD 之後呼叫)
@@ -739,7 +741,7 @@ function guideGeo(id) {
     case 24: {
       const p = D.exit ? scr(D.exit.x, D.exit.y) : { x: 640, y: 400 };
       let sx = p.x, sy = p.y, edge = null;
-      if (p.x < 0 || p.x > 1280 || p.y < 100 || p.y > 720) { sx = clamp(p.x, 60, 1220); sy = clamp(p.y, 160, 660); edge = Math.atan2(p.y - sy, p.x - sx); }
+      if (p.x < -OX || p.x > DW + OX || p.y < 100 || p.y > 720) { sx = clamp(p.x, 60 - OX, 1220 + OX); sy = clamp(p.y, 160, 660); edge = Math.atan2(p.y - sy, p.x - sx); }
       const below = sy < 410;
       return Object.assign(base, { text: '這是出口 可以中途離開', spot: circ(sx, sy, 50), edgeAngle: edge,
         cardX: clamp(sx, 240, 1040), cardY: below ? sy + 144 : sy - 144, tipX: sx, tipY: below ? sy + 52 : sy - 52 });
@@ -966,9 +968,11 @@ function solidAtPoint(x, y) { return solidCell(Math.floor(x / TILE), Math.floor(
 function camOf() {
   if (!D) return { x: 0, y: 0 };
   const T = D.tamer;
-  const cx = clamp(T.x - 640, 0, Math.max(0, D.W * TILE - 1280));
+  // 可視寬 CW(1680): 地圖比可視寬窄時置中(兩側露出的是地下城背景底色), 否則跟著玩家並夾在地圖範圍內
+  const mapW = D.W * TILE;
+  const cx = mapW <= CW ? -(CW - mapW) / 2 : clamp(T.x - CW / 2, 0, mapW - CW);
   const cy = clamp(T.y - 310, 0, Math.max(0, D.H * TILE - 620));
-  return { x: cx, y: cy - 100 };   // 畫面 = 世界 − cam
+  return { x: cx + OX, y: cy - 100 };   // 設計座標畫面 = 世界 − cam(x 已含平移 OX)
 }
 function monStat(sp) {
   const base = SP[sp];
@@ -2077,7 +2081,7 @@ function setup1Input(dt) {
       else {
         Snd.play('ui_denied');
         if (G.day === 0) {   // 見習日一定要選滿 3 隻
-          setupHint('要選 3 隻上台 才能下一步', TM() ? 1085 : 1070, TM() ? 408 : 450);
+          setupHint('要選 3 隻上台 才能下一步', 1070, 450);
         }
       }
     }
@@ -3014,19 +3018,20 @@ function drawHazards(list, areaPhase, ox, oy, killer) {
   }
 }
 function tileKind(ch) { return ch === '#' ? 'wall' : ch === 'o' ? 'pillar' : ch === 'L' ? 'hurt' : ch === 'W' ? 'slow' : ch === 'G' ? 'bush' : 'floor'; }
-function onScr(x, y, m) { return x > -m && x < CW + m && y > 100 - m && y < CH + m; }
+function onScr(x, y, m) { return x > -OX - m && x < DW + OX + m && y > 100 - m && y < CH + m; }
 const STATIC_FLOAT = { hint: true, boost: true, confetti: true, unlock: true };
 
 function renderDungeon() {
   const T = D.tamer, st = D.style, cam = camOf(), ox = cam.x, oy = cam.y, fl = D.fi + 1;
   Art.drawBackground(ctx, bgState('dungeon'));
   ctx.save();
-  ctx.beginPath(); ctx.rect(0, 100, CW, CH - 100); ctx.clip();
+  ctx.beginPath(); ctx.rect(-OX, 100, CW, CH - 100); ctx.clip();
   const wy0 = oy + 100;
-  const c0 = Math.max(0, Math.floor(ox / TILE)), c1 = Math.min(D.W - 1, Math.floor((ox + 1280) / TILE));
+  // 地圖比可視寬窄時, 地圖左右兩側的欄一律補牆(不露出地圖外的底色)
+  const c0 = Math.floor((ox - OX) / TILE), c1 = Math.floor((ox - OX + CW) / TILE);
   const r0 = Math.max(0, Math.floor(wy0 / TILE)), r1 = Math.min(D.H - 1, Math.floor((wy0 + 620) / TILE));
   for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
-    const ch = D.grid[r][c], x = c * TILE + 30 - ox, y = r * TILE + 30 - oy;
+    const ch = (c < 0 || c >= D.W) ? '#' : D.grid[r][c], x = c * TILE + 30 - ox, y = r * TILE + 30 - oy;
     if (ch === 'X') Art.drawCrackWall(ctx, { x, y, dungeon: st, cracks: D.cracks[r * D.W + c] || 0 });
     else Art.drawTile(ctx, { x, y, dungeon: st, floor: fl, kind: tileKind(ch), nest: ch === 'n' });
   }
@@ -3232,11 +3237,10 @@ function renderSetup1() {
   drawBank(s, s.zone === 'grid');
   const b = G.bank[Math.min(s.cur, G.bank.length - 1)];
   if (b) {
-    if (TM()) { ctx.save(); ctx.translate(628, 555); ctx.scale(0.85, 0.85); Art.drawMonsterInfo(ctx, monsterInfoState(b, 0, 0)); ctx.restore(); }   // 觸控: 縮成 x 271~985, 夾在方向鍵與 B 鍵之間
-    else Art.drawMonsterInfo(ctx, monsterInfoState(b, 480, 555));
+    Art.drawMonsterInfo(ctx, monsterInfoState(b, 480, 555));
   }
-  Art.drawButton(ctx, { x: TM() ? 990 : 960, y: TM() ? 430 : 470, w: TM() ? 190 : 220, h: TM() ? 60 : 70, label: '下一步', selected: s.zone === 'next' });
-  if (G.day !== 0) Art.drawButton(ctx, { x: TM() ? 990 : 960, y: TM() ? 495 : 570, w: TM() ? 190 : 220, h: TM() ? 60 : 70, label: '回上一頁', selected: s.zone === 'back' });
+  Art.drawButton(ctx, { x: 960, y: 470, w: 220, h: 70, label: '下一步', selected: s.zone === 'next' });
+  if (G.day !== 0) Art.drawButton(ctx, { x: 960, y: 570, w: 220, h: 70, label: '回上一頁', selected: s.zone === 'back' });
   for (const f of UI.floats) Art.drawFloatText(ctx, { x: f.x, y: f.y - (f.kind === 'hint' ? 0 : f.t * 30), text: f.text, kind: f.kind, t: f.t, dur: f.dur });
   Art.drawHud(ctx, hudState());
   Art.drawStageCount(ctx, { x: 640, y: 25, count: stageCount(), max: stageLimit(), popT: Math.min(0.3, G.stagePopT), popDur: 0.3 });
@@ -3268,8 +3272,8 @@ function renderShop() {
     Art.drawShopItem(ctx, st);
   });
   if (s.zone === 'grid') lines = shopDetailLines(items[s.idx]);
-  Art.drawShopDetail(ctx, { x: 640, y: TM() ? 443 : 570, lines });
-  Art.drawButton(ctx, { x: TM() ? 940 : 1000, y: TM() ? 505 : 625, w: 200, h: 70, label: '離開', selected: s.zone === 'go' });
+  Art.drawShopDetail(ctx, { x: 640, y: 570, lines });
+  Art.drawButton(ctx, { x: 1000, y: 625, w: 200, h: 70, label: '離開', selected: s.zone === 'go' });
   for (const f of UI.floats) Art.drawFloatText(ctx, { x: f.x, y: f.y - f.t * 30, text: f.text, kind: f.kind, t: f.t, dur: f.dur });
   Art.drawHud(ctx, hudState());
   renderTutorial('all');
@@ -3281,16 +3285,20 @@ function renderShop() {
 }
 
 function render() {
+  ctx.save(); ctx.translate(OX, 0);
+  try { renderScene(); } finally { ctx.restore(); }
+}
+function renderScene() {
   switch (scene) {
     case 'title': Art.drawTitle(ctx, { t: TITLE_T }); break;
     case 'calendar': Art.drawCalendar(ctx, { day: G.day, dayMax: DAY_MAX, t: Math.min(CAL.t, CAL.dur), dur: CAL.dur, log: G.log.slice() }); break;
     case 'intermission': Art.drawIntermission(ctx, { t: IM.t, ready: IM.t >= 0.6, monsters: IM.mons, day: G.day, weapon: G.weapon }); break;
     case 'prep': {
       Art.drawBackground(ctx, bgState('prep'));
-      Art.drawPlaceCard(ctx, { x: TM() ? 480 : 440, y: 385, w: 440, h: 440, place: PL.stage === 'dungeon' ? 'dungeon' : 'show',
+      Art.drawPlaceCard(ctx, { x: 440, y: 385, w: 440, h: 440, place: PL.stage === 'dungeon' ? 'dungeon' : 'show',
         note: PL.stage === 'dungeon' ? '抓魔物 · 找石碑變強' : '上台表演 · 賺滿意度', selected: PL.zone === 'card' && PL.cur === 0 });
       Art.drawPlaceCard(ctx, { x: 850, y: 385, w: 260, h: 300, place: 'shop', note: '武器 · 暗號 · 表演卡', selected: PL.zone === 'card' && PL.cur === 1 });
-      Art.drawButton(ctx, { x: TM() ? 985 : 1060, y: TM() ? 420 : 640, w: TM() ? 170 : 190, h: 60, label: Snd.muted ? '聲音 關' : '聲音 開', selected: PL.zone === 'sound' });
+      Art.drawButton(ctx, { x: 1060, y: 640, w: 190, h: 60, label: Snd.muted ? '聲音 關' : '聲音 開', selected: PL.zone === 'sound' });
       if (PL.notice) Art.drawFloatText(ctx, { x: 640, y: 110, text: PL.notice.text, kind: 'unlock', t: PL.notice.t, dur: 1.5 });
       Art.drawHud(ctx, hudState());
       renderTutorial('all');
@@ -3298,7 +3306,7 @@ function render() {
     }
     case 'select':
       Art.drawBackground(ctx, bgState('select'));
-      DUNGEON_ORDER.forEach((id, i) => Art.drawDungeonCard(ctx, { x: 400 + 480 * i, y: TM() ? 330 : 390, dungeon: id, name: DUNGEONS[id].name, floors: DUNGEONS[id].floors.length,
+      DUNGEON_ORDER.forEach((id, i) => Art.drawDungeonCard(ctx, { x: 400 + 480 * i, y: 390, dungeon: id, name: DUNGEONS[id].name, floors: DUNGEONS[id].floors.length,
         species: DUNGEONS[id].species.slice(), chestsLeft: leftCount(id, 'chests', 'gold'), keyLeft: leftCount(id, 'chests', 'key'), boostsLeft: leftCount(id, 'boosts'),
         open: !!G.unlocked[id], condition: G.unlocked[id] ? '' : '在湖畔鐘塔第 2 層的寶箱找到鑰匙', selected: i === SEL.cur }));
       Art.drawHud(ctx, hudState());
@@ -3341,14 +3349,16 @@ function render() {
 // ───────────────────────── 啟動 ─────────────────────────
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
-let dpr = 1;
+let dpr = 1;   // 實際像素 / 邏輯像素(顯示大小 × devicePixelRatio)
 function resize() {
-  dpr = window.devicePixelRatio || 1;
+  // 顯示大小由 index.html 的 CSS 決定(21:9 等比、置中、不裁切); 這裡只依實際顯示寬度配置畫布像素, 維持清晰
+  const rect = canvas.getBoundingClientRect();
+  const cssW = rect.width || Math.min(window.innerWidth, window.innerHeight * CW / CH) || CW;
+  dpr = Math.min(Math.max(cssW * (window.devicePixelRatio || 1) / CW, 0.5), 2.5);
   canvas.width = Math.round(CW * dpr); canvas.height = Math.round(CH * dpr);
-  const s = Math.min(window.innerWidth / CW, window.innerHeight / CH);
-  canvas.style.width = Math.floor(CW * s) + 'px'; canvas.style.height = Math.floor(CH * s) + 'px';
 }
 window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', function () { setTimeout(resize, 100); });
 resize();
 
 newRun(false);

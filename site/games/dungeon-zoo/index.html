@@ -7,11 +7,13 @@
 <style>
   html, body { margin: 0; height: 100%; background: #111; overflow: hidden; }
   body { display: flex; align-items: center; justify-content: center; }
-  canvas { display: block; background: #000; }
+  /* 21:9(1680×720)等比縮放: 寬 = 視窗寬與「視窗高 × 7/3」取小, 高依比例自動, 置中、不裁切、不變形 */
+  canvas { display: block; background: #000; width: min(100vw, calc(100vh * 7 / 3)); height: auto; aspect-ratio: 1680 / 720; }
+  @supports (height: 100dvh) { canvas { width: min(100vw, calc(100dvh * 7 / 3)); } }
 </style>
 </head>
 <body>
-<canvas id="c" width="1280" height="720"></canvas>
+<canvas id="c" width="1680" height="720"></canvas>
 <script src="art/art.js"></script>
 <script src="audio/sound.js"></script>
 <script src="game.js"></script>

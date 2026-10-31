@@ -6,6 +6,8 @@
   // ───────────── 基本工具 ─────────────
   var FONT = '"Microsoft JhengHei","PingFang TC","Noto Sans TC","Heiti TC",sans-serif';
   var TAU = Math.PI * 2;
+  // 畫面寬 1680: 遊戲在 game.js 以 1280 為設計寬度、左右各留 200 並平移, 這裡的整面底色一律從 VX 畫到 VX+VW 填滿兩側
+  var VX = -200, VW = 1680;
   function N(v, d) { return (typeof v === 'number' && isFinite(v)) ? v : d; }
   function S(v, d) { return (typeof v === 'string') ? v : d; }
   function B(v) { return v === true; }
@@ -934,7 +936,7 @@
   function prepPlaza(ctx) {
     var g = ctx.createLinearGradient(0, 0, 0, 720);
     g.addColorStop(0, '#1a1530'); g.addColorStop(0.62, '#241c34'); g.addColorStop(0.63, '#2a2230'); g.addColorStop(1, '#16121c');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, 1280, 720);
+    ctx.fillStyle = g; ctx.fillRect(VX, 0, VW, 720);
     ctx.save(); ctx.globalAlpha = 0.35;
     ctx.beginPath(); ctx.moveTo(380, 450); ctx.lineTo(380, 300); ctx.quadraticCurveTo(470, 190, 640, 170); ctx.quadraticCurveTo(810, 190, 900, 300); ctx.lineTo(900, 450); ctx.closePath();
     ctx.fillStyle = '#3a2840'; ctx.fill();
@@ -945,17 +947,17 @@
     for (var li = 0; li < 2; li++) {
       var y0 = li === 0 ? 64 : 92;
       ctx.strokeStyle = 'rgba(120,100,130,0.4)'; ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.moveTo(0, y0); ctx.quadraticCurveTo(320, y0 + 50, 640, y0); ctx.quadraticCurveTo(960, y0 + 50, 1280, y0); ctx.stroke();
-      for (var b = 0; b <= 16; b++) {
-        var bx = b * 80, half = bx <= 640 ? bx / 640 : (bx - 640) / 640, by = y0 + 50 * 2 * half * (1 - half);
-        circle(ctx, bx, by + 4, 4); ctx.fillStyle = ['rgba(255,214,120,0.55)', 'rgba(255,143,200,0.5)', 'rgba(140,210,255,0.5)'][(b + li) % 3]; ctx.fill();
+      ctx.beginPath(); for (var sw = -1; sw <= 2; sw++) { ctx.moveTo(sw * 640, y0); ctx.quadraticCurveTo(sw * 640 + 320, y0 + 50, sw * 640 + 640, y0); } ctx.stroke();
+      for (var b = -2; b <= 18; b++) {
+        var bx = b * 80, half = (((bx % 640) + 640) % 640) / 640, by = y0 + 50 * 2 * half * (1 - half);
+        circle(ctx, bx, by + 4, 4); ctx.fillStyle = ['rgba(255,214,120,0.55)', 'rgba(255,143,200,0.5)', 'rgba(140,210,255,0.5)'][(((b + li) % 3) + 3) % 3]; ctx.fill();
       }
     }
-    ctx.fillStyle = 'rgba(255,255,255,0.03)'; ctx.fillRect(0, 452, 1280, 3);
+    ctx.fillStyle = 'rgba(255,255,255,0.03)'; ctx.fillRect(VX, 452, VW, 3);
   }
   function drawBackground(ctx, s) {
     var scene = S(s && s.scene, 'select');
-    ctx.beginPath(); ctx.rect(0, 0, 1280, 720); ctx.clip();
+    ctx.beginPath(); ctx.rect(VX, 0, VW, 720); ctx.clip();
     if (scene === 'prep') {
       prepPlaza(ctx);
       // 標題「第 N 天 · 出發前 / 表演前」(中心 (640,650), 約 400×40; 放在下方讓開第 18 階段卡片上方的泡泡)
@@ -968,23 +970,23 @@
     }
     var g = ctx.createLinearGradient(0, 0, 0, 720);
     g.addColorStop(0, '#1a2030'); g.addColorStop(1, '#10131b');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, 1280, 720);
+    ctx.fillStyle = g; ctx.fillRect(VX, 0, VW, 720);
     var tint = BG_TINT[scene];
     if (tint) {
       var rg = ctx.createRadialGradient(640, 380, 60, 640, 380, 760);
       rg.addColorStop(0, tint); rg.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = rg; ctx.fillRect(0, 0, 1280, 720);
+      ctx.fillStyle = rg; ctx.fillRect(VX, 0, VW, 720);
     }
     ctx.save();
     ctx.globalAlpha = 0.06; ctx.strokeStyle = '#8fa0c8'; ctx.lineWidth = 1;
-    for (var i = 0; i <= 1480; i += 40) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i - 200, 720); ctx.stroke(); }
+    for (var i = -200; i <= 1680; i += 40) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i - 200, 720); ctx.stroke(); }
     ctx.restore();
     // 結算畫面: 背景壓暗, 讓面板跳出來
     if (scene === 'dresult' || scene === 'sresult' || scene === 'result') {
-      ctx.fillStyle = 'rgba(4,6,10,0.6)'; ctx.fillRect(0, 0, 1280, 720);
+      ctx.fillStyle = 'rgba(4,6,10,0.6)'; ctx.fillRect(VX, 0, VW, 720);
       var vg = ctx.createRadialGradient(640, 390, 200, 640, 390, 800);
       vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.5)');
-      ctx.fillStyle = vg; ctx.fillRect(0, 0, 1280, 720);
+      ctx.fillStyle = vg; ctx.fillRect(VX, 0, VW, 720);
     }
   }
 
@@ -2412,16 +2414,18 @@
   }
 
   function drawShowArena(ctx) {
-    ctx.fillStyle = '#10131b'; ctx.fillRect(0, 0, 1280, 720);
+    ctx.fillStyle = '#10131b'; ctx.fillRect(VX, 0, VW, 720);
     // 觀眾席(上 / 下): 階梯座位
     function stands(y0, y1, top) {
       var g = ctx.createLinearGradient(0, y0, 0, y1);
       g.addColorStop(0, top ? '#2a1f30' : '#3a2a3a'); g.addColorStop(1, top ? '#3a2a3a' : '#2a1f30');
-      ctx.fillStyle = g; ctx.fillRect(40, y0, 1200, y1 - y0);
+      ctx.fillStyle = g; ctx.fillRect(VX, y0, VW, y1 - y0);
       ctx.fillStyle = 'rgba(0,0,0,0.25)';
-      for (var k = 1; k < 4; k++) ctx.fillRect(40, y0 + (y1 - y0) * k / 4, 1200, 2);
+      for (var k = 1; k < 4; k++) ctx.fillRect(VX, y0 + (y1 - y0) * k / 4, VW, 2);
     }
     stands(56, 136, true); stands(582, 662, false);
+    // 場地外側(畫面兩側加寬的部分)延伸同色地板, 場地框內才是魔物活動範圍
+    ctx.fillStyle = '#23222c'; ctx.fillRect(VX, 136, VW, 446);
     // 場地
     rr(ctx, 60, 146, 1160, 420, 18); ctx.fillStyle = '#2b2a35'; ctx.fill();
     ctx.save(); rr(ctx, 60, 146, 1160, 420, 18); ctx.clip();
@@ -2433,7 +2437,7 @@
     ctx.restore();
     rr(ctx, 60, 146, 1160, 420, 18); ctx.strokeStyle = '#4a4458'; ctx.lineWidth = 3; ctx.stroke();
     // 縮小節目單底
-    ctx.fillStyle = '#0c0f16'; ctx.fillRect(0, 666, 1280, 54);
+    ctx.fillStyle = '#0c0f16'; ctx.fillRect(VX, 666, VW, 54);
   }
 
   function paintShowMonster(ctx, s, opt) {
@@ -2865,7 +2869,8 @@
   function drawHeatAlert(ctx, s) {
     var t = Math.max(0, N(s.t, 0));
     var a = 0.18 + 0.5 * (0.5 - 0.5 * Math.cos(TAU * t / 0.8));
-    var E = 40, W = 1280, H = 720, c0 = 'rgba(255,59,74,' + a.toFixed(3) + ')', c1 = 'rgba(255,59,74,0)';
+    ctx.translate(VX, 0);
+    var E = 40, W = VW, H = 720, c0 = 'rgba(255,59,74,' + a.toFixed(3) + ')', c1 = 'rgba(255,59,74,0)';
     var g;
     g = ctx.createLinearGradient(0, 0, 0, E); g.addColorStop(0, c0); g.addColorStop(1, c1); ctx.fillStyle = g; ctx.fillRect(0, 0, W, E);
     g = ctx.createLinearGradient(0, H, 0, H - E); g.addColorStop(0, c0); g.addColorStop(1, c1); ctx.fillStyle = g; ctx.fillRect(0, H - E, W, E);
@@ -2935,7 +2940,7 @@
   function drawExitPrompt(ctx, s) {
     var t = Math.max(0, N(s.t, 1)), choice = Math.floor(N(s.choice, 1)) === 0 ? 0 : 1;
     var q = clamp(t / 0.2, 0, 1), ease = 1 - Math.pow(1 - q, 3);
-    ctx.fillStyle = 'rgba(4,6,10,' + (0.6 * (0.4 + 0.6 * ease)).toFixed(3) + ')'; ctx.fillRect(0, 0, 1280, 720);
+    ctx.fillStyle = 'rgba(4,6,10,' + (0.6 * (0.4 + 0.6 * ease)).toFixed(3) + ')'; ctx.fillRect(VX, 0, VW, 720);
     ctx.translate(640, 400); ctx.scale(0.9 + 0.1 * ease, 0.9 + 0.1 * ease); ctx.globalAlpha *= 0.3 + 0.7 * ease;
     ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 18;
     rr(ctx, -280, -120, 560, 240, 18); ctx.fillStyle = '#1e2536'; ctx.fill(); ctx.restore();
@@ -3090,7 +3095,7 @@
   function drawDownFx(ctx, s) {
     var x = N(s.x, 640), y = N(s.y, 410);
     var dur = N(s.dur, 1.5) > 0 ? N(s.dur, 1.5) : 1.5, t = clamp(N(s.t, 0), 0, dur);
-    ctx.beginPath(); ctx.rect(0, 0, 1280, 720); ctx.clip();
+    ctx.beginPath(); ctx.rect(VX, 0, VW, 720); ctx.clip();
     if (t < 0.3) {
       var q = t / 0.3;
       for (var k = 0; k < 2; k++) {
@@ -3103,7 +3108,7 @@
     var dq = clamp((t - 0.3) / 0.4, 0, 1);
     var g = ctx.createRadialGradient(x, y, 110, x, y, 170);
     g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,' + (0.6 * dq).toFixed(3) + ')');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, 1280, 720);
+    ctx.fillStyle = g; ctx.fillRect(VX, 0, VW, 720);
     var cause = S(s.cause, '');
     if (!cause) return;
     var pq = clamp((t - 0.3) / 0.2, 0, 1), sc = 0.6 + 0.4 * (1 - Math.pow(1 - pq, 3));
@@ -3396,8 +3401,8 @@
     var phase = S(s.phase, 'select');
     var dg = phase === 'dungeon';
     var H = dg ? 100 : 50;
-    ctx.fillStyle = 'rgba(12,15,22,0.94)'; ctx.fillRect(0, 0, 1280, H);
-    ctx.fillStyle = '#2c3446'; ctx.fillRect(0, H - 2, 1280, 2);
+    ctx.fillStyle = 'rgba(12,15,22,0.94)'; ctx.fillRect(VX, 0, VW, H);
+    ctx.fillStyle = '#2c3446'; ctx.fillRect(VX, H - 2, VW, 2);
     var day = Math.floor(N(s.day, 1)), dmax = Math.floor(N(s.dayMax, 4));
     var show = phase === 'show';
     T(ctx, day <= 0 ? '見習日' : '第 ' + day + ' / ' + dmax + ' 天', 20, 25, { size: 20, align: 'left', color: day <= 0 ? P.select : P.text, maxW: show ? 118 : 130 });
@@ -3463,19 +3468,19 @@
   // ───────────── 開始畫面 ─────────────
   function drawTitle(ctx, s) {
     var t = Math.max(0, N(s.t, 0));
-    ctx.beginPath(); ctx.rect(0, 0, 1280, 720); ctx.clip(); // 遊行的魔物從畫面外走進來
+    ctx.beginPath(); ctx.rect(VX, 0, VW, 720); ctx.clip(); // 遊行的魔物從畫面外走進來
     var g = ctx.createLinearGradient(0, 0, 0, 720);
     g.addColorStop(0, '#1c1630'); g.addColorStop(0.6, '#241a2e'); g.addColorStop(1, '#120e18');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, 1280, 720);
+    ctx.fillStyle = g; ctx.fillRect(VX, 0, VW, 720);
     // 兩道聚光燈慢慢擺(背景氣氛, 低不透明度)
     for (var k = 0; k < 2; k++) {
-      var ox = k === 0 ? 300 : 980, sw = Math.sin(t * 0.6 + k * 2) * 0.25;
+      var ox = k === 0 ? 150 : 1130, sw = Math.sin(t * 0.6 + k * 2) * 0.25;
       ctx.save(); ctx.translate(ox, -20); ctx.rotate(sw + (k === 0 ? -0.15 : 0.15));
       ctx.beginPath(); ctx.moveTo(-20, 0); ctx.lineTo(20, 0); ctx.lineTo(170, 560); ctx.lineTo(-170, 560); ctx.closePath();
       ctx.fillStyle = 'rgba(255,240,200,0.06)'; ctx.fill(); ctx.restore();
     }
     // 舞台
-    ell(ctx, 640, 520, 620, 110, 0); ctx.fillStyle = '#2b2a35'; ctx.fill(); ctx.strokeStyle = '#4a4458'; ctx.lineWidth = 3; ctx.stroke();
+    ell(ctx, 640, 520, 820, 110, 0); ctx.fillStyle = '#2b2a35'; ctx.fill(); ctx.strokeStyle = '#4a4458'; ctx.lineWidth = 3; ctx.stroke();
     ell(ctx, 640, 520, 380, 64, 0); ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 2; ctx.stroke();
     // 遊戲名
     ctx.save(); ctx.translate(640, 170);
@@ -3490,7 +3495,7 @@
     var parade = ['monkey', 'lily', 'hedgehog', 'penguin', 'parrot', 'tanuki', 'beetle'];
     for (var i = 0; i < parade.length; i++) {
       var sp = parade[i];
-      var x = ((t * 70 + i * 215) % 1505) - 110, y = 505 + (i % 2) * 22;
+      var x = ((t * 70 + i * 272) % 1905) - 310, y = 505 + (i % 2) * 22;
       var dy = 0;
       if (sp === 'monkey') { var hp = (t % 1.0) / 0.3; if (hp < 1) dy = -Math.sin(Math.PI * hp) * 8; }
       ell(ctx, x, y + 26, 22, 5, 0); ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fill();
@@ -3519,10 +3524,10 @@
     var log = Array.isArray(s.log) ? s.log : [];
     var g = ctx.createLinearGradient(0, 0, 0, 720);
     g.addColorStop(0, '#1e1a24'); g.addColorStop(1, '#100d14');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, 1280, 720);
+    ctx.fillStyle = g; ctx.fillRect(VX, 0, VW, 720);
     // 桌面
-    ctx.fillStyle = '#2a2018'; ctx.fillRect(0, 520, 1280, 200);
-    ctx.fillStyle = 'rgba(255,255,255,0.04)'; ctx.fillRect(0, 520, 1280, 3);
+    ctx.fillStyle = '#2a2018'; ctx.fillRect(VX, 520, VW, 200);
+    ctx.fillStyle = 'rgba(255,255,255,0.04)'; ctx.fillRect(VX, 520, VW, 3);
     // 桌曆
     ctx.save(); ctx.translate(640, 300);
     ctx.beginPath(); ctx.moveTo(-280, 170); ctx.lineTo(-240, 210); ctx.lineTo(240, 210); ctx.lineTo(280, 170); ctx.closePath(); ctx.fillStyle = '#4a3a2c'; ctx.fill();
@@ -3725,26 +3730,27 @@
     var mons = Array.isArray(s.monsters) ? s.monsters : [];       // 全部畫出, 不截斷、不收合
     var n = mons.length, day = clamp(Math.floor(N(s.day, 0)), 0, 99), wp = wpKey(s.weapon);
     var allInT = 2.05 + 0.25 * n;
-    ctx.beginPath(); ctx.rect(0, 0, 1280, 720); ctx.clip();
+    ctx.beginPath(); ctx.rect(VX, 0, VW, 720); ctx.clip();
     // 夜空 + 幾顆星(避開帳篷)
     var g = ctx.createLinearGradient(0, 0, 0, 720);
     g.addColorStop(0, '#1c1630'); g.addColorStop(0.6, '#241a2e'); g.addColorStop(1, '#120e18');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, 1280, 720);
+    ctx.fillStyle = g; ctx.fillRect(VX, 0, VW, 720);
     for (var st = 0; st < 14; st++) {
-      var sx = 40 + hash01(st, 1) * 1200, sy = 170 + hash01(st, 2) * 150;
+      var sx = -160 + hash01(st, 1) * 1600, sy = 170 + hash01(st, 2) * 150;
       if (sx > 340 && sx < 940) continue;
       circle(ctx, sx, sy, 1.5 + hash01(st, 3)); ctx.fillStyle = 'rgba(255,240,200,' + (0.25 + 0.25 * Math.sin(t * 2 + st)).toFixed(2) + ')'; ctx.fill();
     }
     // 地面(y 600 起)+ 通往門口的紅地毯
-    ctx.fillStyle = '#2a2230'; ctx.fillRect(0, 600, 1280, 120);
-    ctx.fillStyle = 'rgba(255,255,255,0.05)'; ctx.fillRect(0, 600, 1280, 3);
-    ctx.beginPath(); ctx.moveTo(0, 598); ctx.lineTo(700, 598); ctx.lineTo(720, 622); ctx.lineTo(0, 622); ctx.closePath();
+    ctx.fillStyle = '#2a2230'; ctx.fillRect(VX, 600, VW, 120);
+    ctx.fillStyle = 'rgba(255,255,255,0.05)'; ctx.fillRect(VX, 600, VW, 3);
+    ctx.beginPath(); ctx.moveTo(VX, 598); ctx.lineTo(700, 598); ctx.lineTo(720, 622); ctx.lineTo(VX, 622); ctx.closePath();
     ctx.fillStyle = '#8a2a36'; ctx.fill();
-    ctx.fillStyle = 'rgba(255,210,74,0.55)'; ctx.fillRect(0, 618, 714, 2);
+    ctx.fillStyle = 'rgba(255,210,74,0.55)'; ctx.fillRect(VX, 618, 714 - VX, 2);
     // 旗串(都在 y 520 以上)、帳篷、門、進門特效、右邊布置
     var fxE = (t >= allInT && t < allInT + 0.8) ? (t - allInT) / 0.8 : -1;
     var flagSw = fxE >= 0 ? Math.sin(fxE * Math.PI * 5) * 0.45 * (1 - fxE) : 0;
     imBunting(ctx, 0, 300, 640, 200, 60, 14, t, 0);
+    imBunting(ctx, -200, 290, 0, 300, -10, 5, t, 1);   // 畫面加寬的左側: 旗串接著往外延伸
     imBunting(ctx, 640, 200, 1201, 300, 70, 14, t, 2);
     imTent(ctx, t, flagSw);
     imDoor(ctx, t, allInT);
@@ -3767,7 +3773,7 @@
       tk = 1.75 + 0.25 * k;
       if (t >= tk) continue;
       var x = 80 - 80 * k + 320 * t;
-      if (x < -40) break;                       // 後面的更左, 都還在畫面外
+      if (x < VX - 40) break;                       // 後面的更左, 都還在畫面外
       sp = k === 0 ? '' : spKey(mons[k - 1]);
       var dy = -Math.abs(Math.sin(x / 80 * Math.PI)) * 4;   // 每走 80 像素一步的上下晃
       if (sp === 'monkey') { var hp = ((t + k * 0.37) % 1.0) / 0.3; if (hp < 1) dy = -Math.sin(Math.PI * hp) * 10; }
@@ -3982,7 +3988,7 @@
 
     if (ph === 'card') {
       // 全畫面壓暗 0.45(地圖、馴獸師、魔物仍看得到)+ 卡片 720×220 @ (640,380); 前 0.25 秒 0.6 → 1.0 倍(緩出, 不過衝)
-      ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fillRect(0, 0, 1280, 720);
+      ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fillRect(VX, 0, VW, 720);
       var q = clamp(t / 0.25, 0, 1), e = 1 - Math.pow(1 - q, 3), sc = 0.6 + 0.4 * e;
       ctx.translate(640, 380); ctx.scale(sc, sc); ctx.globalAlpha *= 0.35 + 0.65 * e;
       ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 18; ctx.shadowOffsetY = 6;
@@ -3996,7 +4002,7 @@
       // 0.5 秒: 中心 (640,380) → (640,25)、720×220 → 400×40(緩出); 壓暗 0.45 → 0; 卡片內容淡出、任務列內容淡入
       var p = clamp(t / dur, 0, 1), k = 1 - Math.pow(1 - p, 3);
       var cy = 380 + (25 - 380) * k, w = 720 + (400 - 720) * k, h = 220 + (40 - 220) * k;
-      if (k < 1) { ctx.fillStyle = 'rgba(0,0,0,' + (0.45 * (1 - k)).toFixed(3) + ')'; ctx.fillRect(0, 0, 1280, 720); }
+      if (k < 1) { ctx.fillStyle = 'rgba(0,0,0,' + (0.45 * (1 - k)).toFixed(3) + ')'; ctx.fillRect(VX, 0, VW, 720); }
       ctx.translate(640, cy);
       var r = 20 + (11 - 20) * k;
       rr(ctx, -w / 2, -h / 2, w, h, r); ctx.fillStyle = 'rgba(30,37,52,0.98)'; ctx.fill();
@@ -4076,12 +4082,12 @@
     var k = 1.2 / dur, tt = t * k; // 換算成 1.2 秒的時間軸
     var kind0 = S(s.kind, 'cue'), kind = kind0 === 'program' || kind0 === 'key' ? kind0 : 'cue', key = S(s.key, '');
     var fx = N(s.fromX, 640), fy = N(s.fromY, 420);
-    ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, 0, 1280, 720);
+    ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(VX, 0, VW, 720);
     var q = easeOut(tt / 0.6), gq = clamp((tt - 0.6) / 0.6, 0, 1);
     // 放射光芒(卡片飛到一半開始出現, 一直慢慢轉)
     var ra = clamp((tt - 0.25) / 0.4, 0, 1);
     if (ra > 0) {
-      ctx.save(); ctx.beginPath(); ctx.rect(0, 0, 1280, 720); ctx.clip();
+      ctx.save(); ctx.beginPath(); ctx.rect(VX, 0, VW, 720); ctx.clip();
       ctx.translate(640, 320); ctx.rotate(now() / 3000);
       for (var r = 0; r < 12; r++) {
         ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, 520, r * TAU / 12, r * TAU / 12 + TAU / 30); ctx.closePath();
@@ -4128,7 +4134,7 @@
   function drawFloorFx(ctx, s) {
     var dur = N(s.dur, 1) > 0 ? N(s.dur, 1) : 1, p = clamp(N(s.t, 0) / dur, 0, 1);
     var dark = p < 0.4 ? p / 0.4 : 1 - (p - 0.4) / 0.6;
-    ctx.fillStyle = 'rgba(0,0,0,' + clamp(dark, 0, 1).toFixed(3) + ')'; ctx.fillRect(0, 0, 1280, 720);
+    ctx.fillStyle = 'rgba(0,0,0,' + clamp(dark, 0, 1).toFixed(3) + ')'; ctx.fillRect(VX, 0, VW, 720);
     if (p < 0.4) return;
     var ta = p < 0.5 ? (p - 0.4) / 0.1 : (p < 0.8 ? 1 : 1 - (p - 0.8) / 0.2);
     var fl = Math.max(1, Math.floor(N(s.floor, 1))), fm = Math.max(fl, Math.floor(N(s.floorMax, fl)));
@@ -4258,7 +4264,7 @@
       circle(ctx, cx, cy, 70 * (1 - fq)); ctx.fillStyle = 'rgba(255,240,190,' + (0.8 * (1 - fq)).toFixed(3) + ')'; ctx.fill();
     }
     var cnt = clamp(24 + 8 * n, 24, 120), fade = p < 0.7 ? 1 : 1 - (p - 0.7) / 0.3;
-    ctx.save(); ctx.beginPath(); ctx.rect(0, 0, 1280, 720); ctx.clip();
+    ctx.save(); ctx.beginPath(); ctx.rect(VX, 0, VW, 720); ctx.clip();
     for (var i = 0; i < cnt; i++) {
       var a = hash01(i, 2) * TAU, sp = 260 + 520 * hash01(i, 3), e = easeOut(p);
       var px = cx + Math.cos(a) * sp * e * 1.25, py = cy + Math.sin(a) * sp * e * 0.85 + 160 * p * p;
@@ -4361,13 +4367,13 @@
     var pt = phase === 'pause' ? clamp(N(s.pauseT, 0), 0, pD) * (0.8 / pD) : 0.8;   // 換算成 0.8 秒軸
     var A = grand ? 0.5 : 0.6;
     var sp = phase === 'pause' || grand ? null : guideSpot(s);
-    ctx.beginPath(); ctx.rect(0, 0, 1280, 720); ctx.clip();
+    ctx.beginPath(); ctx.rect(VX, 0, VW, 720); ctx.clip();
     // ① 壓暗(pause 前 0.25 秒漸暗; outro 跟著淡出)+ 聚光燈挖空(柔邊往內)
     var dimA = A * (phase === 'pause' ? clamp(pt / 0.25, 0, 1) : 1) * fade;
     if (dimA > 0.001) {
-      if (!sp) { ctx.fillStyle = 'rgba(0,0,0,' + dimA.toFixed(3) + ')'; ctx.fillRect(0, 0, 1280, 720); }
+      if (!sp) { ctx.fillStyle = 'rgba(0,0,0,' + dimA.toFixed(3) + ')'; ctx.fillRect(VX, 0, VW, 720); }
       else {
-        ctx.beginPath(); ctx.rect(0, 0, 1280, 720); spotSub(ctx, sp, 0);
+        ctx.beginPath(); ctx.rect(VX, 0, VW, 720); spotSub(ctx, sp, 0);
         ctx.fillStyle = 'rgba(0,0,0,' + dimA.toFixed(3) + ')'; ctx.fill('evenodd');
         var SN = 6;
         for (var k = 0; k < SN; k++) {
@@ -4436,7 +4442,7 @@
         var ts = 0.3 + 1.9 * hash01(c, 3), v = 300 + 180 * hash01(c, 4), ce = el - ts;
         if (ce <= 0) continue;
         var cyy = -14 + v * ce; if (cyy > 734) continue;
-        var cxx = 30 + 1220 * hash01(c, 5) + Math.sin(ce * 3 + c) * 22;
+        var cxx = VX + 30 + (VW - 60) * hash01(c, 5) + Math.sin(ce * 3 + c) * 22;
         ctx.save(); ctx.translate(cxx, cyy); ctx.rotate(ce * (3 + 4 * hash01(c, 6)) + c);
         ctx.fillStyle = CONF_COL[c % CONF_COL.length];
         if (c % 4 === 0) { ctx.fillRect(-2, -10, 4, 20); } else ctx.fillRect(-6, -3.5, 12, 7 * Math.abs(Math.cos(ce * 5 + c)) + 1);
@@ -4523,7 +4529,7 @@
 
   // ───────────── 匯出 ─────────────
   window.Art = {
-    canvas: { width: 1280, height: 720 },
+    canvas: { width: 1680, height: 720 },
     palette: P,
     drawBackground: wrap(drawBackground),
     drawTitle: wrap(drawTitle),
