@@ -392,7 +392,7 @@ function inputReset() {
   pressed = {};
 }
 window.addEventListener('keydown', function (e) {
-  // M: 靜音開關(通用鍵, 哪個畫面都能按; 和出發準備的聲音按鈕切同一個設定)
+  // M: 靜音開關(通用鍵, 哪個畫面都能按)
   if (e.code === 'KeyM' || e.key === 'm' || e.key === 'M') {
     e.preventDefault();
     if (e.repeat || (window.PVDX && PVDX.paused)) return;
@@ -888,7 +888,6 @@ function prepInput(dt) {
   if (PL.zone === 'card') {
     if (pressed.left && PL.cur > 0) { PL.cur--; Snd.play('ui_move'); }
     else if (pressed.right && PL.cur < 1) { PL.cur++; Snd.play('ui_move'); }
-    else if (pressed.down) { PL.zone = 'sound'; Snd.play('ui_move'); }
     else if (pressed.z) {
       tut('placeChosen');
       Snd.play('ui_confirm');
@@ -2984,8 +2983,12 @@ function update(dt) {
 
 // ───────────────────────── 繪製 ─────────────────────────
 function hudMessage() {
+  const m = hudMessageBase();
+  return m && m.indexOf('[') >= 0 && !(window.PVDX && PVDX.on) ? m + ' [M] 靜音' : m;
+}
+function hudMessageBase() {
   switch (scene) {
-    case 'prep': return '[←][→] 選擇 [Z] 決定 [↓] 聲音';
+    case 'prep': return '[←][→] 選擇 [Z] 決定';
     case 'select': return '[←][→] 選擇 [Z] 決定 [X] 返回';
     case 'weapon': return G.day === 0 ? '[Z] 出發' : '[←][→] 選擇 [Z] 決定 [X] 返回';
     case 'dungeon': {
@@ -3314,7 +3317,6 @@ function renderScene() {
       Art.drawPlaceCard(ctx, { x: 440, y: 385, w: 440, h: 440, place: PL.stage === 'dungeon' ? 'dungeon' : 'show',
         note: PL.stage === 'dungeon' ? '抓魔物 · 找石碑變強' : '上台表演 · 賺滿意度', selected: PL.zone === 'card' && PL.cur === 0 });
       Art.drawPlaceCard(ctx, { x: 850, y: 385, w: 260, h: 300, place: 'shop', note: '武器 · 暗號 · 表演卡', selected: PL.zone === 'card' && PL.cur === 1 });
-      Art.drawButton(ctx, { x: 1060, y: 640, w: 190, h: 60, label: Snd.muted ? '聲音 關' : '聲音 開', selected: PL.zone === 'sound' });
       if (PL.notice) Art.drawFloatText(ctx, { x: 640, y: 110, text: PL.notice.text, kind: 'unlock', t: PL.notice.t, dur: 1.5 });
       Art.drawHud(ctx, hudState());
       renderTutorial('all');

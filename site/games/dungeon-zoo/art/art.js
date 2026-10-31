@@ -14,6 +14,7 @@
   var HUD_KD = 1.25, HUD_KM = 1.6;
 
   var HL = VX + 24, HR = VX + VW - 24, HUD_LAST_H = 50;
+  var HUD_C = null;   // 這一幀地下城 HUD 第 1 行中段的中心 x 與倍數(drawHud 算, 任務列與遊戲端的聚光燈跟著用)
   function hudK(phase) {
     if (phase === 'show') return 1;
     var k = (window.PVDX && window.PVDX.on) ? HUD_KM : HUD_KD;
@@ -25,7 +26,8 @@
     if (phase === 'show') return { x: x, y: y, k: 1 };
     var k = hudK(phase), hb = hudH(phase) / (phase === 'dungeon' ? 100 : 50);
     var row2 = phase === 'dungeon' && y >= 50, cy = row2 ? 74 : 25, ny = cy * hb + (y - cy) * k, nx;
-    if (!row2) nx = x < 420 ? HL + (x - 20) * k : (x < 900 ? 640 + (x - 640) * k : HR + (x - 1268) * k);
+    if (!row2 && x >= 420 && x < 860 && phase === 'dungeon' && HUD_C) return { x: HUD_C.x + (x - 640) * HUD_C.k, y: cy * hb + (y - cy) * HUD_C.k, k: HUD_C.k };
+    if (!row2) nx = x < 420 ? HL + (x - 20) * k : (x < 860 ? 640 + (x - 640) * k : HR + (x - 1268) * k);
     else nx = x < 700 ? HL + (x - 20) * k : (x < 820 ? HL + 620 * k + (x - 700) * k : HR + (x - 1260) * k);
     return { x: nx, y: ny, k: k };
   }
@@ -33,10 +35,11 @@
   function menuK() { return Math.min(1.3, (window.PVDX && window.PVDX.on) ? HUD_KM : HUD_KD); }
   // 表演場 HUD 第 1 行: 左(天數 + 觀眾滿意度 x 20~404)、中(熱度表 + 時鐘 + 小字 x 420~1000)、右(金幣、名聲)各自放大;
   // 中段放在左右兩塊之間的正中央
+  function showBand() { return Math.max(50, Math.round(48 * menuK())); }   // 時鐘圓環高 46, 放大後整個要在帶內
   function showPt(x, y) {
     var k = menuK(), mid = (HL + 384 * k + HR - 268 * k) / 2;
     var nx = x < 420 ? HL + (x - 20) * k : (x < 1000 ? mid + (x - 710) * k : HR + (x - 1268) * k);
-    return { x: nx, y: 25 + (y - 25) * k, k: k };
+    return { x: nx, y: showBand() / 2 + (y - 25) * k, k: k };
   }
   function showRect(cx, cy, w, h) { var p = showPt(cx, cy); return { x: p.x, y: p.y, w: w * p.k, h: h * p.k }; }
   function showGrp(ctx, ox, oy, fn) {
@@ -159,7 +162,7 @@
     while (i < str.length) {
       var c = str[i];
       if (c === '[' && str.substr(i, 4) === '[空白]') { flush(); toks.push({ k: 'key', s: '空白' }); i += 4; continue; }
-      if (c === '[' && str[i + 2] === ']' && /[ZX↑↓←→]/.test(str[i + 1])) { flush(); toks.push({ k: 'key', s: str[i + 1] }); i += 3; continue; }
+      if (c === '[' && str[i + 2] === ']' && /[ZXM↑↓←→]/.test(str[i + 1])) { flush(); toks.push({ k: 'key', s: str[i + 1] }); i += 3; continue; }
       if (tags && c === '〔') { var j = str.indexOf('〕', i + 1); if (j < 0) j = str.length; flush(); toks.push({ k: 'tag', s: str.slice(i + 1, j) }); i = j + 1; continue; }
       buf += c; i++;
     }
@@ -3228,22 +3231,22 @@
       ctx.restore();
       if (S(s.lockKind, 'fame') === 'd2') {
         // 第 12 輪: 等第 2 座開放(只有冷場): 雪境冰窟小圖示 + 冰藍字兩行「雪境冰窟開放後」/「解鎖」(和名聲星 + 名聲色分開: 條件不同, 長相不同)
-        ctx.font = 'bold 16px ' + FONT; var dw = Math.min(150, ctx.measureText('雪境冰窟開放後').width);
-        dunIcon(ctx, 'd2', 128 - dw - 14, 24, 9, 1);
+        ctx.font = 'bold 18px ' + FONT; var dw = Math.min(160, ctx.measureText('雪境冰窟開放後').width);
+        dunIcon(ctx, 'd2', 128 - dw - 16, 22, 10, 1);
         T(ctx, '雪境冰窟開放後', 128, 22, { size: 18, align: 'right', color: '#bfe6ff', maxW: 160 });
         T(ctx, '解鎖', 128, 44, { size: 18, align: 'right', color: '#bfe6ff', maxW: 160 });
       } else {
         var lt = '名聲 ' + Math.max(0, Math.floor(N(s.fameReq, 0))) + ' 解鎖';
-        ctx.font = 'bold 17px ' + FONT; var lw = Math.min(150, ctx.measureText(lt).width);
-        repIcon(ctx, 128 - lw - 12, 34, 8);
+        ctx.font = 'bold 20px ' + FONT; var lw = Math.min(160, ctx.measureText(lt).width);
+        repIcon(ctx, 128 - lw - 14, 34, 9.5);
         T(ctx, lt, 128, 34, { size: 20, align: 'right', color: P.rep, maxW: 160 });
       }
     } else if (B(s.owned) || item === 'club') {
       T(ctx, '已擁有', 128, 34, { size: 21, align: 'right', color: P.textDim });
     } else {
       var aff = B(s.affordable), ct = cost + ' 金';
-      ctx.font = 'bold 20px ' + FONT; var cw = Math.min(150, ctx.measureText(ct).width);
-      coinIcon(ctx, 128 - cw - 12, 34, 8);
+      ctx.font = 'bold 23px ' + FONT; var cw = Math.min(160, ctx.measureText(ct).width);
+      coinIcon(ctx, 128 - cw - 14, 34, 9.5);
       T(ctx, ct, 128, 34, { size: 23, align: 'right', color: aff ? P.gold : '#ff7a7a', maxW: 160 });
     }
     ctx.restore();
@@ -3516,9 +3519,10 @@
   }
 
   function drawHudShow(ctx, s) {
-    ctx.fillStyle = 'rgba(12,15,22,0.94)'; ctx.fillRect(VX, 0, VW, 50);
-    ctx.fillStyle = '#2c3446'; ctx.fillRect(VX, 48, VW, 2);
-    HUD_LAST_H = 50;
+    var SB = showBand();
+    ctx.fillStyle = 'rgba(12,15,22,0.94)'; ctx.fillRect(VX, 0, VW, SB);
+    ctx.fillStyle = '#2c3446'; ctx.fillRect(VX, SB - 2, VW, 2);
+    HUD_LAST_H = SB;
     var day = Math.floor(N(s.day, 1)), dmax = Math.floor(N(s.dayMax, 4));
     showGrp(ctx, 20, 25, function () {
       T(ctx, day <= 0 ? '見習日' : '第 ' + day + ' / ' + dmax + ' 天', 20, 25, { size: 20, align: 'left', color: day <= 0 ? P.select : P.text, maxW: 118 });
@@ -3548,27 +3552,41 @@
     var fl = Math.floor(N(s.floor, 1));
     var meadow = dg && s.dungeon === 'meadow';
     // 第 1 行左: 天數 + 地下城名「第 F 層」
+    var k1 = hudK(phase), leftEnd = 150;   // 第 1 行左塊在原座標的右緣(量地下城名的實際寬度)
     hudGrp(ctx, 20, 25, phase, function () {
       T(ctx, day <= 0 ? '見習日' : '第 ' + day + ' / ' + dmax + ' 天', 20, 25, { size: 20, align: 'left', color: day <= 0 ? P.select : P.text, maxW: 130 });
       if (dg && dn) {
         var dcol = DUN[s.dungeon] ? DUN[s.dungeon].color : P.text;
-        if (meadow || !(fl >= 1)) T(ctx, dn, 160, 25, { size: 20, align: 'left', color: dcol, maxW: 250 });
+        ctx.save(); ctx.font = 'bold 20px ' + FONT; var dnw = Math.min(meadow || !(fl >= 1) ? 250 : 180, ctx.measureText(dn).width);
+        var flw = ctx.measureText('第 ' + fl + ' 層').width; ctx.restore();
+        if (meadow || !(fl >= 1)) { T(ctx, dn, 160, 25, { size: 20, align: 'left', color: dcol, maxW: 250 }); leftEnd = 160 + dnw; }
         else {
-          ctx.save(); ctx.font = 'bold 20px ' + FONT; var dnw = Math.min(180, ctx.measureText(dn).width); ctx.restore();
           T(ctx, dn, 160, 25, { size: 20, align: 'left', color: dcol, maxW: 180 });
           T(ctx, '第 ' + fl + ' 層', 160 + dnw + 10, 25, { size: 20, align: 'left', color: '#ffffff', maxW: 300 - dnw - 10 });
+          leftEnd = 160 + dnw + 10 + Math.min(flw, 290 - dnw);
         }
       }
     });
     // 第 1 行右: 金幣、名聲
+    // 第 1 行右: (地下城)武器小圖示 + 攻擊加成, 金幣、名聲
+    var atk = clamp(Math.floor(N(s.atk, 0)), 0, 9);
     hudGrp(ctx, 1268, 25, phase, function () {
+      if (dg) {
+        iconWeapon(ctx, wpKey(s.weapon), 880, 26, 22);
+        T(ctx, '+' + atk, 920, 25, { size: 19, color: atk > 0 ? P.boost : '#c8b880', strokeColor: '#3a2600', strokeW: 4, maxW: 40 });
+      }
       coinIcon(ctx, 1000, 25, 10);
       T(ctx, String(Math.floor(N(s.gold, 0))), 1016, 25, { size: 20, align: 'left', color: P.gold, maxW: 106 });
       repIcon(ctx, 1132, 25, 11);
       T(ctx, String(Math.floor(N(s.rep, 0))), 1148, 25, { size: 20, align: 'left', color: P.rep, maxW: 120 });
     });
     var tmax = N(s.timeMax, 0), tl = N(s.timeLeft, 0), msg = S(s.message, '');
-    // 第 1 行中: 時間條 + 秒數(見習草地這裡給任務列)
+    // 第 1 行中: 時間條 + 秒數(見習草地是任務列), 放在左右兩塊中間; 中間放不下原倍數就少放大一點
+    HUD_C = null;
+    if (dg) {
+      var lx = HL + (leftEnd - 20) * k1, rx = HR + (866 - 1268) * k1, half = meadow ? 220 : 170;
+      HUD_C = { x: (lx + rx) / 2, k: Math.max(0.8, Math.min(k1, ((rx - lx) / 2 - 16) / half)) };
+    }
     if (tmax > 0 && !meadow) hudGrp(ctx, 640, 25, phase, function () {
       timeBar(ctx, 470, 16, 260, 18, tl, tmax);
       T(ctx, Math.ceil(Math.max(0, tl)) + ' 秒', 744, 25, { size: 19, align: 'left', color: tl / tmax < 0.2 ? '#ff8a8a' : P.text });
@@ -3584,17 +3602,11 @@
       for (var k = 0; k < rm; k++) ropeIcon(ctx, 40 + k * 22, 74, 10, k < ro);
       caughtRow(ctx, Array.isArray(s.caught) ? s.caught : []);
     });
-    // 第 2 行: 武器小圖示 + 攻擊加成(緊接在收服列最多 10 格之後)
-    var atk = clamp(Math.floor(N(s.atk, 0)), 0, 9);
-    hudGrp(ctx, 726, 74, phase, function () {
-      iconWeapon(ctx, wpKey(s.weapon), 744, 75, 22);
-      T(ctx, '+' + atk, 784, 74, { size: 19, color: atk > 0 ? P.boost : '#c8b880', strokeColor: '#3a2600', strokeW: 4, maxW: 40 });
-    });
-    // 第 2 行右: 按鍵提示 / 訊息(靠右, 寬度到武器那塊為止)
+    // 第 2 行右: 按鍵提示 / 訊息(靠右, 寬度到收服列最多 10 格為止)
     var xm = N(s.xCdMax, 0), xl = N(s.xCdLeft, 0), xcd = (xm > 0 && xl > 0) ? p01(xl, xm) : 0;
     var mcol = msg.indexOf('爆炸桶') >= 0 ? '#ff6b78' : ((msg.indexOf('繞') >= 0 || msg.indexOf('丟繩') >= 0) ? P.capture : '#d8e0ee');
     if (msg) {
-      var kk = hudK(phase), wEnd = hudPt(812, 74).x;
+      var kk = hudK(phase), wEnd = hudPt(632, 74).x;
       hudGrp(ctx, 1260, 74, phase, function () { richLine(ctx, msg, 1260, 74, { size: 16, color: mcol, maxW: (HR - wEnd - 24) / kk, xCd: xcd, align: 'right' }); });
     }
   }
