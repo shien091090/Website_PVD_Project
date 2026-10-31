@@ -75,10 +75,11 @@ test('遊戲收到暫停訊息', async () => {
 });
 
 test('遊戲圖示塞滿圓角框, 不會撐出框外', async () => {
-  for (const opts of [PC, PHONE]) {
+  // 手機清單改用橫幅, 圖示改看抽屜裡的
+  for (const [opts, hash] of [[PC, '#play'], [PHONE, '#play/dungeon-zoo']]) {
     const ctx = await browser.newContext(opts);
     const page = await ctx.newPage();
-    await page.goto(srv.url + '#play');
+    await page.goto(srv.url + hash);
     const icons = page.locator('.icon:has(img)');
     await icons.first().locator('img').waitFor();
     await page.waitForFunction(() => [...document.querySelectorAll('.icon img')].every(i => i.complete));
@@ -189,4 +190,29 @@ test('遊玩頁擋掉 iPhone 的雙指縮放手勢(網頁與遊戲框內都擋)'
   await page.waitForTimeout(200);
   assert.equal(await blocked(page, 'gesturestart'), false);
   await ctx.close();
+});
+
+test('手機遊戲清單: 有橫幅的用橫幅當按鈕, 沒有的用主色暫代; 抽屜不放橫幅; 電腦清單不變', async () => {
+  const ctx = await browser.newContext(PHONE);
+  const page = await ctx.newPage();
+  await page.goto(srv.url + '#play');
+  await page.locator('#glist .gh').first().waitFor();
+  const zoo = page.locator('.gh:has-text("來馬戲團看一點大場面")');
+  assert.match(await zoo.locator('img.cv').getAttribute('src'), /dungeon-zoo-banner\.png$/);
+  assert.match(await zoo.locator('.chip').textContent(), /15–20 分鐘/);
+  const box = await zoo.boundingBox();
+  assert.ok(Math.abs(box.width / box.height - 21 / 9) < 0.35, `格子 ${box.width}x${box.height}`);
+  const bubble = page.locator('.gh:has-text("捕泡手")');
+  assert.equal(await bubble.locator('img.cv').count(), 0);
+  assert.ok(await bubble.locator('.fb').isVisible());
+  await zoo.click();
+  await page.locator('.psheet .pn').waitFor();
+  assert.equal(await page.locator('.psheet .cover, .psheet img[src*="banner"]').count(), 0);
+  await ctx.close();
+  const pc = await browser.newContext(PC);
+  const p2 = await pc.newPage();
+  await p2.goto(srv.url + '#play');
+  await p2.locator('#glist .gh').first().waitFor();
+  assert.equal(await p2.locator('#glist .gh.bn').count(), 0);
+  await pc.close();
 });

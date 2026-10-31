@@ -265,6 +265,17 @@ body.vend .vnote { display: flex; }
   .gi.sel .gh .icon { background: var(--c); color: var(--fc); }
   .gi.sel .gh .nm b, .gi.sel .gh .nm span { color: inherit; }
   .gi.sel .gh .nm span { color: var(--muted); }
+  /* 手機遊戲按鈕用橫幅; 時長裝置放左下角(橫幅規格本來就留空) */
+  .gh.bn { position: relative; display: block; padding: 0; overflow: hidden; background: var(--c); }
+  .gh.bn .cv { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+  .gh.bn .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .gh.bn .fb { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 14px; padding: 0 16px; color: var(--fc);
+    background: repeating-linear-gradient(135deg, rgba(255,255,255,.14) 0 14px, transparent 14px 28px), var(--c); }
+  .gh.bn .fb .icon { width: 64px; height: 64px; font-size: 36px; background: #fff; color: var(--dk); flex: none; }
+  .gh.bn .fb b { font: 900 22px/1.15 var(--font); }
+  .gh.bn .chip { position: absolute; left: 8px; bottom: 8px; display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,.92); color: #2d2144; border: 2px solid #2d2144; border-radius: 999px; padding: 5px 10px; font: 700 13px/1 var(--font); }
+  .gh.bn .chip .devs { display: inline-flex; gap: 3px; color: inherit; }
+  .gh.bn .chip svg { width: 15px; height: 15px; }
   /* 展開一款: 它撐滿剩餘高度, 其他收成矮條 */
   /* 手機: 點一款從底部拉出抽屜 (方案 1a), 清單本身不變 */
   .psheet.on { display: block; }

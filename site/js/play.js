@@ -31,9 +31,16 @@ if (!(myAv >= 0 && myAv < AV.length)) myAv = Math.floor(Math.random() * AV.lengt
 
 export function renderPlay() {
   const mob = mobileQ.matches;
-  glist.innerHTML = GAMES.map((g, i) => `
-    <div class="gi${!mob && i === sel ? ' sel' : ''}" style="--c:${g.bg};--fc:${g.fg}">
-      <button class="gh" data-i="${i}" ${mob ? 'aria-haspopup="dialog"' : `aria-pressed="${i === sel}"`}>${ico(g)}
+  // 手機: 按鈕直接用橫幅(名稱藏起來給讀屏), 時長裝置縮成左下角小標籤; 還沒有橫幅的用主色斜紋加圖示名稱暫代
+  glist.innerHTML = GAMES.map((g, i) => mob ? `
+    <div class="gi" style="--c:${g.bg};--fc:${g.fg}">
+      <button class="gh bn" data-i="${i}" aria-haspopup="dialog">${g.banner
+        ? `<img class="cv" src="${esc(g.banner)}" alt=""><b class="sr">${esc(g.name)}</b>`
+        : `<span class="fb">${ico(g)}<b>${esc(g.name)}</b></span>`}
+        <span class="chip">${esc(g.time)}${devHtml(g)}</span></button>
+    </div>` : `
+    <div class="gi${i === sel ? ' sel' : ''}" style="--c:${g.bg};--fc:${g.fg}">
+      <button class="gh" data-i="${i}" aria-pressed="${i === sel}">${ico(g)}
         <span class="nm"><b>${esc(g.name)}</b><span class="tm">${esc(g.time)}<span class="devs" role="img" aria-label="${g.mobile ? '支援電腦與手機' : '僅支援電腦'}">${DEV_PC}${g.mobile ? DEV_PH : ''}</span></span></span>
         <span class="arr">›</span><span class="pm">+</span></button>
     </div>`).join('');
