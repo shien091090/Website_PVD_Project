@@ -2,6 +2,7 @@
 // 用法: node tools/posthog-setup.mjs [--dry-run]
 // 需要 .secrets.env: POSTHOG_PERSONAL_KEY、POSTHOG_PROJECT_ID、POSTHOG_HOST(例 https://us.posthog.com)
 import { readFileSync, existsSync } from 'node:fs';
+import { quoteCJK } from './hogql.mjs';
 
 const DRY = process.argv.includes('--dry-run');
 const env = Object.fromEntries((existsSync('.secrets.env') ? readFileSync('.secrets.env', 'utf8') : '')
@@ -41,7 +42,7 @@ await insight('漏斗: 進站 → 開始玩 → 留言', funnel(['$pageview', 'g
 // 主題比較: 每人取最後一次回報的累計前景時間; 很快離開 = 沒點過任何東西且前景時間 < 10/30 秒
 await ph('/insights/', {
   name: '主題 AB: 停留時間與很快離開的比例', dashboards: [dash.id],
-  query: { kind: 'DataVisualizationNode', source: { kind: 'HogQLQuery', query: `
+  query: { kind: 'DataVisualizationNode', source: { kind: 'HogQLQuery', query: quoteCJK(`
 SELECT theme AS 主題, count() AS 人數, round(avg(fg) / 1000, 1) AS 平均停留秒數,
   round(100 * countIf(fg < 10000 AND NOT inter) / count(), 1) AS 十秒內離開百分比,
   round(100 * countIf(fg < 30000 AND NOT inter) / count(), 1) AS 三十秒內離開百分比
@@ -50,20 +51,20 @@ FROM (
     max(toFloat(properties.total_fg_ms)) AS fg, max(toString(properties.interacted) = 'true') AS inter
   FROM events WHERE event = 'engaged' AND timestamp > now() - INTERVAL 90 DAY
   GROUP BY person_id
-) GROUP BY theme ORDER BY theme` } },
+) GROUP BY theme ORDER BY theme`) } },
 });
 
 // 各遊戲遊玩時間: 每次離開遊玩頁(含直接關分頁)一筆; 超過 2 小時視為分頁擺著沒玩, 不計
 await ph('/insights/', {
   name: '各遊戲平均遊玩時間', dashboards: [dash.id],
-  query: { kind: 'DataVisualizationNode', source: { kind: 'HogQLQuery', query: `
+  query: { kind: 'DataVisualizationNode', source: { kind: 'HogQLQuery', query: quoteCJK(`
 SELECT toString(properties.game) AS 遊戲, count() AS 遊玩次數,
   round(avg(toFloat(properties.seconds)) / 60, 1) AS 平均分鐘,
   round(median(toFloat(properties.seconds)) / 60, 1) AS 中位數分鐘
 FROM events
 WHERE event = 'game_leave' AND timestamp > now() - INTERVAL 30 DAY
   AND toFloat(properties.seconds) BETWEEN 0 AND 7200
-GROUP BY 遊戲 ORDER BY 遊玩次數 DESC` } },
+GROUP BY 遊戲 ORDER BY 遊玩次數 DESC`) } },
 });
 
 // 專案金鑰(phc_ 開頭, 公開的)給網頁用

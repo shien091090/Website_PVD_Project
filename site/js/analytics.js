@@ -43,15 +43,16 @@ export class Engage {
   interact() { this.interacted = true; }
 }
 
-// 分頁隱藏或離開時送 engaged 事件(用 sendBeacon, 關分頁也送得出去)
+// 分頁隱藏、離開或換頁時送 engaged 事件(用 sendBeacon, 關分頁也送得出去)
 export function initEngage(pageOf) {
   const e = new Engage(performance.now());
-  const flush = () => {
+  const send = () => {
     const r = e.hidden(performance.now());
     if (r) track('engaged', { fg_ms: Math.round(r.fgMs), total_fg_ms: Math.round(r.totalFgMs), interacted: r.interacted, page: pageOf() }, { transport: 'sendBeacon' });
   };
-  document.addEventListener('visibilitychange', () => (document.hidden ? flush() : e.visible(performance.now())));
-  addEventListener('pagehide', flush);
+  document.addEventListener('visibilitychange', () => (document.hidden ? send() : e.visible(performance.now())));
+  addEventListener('pagehide', send);
   document.addEventListener('click', ev => { if (ev.target.closest('a, button, [role="radio"], input')) e.interact(); }, true);
-  return e;
+  // 換頁時呼叫(還在舊頁時): 送出舊頁這段, 分頁還看得到就從現在起算新頁
+  return { flush() { send(); if (!document.hidden) e.visible(performance.now()); } };
 }

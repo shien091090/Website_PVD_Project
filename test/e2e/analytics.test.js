@@ -139,3 +139,61 @@ test('網址 ?theme= 強制主題並出現切換鈕, 不存檔', async () => {
   assert.equal(await page.evaluate(() => localStorage.getItem('pvd:theme')), null);
   await ctx.close();
 });
+
+test('遊玩時間只算真正在玩: 分頁切走的時間不算; 玩完一局帶上這款累計的遊玩時間', async () => {
+  const ctx = await browser.newContext(PC);
+  const page = await ctx.newPage();
+  await page.clock.install();
+  await page.route('**/js/config.js', async r => {
+    const res = await r.fetch();
+    r.fulfill({ response: res, body: (await res.text()).replace("posthogKey: ''", "posthogKey: 'phc_test'").replace('analyticsHosts: [', "analyticsHosts: ['localhost', ") });
+  });
+  await page.route('**/static/array.full.js', r => r.fulfill({ contentType: 'text/javascript', body: FAKE('light') }));
+  await page.goto(srv.url + '#game/slime-tetris');
+  await page.locator('#pg-game iframe').waitFor();
+  const setHidden = h => page.evaluate(h => {
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => h });
+    document.dispatchEvent(new Event('visibilitychange'));
+  }, h);
+  const ev = async name => (await page.evaluate(() => window.posthog.calls)).filter(c => c[0] === 'capture' && c[1] === name);
+  await page.clock.runFor(10000);
+  await setHidden(true);
+  await page.clock.runFor(60000);
+  await setHidden(false);
+  await page.clock.runFor(5000);
+  await page.click('text=‹ 返回');
+  await page.waitForFunction(() => window.posthog.calls.some(c => c[1] === 'game_leave'));
+  // 時鐘仍照真實時間走, 載入與點擊會多幾秒; 重點是切走的 60 秒不算
+  const s = (await ev('game_leave'))[0][2].seconds;
+  assert.ok(s >= 15 && s < 45, `遊玩 ${s} 秒`);
+  // 第二次進來玩 20 秒後玩完: 累計 35 秒
+  await page.evaluate(() => { location.hash = '#game/slime-tetris'; });
+  await page.locator('#pg-game iframe').waitFor();
+  await page.clock.runFor(20000);
+  const f = await (await page.$('#pg-game iframe')).contentFrame();
+  await f.waitForLoadState();
+  await f.evaluate(() => parent.postMessage({ type: 'pvd:finish' }, location.origin));
+  await page.waitForFunction(() => window.posthog.calls.some(c => c[1] === 'game_finish'));
+  const fin = (await ev('game_finish'))[0][2];
+  assert.equal(fin.game, 'slime-tetris');
+  assert.ok(fin.play_seconds >= s + 20 && fin.play_seconds < s + 50, `累計 ${fin.play_seconds} 秒`);
+  await ctx.close();
+});
+
+test('換頁時送出上一頁的 engaged 前景時間, 各頁分開算', async () => {
+  const { ctx, page, calls } = await open('light', '#play');
+  await page.waitForFunction(() => window.posthog?.calls.some(c => c[1] === '$pageview'));
+  await page.evaluate(() => { location.hash = '#vote'; });
+  await page.waitForFunction(() => window.posthog.calls.some(c => c[1] === 'engaged'));
+  const [e] = events(await calls()).filter(c => c[1] === 'engaged');
+  assert.equal(e[2].page, 'play');
+  assert.ok(e[2].fg_ms > 0);
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  const all = events(await calls()).filter(c => c[1] === 'engaged');
+  assert.equal(all.length, 2);
+  assert.equal(all[1][2].page, 'vote');
+  await ctx.close();
+});

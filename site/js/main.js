@@ -22,12 +22,12 @@ initTheme(flag, ({ theme, source }) => {
   if (firstPage) trackPage(firstPage);
 });
 const pageView = page => (themeReady ? trackPage(page) : (firstPage = page));
-initEngage(() => document.body.dataset.pg);
+const engage = initEngage(() => document.body.dataset.pg);
 
 renderHeaders();
 initHome({ show, onVideo: what => track(what === 'play' ? 'video_play' : 'video_complete') });
 initPlay({ onOpen: game => track('game_detail_open', { game }) });
-initGamePage({ onFinish: game => track('game_finish', { game }) });
+initGamePage({ onFinish: (game, seconds) => track('game_finish', { game, play_seconds: seconds }) });
 setBoard(board);
 initComments({ onPosted: game => track('comment_post', { game }) });
 initVote({ onZero: () => loadState(), onPick: pickVote });
@@ -59,7 +59,7 @@ async function pickVote(code) {
 loadState();
 document.addEventListener('visibilitychange', () => { if (!document.hidden) loadState(); });
 
-let playing = null;
+let playing = null, routed = false;
 function route() {
   const { page, arg } = parse(location.hash);
   const prev = document.body.dataset.pg;
@@ -73,6 +73,8 @@ function route() {
     document.querySelector('#pg-game .back').href = `#play/${arg}`;
     if (playing !== arg) { enterGame(arg); playing = arg; track('game_start', { game: arg }); }
   }
+  if (routed && prev !== page) engage.flush(); // 換頁: 先送上一頁的前景時間, 各頁分開算
+  routed = true;
   document.body.dataset.pg = page;
   if (page === 'play') { enterPlay(arg, prev === 'game'); if (prev !== 'play') track('play_page_view'); }
   else if (page === 'vote') { setState({ ...getState(), now: undefined }); loadState(); }
