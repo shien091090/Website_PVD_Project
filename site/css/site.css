@@ -90,7 +90,7 @@ body.lock { overflow: hidden; }
 .page { display: none; }
 body[data-pg="play"] #pg-play, body[data-pg="vote"] #pg-vote, body[data-pg="develop"] #pg-dev, body[data-pg="game"] #pg-game { display: flex; }
 body:not([data-pg="home"]) #home { display: none; }
-.page { flex-direction: column; height: 100vh; height: 100svh; overflow: hidden; padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); box-sizing: border-box; }
+.page { --sal: env(safe-area-inset-left, 0px); flex-direction: column; height: 100vh; height: 100svh; overflow: hidden; padding-left: var(--sal); padding-right: env(safe-area-inset-right, 0px); box-sizing: border-box; }
 #pg-dev { height: auto; min-height: 100svh; overflow: visible; }
 /* 太矮的視窗塞不下一屏版型, 退回可捲動 */
 @media (max-height: 560px) and (min-width: 721px), (max-width: 720px) and (max-height: 600px) {
@@ -440,10 +440,10 @@ img.logo { border: 0; object-fit: contain; }
   #pg-game .rot { display: flex; }
   .gbar { border-bottom: 0; padding-top: env(safe-area-inset-top, 0px); height: calc(56px + env(safe-area-inset-top, 0px)); }
 }
-/* 手機橫拿: 高度太珍貴, bar 改成左側細條 */
+/* 手機橫拿: 高度太珍貴, bar 改成左側細條; 左邊瀏海保留區本來就空著, 返回鈕直接放進去 */
 @media (orientation: landscape) and (max-height: 500px) {
-  #pg-game { flex-direction: row; }
-  .gbar { width: 84px; height: auto; flex-direction: column; justify-content: flex-start; padding: 12px 0; border-bottom: 0; border-right: 2px solid var(--ink); }
+  #pg-game { flex-direction: row; padding-left: 0; }
+  .gbar { width: max(var(--sal), 76px); height: auto; flex-direction: column; justify-content: flex-start; align-items: flex-end; padding: 12px 6px 12px 0; border-bottom: 0; border-right: 2px solid var(--ink); }
   .back { padding: 7px 10px 7px 8px; font-size: 13px; }
   .gwrap { padding: 8px; }
 }

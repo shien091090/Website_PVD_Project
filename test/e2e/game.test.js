@@ -107,3 +107,17 @@ test('遊戲框是 21:9, 電腦四周留白較多, 手機橫拿只留一點', as
     await ctx.close();
   }
 });
+
+test('手機橫拿: 返回鈕放進瀏海保留區, 遊戲左邊不多空一條', async () => {
+  const ctx = await browser.newContext(PHONE_L);
+  const page = await ctx.newPage();
+  await page.goto(srv.url + '#game/slime-tetris');
+  await page.locator('#scr iframe').waitFor();
+  await page.addStyleTag({ content: '.page { --sal: 92px; }' }); // 模擬 iPhone 左邊瀏海保留區
+  const scr = await page.locator('#scr').boundingBox();
+  const back = await page.locator('#pg-game .back').boundingBox();
+  assert.ok(scr.x <= 92 + 2 + 8 + 1, `遊戲左邊從 ${scr.x} 開始`);
+  assert.ok(back.x >= 0 && back.x + back.width <= scr.x, '返回鈕完整顯示且不壓到遊戲');
+  assert.match(await page.locator('#pg-game .back').textContent(), /返回/);
+  await ctx.close();
+});
