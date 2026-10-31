@@ -73,3 +73,22 @@ test('遊戲收到暫停訊息', async () => {
   assert.deepEqual(await page.evaluate(() => window.__msgs), ['pvd:pause', 'pvd:resume']);
   await ctx.close();
 });
+
+test('遊戲圖示塞滿圓角框, 不會撐出框外', async () => {
+  for (const opts of [PC, PHONE]) {
+    const ctx = await browser.newContext(opts);
+    const page = await ctx.newPage();
+    await page.goto(srv.url + '#play');
+    const icons = page.locator('.icon:has(img)');
+    await icons.first().locator('img').waitFor();
+    await page.waitForFunction(() => [...document.querySelectorAll('.icon img')].every(i => i.complete));
+    for (const icon of await icons.all()) {
+      const box = await icon.boundingBox();
+      const img = await icon.locator('img').boundingBox();
+      assert.ok(img.width <= box.width && img.height <= box.height, `圖 ${img.width}x${img.height} 超出框 ${box.width}x${box.height}`);
+      assert.ok(img.width >= box.width - 8, '圖要塞滿框');
+      assert.equal(await icon.evaluate(e => getComputedStyle(e).overflow), 'hidden');
+    }
+    await ctx.close();
+  }
+});
