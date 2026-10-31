@@ -21,7 +21,7 @@ export function checkRelease(dir) {
     if (statSync(f).size > LIMIT) errors.push(`檔案超過 25MB: ${rel}`);
     if (/\.(js|html)$/i.test(f) && DOWNLOAD.test(readFileSync(f, 'utf8'))) errors.push(`程式裡有下載檔案的寫法: ${rel}`);
   }
-  if (!existsSync(join(dir, 'assets', 'icon.png'))) errors.push('release/assets/ 裡沒有 icon.png');
+  for (const f of ['icon.png', 'banner.png']) if (!existsSync(join(dir, 'assets', f))) errors.push(`release/assets/ 裡沒有 ${f}`);
 
   let info = null;
   const infoPath = join(dir, 'assets', 'info.json');

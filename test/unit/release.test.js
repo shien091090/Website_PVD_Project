@@ -18,6 +18,7 @@ function makeRelease(edit = {}) {
     'game/game.js': 'let x = 1;',
     'game/audio/credits.md': '# 授權',
     'assets/icon.png': 'png',
+    'assets/banner.png': 'png',
     'assets/info.json': JSON.stringify(INFO),
     ...edit,
   };
@@ -53,9 +54,10 @@ test('程式裡有下載檔案的寫法要擋', () => {
   assert.match(errorsOf({ 'game/game.js': 'a.download = "log.json"' }).join('\n'), /game\.js/);
 });
 
-test('沒有圖示或遊戲資料要擋', () => {
+test('沒有圖示、橫幅或遊戲資料要擋', () => {
   assert.match(errorsOf({ 'assets/icon.png': null }).join('\n'), /icon\.png/);
   assert.match(errorsOf({ 'assets/info.json': null }).join('\n'), /info\.json/);
+  assert.match(errorsOf({ 'assets/banner.png': null }).join('\n'), /banner\.png/);
 });
 
 test('遊戲資料欄位缺漏或格式錯要擋', () => {

@@ -49,6 +49,7 @@ for (const code of codes) {
   if (infos[code]) {
     mkdirSync('site/media/games', { recursive: true });
     cpSync(join(RELEASE[code], 'assets', 'icon.png'), `site/media/games/${code}.png`);
+    cpSync(join(RELEASE[code], 'assets', 'banner.png'), `site/media/games/${code}-banner.png`);
     games = applyInfo(games, infos[code], `media/games/${code}.png`);
   }
   console.log(`${code} ← ${src}`);
