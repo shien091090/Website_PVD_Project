@@ -8,6 +8,51 @@
   var TAU = Math.PI * 2;
   // 畫面寬 1680: 遊戲在 game.js 以 1280 為設計寬度、左右各留 200 並平移, 這裡的整面底色一律從 VX 畫到 VX+VW 填滿兩側
   var VX = -200, VW = 1680;
+  // HUD 放大: 字與圖示乘上 hudK(); 電腦 HUD_KD 倍、觸控模式(手機)HUD_KM 倍。21:9 兩側加寬的地方拿來放放大後的 HUD:
+  // 原本 1280 設計區裡的 HUD 分成幾塊, 各自以錨點放大後貼齊畫面左緣 / 中央 / 右緣。hudPt 把原座標換成新座標(遊戲端的聚光燈、提示也用它)
+  // 表演場的 HUD(和熱度表、時鐘排在一起)維持原大小; 地下城以外的畫面 HUD 帶高度不變(50), 放大最多 1.3 倍
+  var HUD_KD = 1.25, HUD_KM = 1.6;
+
+  var HL = VX + 24, HR = VX + VW - 24, HUD_LAST_H = 50;
+  function hudK(phase) {
+    if (phase === 'show') return 1;
+    var k = (window.PVDX && window.PVDX.on) ? HUD_KM : HUD_KD;
+    return phase === 'dungeon' ? k : Math.min(k, 1.3);
+  }
+  function hudH(phase) { return phase === 'dungeon' ? Math.round(100 * Math.max(1, hudK('dungeon') * 0.78)) : 50; }
+  function hudPt(x, y, phase) {
+    phase = phase || 'dungeon';
+    if (phase === 'show') return { x: x, y: y, k: 1 };
+    var k = hudK(phase), hb = hudH(phase) / (phase === 'dungeon' ? 100 : 50);
+    var row2 = phase === 'dungeon' && y >= 50, cy = row2 ? 74 : 25, ny = cy * hb + (y - cy) * k, nx;
+    if (!row2) nx = x < 420 ? HL + (x - 20) * k : (x < 900 ? 640 + (x - 640) * k : HR + (x - 1268) * k);
+    else nx = x < 700 ? HL + (x - 20) * k : (x < 820 ? HL + 620 * k + (x - 700) * k : HR + (x - 1260) * k);
+    return { x: nx, y: ny, k: k };
+  }
+  // 選單、表演場、引導卡等不在地下城 HUD 帶裡的東西: 電腦 1.25 倍、手機 1.3 倍
+  function menuK() { return Math.min(1.3, (window.PVDX && window.PVDX.on) ? HUD_KM : HUD_KD); }
+  // 表演場 HUD 第 1 行: 左(天數 + 觀眾滿意度 x 20~404)、中(熱度表 + 時鐘 + 小字 x 420~1000)、右(金幣、名聲)各自放大;
+  // 中段放在左右兩塊之間的正中央
+  function showPt(x, y) {
+    var k = menuK(), mid = (HL + 384 * k + HR - 268 * k) / 2;
+    var nx = x < 420 ? HL + (x - 20) * k : (x < 1000 ? mid + (x - 710) * k : HR + (x - 1268) * k);
+    return { x: nx, y: 25 + (y - 25) * k, k: k };
+  }
+  function showRect(cx, cy, w, h) { var p = showPt(cx, cy); return { x: p.x, y: p.y, w: w * p.k, h: h * p.k }; }
+  function showGrp(ctx, ox, oy, fn) {
+    var p = showPt(ox, oy);
+    ctx.save(); ctx.translate(p.x, p.y); ctx.scale(p.k, p.k); ctx.translate(-ox, -oy); fn(); ctx.restore();
+  }
+  // 結算面板以畫面中心 (640, 390) 放大; big = 面板較高的總結算(倍數小一點, 不超出畫面)
+  function panelZoom(ctx, big) {
+    var on = window.PVDX && window.PVDX.on, k = big ? (on ? 1.17 : 1.15) : (on ? 1.25 : 1.15);
+    ctx.translate(640, 390); ctx.scale(k, k); ctx.translate(-640, -390);
+  }
+  function hudRect(cx, cy, w, h, phase) { var p = hudPt(cx, cy, phase); return { x: p.x, y: p.y, w: w * p.k, h: h * p.k }; }
+  function hudGrp(ctx, ox, oy, phase, fn) {
+    var p = hudPt(ox, oy, phase);
+    ctx.save(); ctx.translate(p.x, p.y); ctx.scale(p.k, p.k); ctx.translate(-ox, -oy); fn(); ctx.restore();
+  }
   function N(v, d) { return (typeof v === 'number' && isFinite(v)) ? v : d; }
   function S(v, d) { return (typeof v === 'string') ? v : d; }
   function B(v) { return v === true; }
@@ -1633,6 +1678,7 @@
     var x = N(s.x, 0), y = N(s.y, 0);
     var mh = clamp(Math.floor(N(s.maxHearts, 6)), 0, 30), h = clamp(Math.floor(N(s.hearts, 0)), 0, mh);
     if (mh <= 0) return;
+    var hk = hudK('dungeon'); ctx.translate(x, y + 9); ctx.scale(hk, hk); ctx.translate(-x, -y - 9);
     var fx = S(s.fx, 'none'); if (fx !== 'hurt' && fx !== 'heal') fx = 'none';
     var dur = N(s.fxDur, 2) > 0 ? N(s.fxDur, 2) : 2, t = clamp(N(s.fxT, dur), 0, dur);
     var k15 = dur * 0.75; // 1.5 / 2.0
@@ -2224,6 +2270,7 @@
   }
   function drawCueRow(ctx, s) {
     var x = N(s.x, 0), y = N(s.y, 0);
+    if (S(s.style, '') === 'mini') { var mk = menuK(); ctx.translate(640 + (x - 640) * mk, 716 - 23 * mk); ctx.scale(mk, mk); ctx.translate(-x, -y); }
     var cue = CUE[s.cue] ? s.cue : '', prog = PROG[s.program] ? s.program : '';
     var complete = B(s.complete) && cue && prog;
     var style = S(s.style, 'row') === 'mini' ? 'mini' : 'row';
@@ -2798,7 +2845,7 @@
     var bq = tt < td ? Math.sin(Math.PI * tt / td) : 0;
     var fr = tier === 'frenzy', pulse = fr ? 0.5 - 0.5 * Math.cos(TAU * t / 0.8) : 0;
     var LL = clamp(N(s.looseLine, 92), 0, 100);
-    ctx.translate(N(s.x, 640) - 640, N(s.y, 25) - 25);  // 以下用畫面座標
+    var hp0 = showPt(N(s.x, 640), N(s.y, 25)); ctx.translate(hp0.x, hp0.y); ctx.scale(hp0.k, hp0.k); ctx.translate(-640, -25);  // 以下用畫面座標(跟著表演場 HUD 放大)
     // 底板 418×40(x 431~849、y 5~45)
     rr(ctx, 431, 5, 418, 40, 10); ctx.fillStyle = '#161b27'; ctx.fill();
     if (fr) { rr(ctx, 431, 5, 418, 40, 10); ctx.fillStyle = 'rgba(255,59,74,' + (0.22 * pulse).toFixed(3) + ')'; ctx.fill(); }
@@ -2840,6 +2887,7 @@
   // 已過去的部分畫暗。正中間一塊深色圓墊 + 粗體秒數 ceil(timeLeft), 字壓在扇形之上也讀得到。
   // timeLeft ≤ 10: 扇形與數字轉紅。running 且剛跨過整數秒 0.15 秒內: 整個放大到 1.1 倍再回來(sin 曲線, 最大 53×53)
   function drawShowClock(ctx, s) {
+    var cp0 = showPt(N(s.x, 900), N(s.y, 25)); ctx.translate(cp0.x, cp0.y); ctx.scale(cp0.k, cp0.k); ctx.translate(-N(s.x, 900), -N(s.y, 25));
     var tl = Math.max(0, N(s.timeLeft, 0)), tm = N(s.timeMax, 0);
     var f = tm > 0 ? clamp(tl / tm, 0, 1) : 0;
     var red = tl <= 10;
@@ -2890,6 +2938,7 @@
     ctx.restore();
   }
   function drawShowResult(ctx, s) {
+    panelZoom(ctx, false);
     var loose = B(s.loose), tut = B(s.tutorial);
     var sat = Math.max(0, Math.round(N(s.sat, 0))), gold = Math.max(0, Math.round(N(s.gold, 0))), fg = Math.max(0, Math.round(N(s.fameGain, 0)));
     var td = N(s.tallyDur, 1.5), tT = N(s.tallyT, td);
@@ -2958,6 +3007,7 @@
   }
   var DRES_TITLE = { time: ['時間到', '#ffffff'], down: ['倒下了', '#ff8a94'], exit: ['提早收工', '#c8e6ff'], tutorial: ['見習完成!', P.select] };
   function drawDungeonResult(ctx, s) {
+    panelZoom(ctx, false);
     var tt = DRES_TITLE[s.reason] || DRES_TITLE.time;
     ctx.translate(640, 390);
     resultPanel(ctx, 760, 460);
@@ -3180,21 +3230,21 @@
         // 第 12 輪: 等第 2 座開放(只有冷場): 雪境冰窟小圖示 + 冰藍字兩行「雪境冰窟開放後」/「解鎖」(和名聲星 + 名聲色分開: 條件不同, 長相不同)
         ctx.font = 'bold 16px ' + FONT; var dw = Math.min(150, ctx.measureText('雪境冰窟開放後').width);
         dunIcon(ctx, 'd2', 128 - dw - 14, 24, 9, 1);
-        T(ctx, '雪境冰窟開放後', 128, 24, { size: 16, align: 'right', color: '#bfe6ff', maxW: 150 });
-        T(ctx, '解鎖', 128, 44, { size: 16, align: 'right', color: '#bfe6ff', maxW: 150 });
+        T(ctx, '雪境冰窟開放後', 128, 22, { size: 18, align: 'right', color: '#bfe6ff', maxW: 160 });
+        T(ctx, '解鎖', 128, 44, { size: 18, align: 'right', color: '#bfe6ff', maxW: 160 });
       } else {
         var lt = '名聲 ' + Math.max(0, Math.floor(N(s.fameReq, 0))) + ' 解鎖';
         ctx.font = 'bold 17px ' + FONT; var lw = Math.min(150, ctx.measureText(lt).width);
         repIcon(ctx, 128 - lw - 12, 34, 8);
-        T(ctx, lt, 128, 34, { size: 17, align: 'right', color: P.rep, maxW: 150 });
+        T(ctx, lt, 128, 34, { size: 20, align: 'right', color: P.rep, maxW: 160 });
       }
     } else if (B(s.owned) || item === 'club') {
-      T(ctx, '已擁有', 128, 34, { size: 18, align: 'right', color: P.textDim });
+      T(ctx, '已擁有', 128, 34, { size: 21, align: 'right', color: P.textDim });
     } else {
       var aff = B(s.affordable), ct = cost + ' 金';
       ctx.font = 'bold 20px ' + FONT; var cw = Math.min(150, ctx.measureText(ct).width);
       coinIcon(ctx, 128 - cw - 12, 34, 8);
-      T(ctx, ct, 128, 34, { size: 20, align: 'right', color: aff ? P.gold : '#ff7a7a', maxW: 150 });
+      T(ctx, ct, 128, 34, { size: 23, align: 'right', color: aff ? P.gold : '#ff7a7a', maxW: 160 });
     }
     ctx.restore();
     // NEW(剛上架; 名聲未到時不會是 fresh, 保險起見鎖住時不畫); 不跟著彈, 固定在框內右上角
@@ -3204,13 +3254,12 @@
   }
   function drawShopDetail(ctx, s) {
     ctx.translate(N(s.x, 640), N(s.y, 570));
-    panel(ctx, -540, -35, 1080, 70, 10, '#1a2030', P.line);
+    panel(ctx, -540, -42, 1080, 84, 10, '#1a2030', P.line);
     var lines = Array.isArray(s.lines) ? s.lines : [];
     var n = Math.min(3, lines.length);
     if (n === 0) return;
-    var size = n === 1 ? 20 : (n === 2 ? 18 : 16), gap = n === 1 ? 0 : (n === 2 ? 26 : 20);
-    if (n === 3) gap = 21;
-    for (var i = 0; i < n; i++) richLine(ctx, String(lines[i]), 0, (i - (n - 1) / 2) * gap, { size: n === 3 ? 15 : size, color: i === 0 ? P.text : '#c8d0e0', maxW: 1040 });
+    var size = n === 1 ? 24 : (n === 2 ? 21 : 18), gap = n === 1 ? 0 : (n === 2 ? 30 : 25);
+    for (var i = 0; i < n; i++) richLine(ctx, String(lines[i]), 0, (i - (n - 1) / 2) * gap, { size: size, color: i === 0 ? P.text : '#c8d0e0', maxW: 1040 });
   }
   function drawButton(ctx, s) {
     var x = N(s.x, 0), y = N(s.y, 0), w = Math.max(10, N(s.w, 200)), h = Math.max(10, N(s.h, 60)), sel = B(s.selected);
@@ -3316,6 +3365,7 @@
 
   // ───────────── 結算 ─────────────
   function drawResultPanel(ctx, s) {
+    panelZoom(ctx, true);
     ctx.translate(640, 390);
     resultPanel(ctx, 800, 560);
     T(ctx, '總結算', 0, -246, { size: 32 });
@@ -3397,7 +3447,7 @@
       T(ctx, '+' + (n - 9), px, 74, { size: 13, color: P.capture, maxW: 24 });
     }
   }
-  function drawHud(ctx, s) {
+  function drawHudOrig(ctx, s) {
     var phase = S(s.phase, 'select');
     var dg = phase === 'dungeon';
     var H = dg ? 100 : 50;
@@ -3463,6 +3513,90 @@
     // 訊息色: 捕捉相關 = 捕捉萊姆; 「爆炸桶要爆了 快跑!」= 危險紅(和預警圈同一個意思); 其他 = 淡白
     var mcol = msg.indexOf('爆炸桶') >= 0 ? '#ff6b78' : ((msg.indexOf('繞') >= 0 || msg.indexOf('丟繩') >= 0) ? P.capture : '#d8e0ee');
     if (msg) richLine(ctx, msg, 1040, 74, { size: 16, color: mcol, maxW: 440, xCd: xcd });
+  }
+
+  function drawHudShow(ctx, s) {
+    ctx.fillStyle = 'rgba(12,15,22,0.94)'; ctx.fillRect(VX, 0, VW, 50);
+    ctx.fillStyle = '#2c3446'; ctx.fillRect(VX, 48, VW, 2);
+    HUD_LAST_H = 50;
+    var day = Math.floor(N(s.day, 1)), dmax = Math.floor(N(s.dayMax, 4));
+    showGrp(ctx, 20, 25, function () {
+      T(ctx, day <= 0 ? '見習日' : '第 ' + day + ' / ' + dmax + ' 天', 20, 25, { size: 20, align: 'left', color: day <= 0 ? P.select : P.text, maxW: 118 });
+      satFace(ctx, 158, 25, 10);
+      T(ctx, '觀眾滿意度 ' + Math.max(0, Math.floor(N(s.sat, 0))), 174, 25, { size: 19, align: 'left', color: P.sat, maxW: 230 });
+    });
+    showGrp(ctx, 1268, 25, function () {
+      coinIcon(ctx, 1000, 25, 10);
+      T(ctx, String(Math.floor(N(s.gold, 0))), 1016, 25, { size: 20, align: 'left', color: P.gold, maxW: 106 });
+      repIcon(ctx, 1132, 25, 11);
+      T(ctx, String(Math.floor(N(s.rep, 0))), 1148, 25, { size: 20, align: 'left', color: P.rep, maxW: 120 });
+    });
+    var msg = S(s.message, '');
+    if (msg) showGrp(ctx, 932, 25, function () {
+      ctx.save(); ctx.beginPath(); ctx.rect(932, 0, 62, 50); ctx.clip(); richLine(ctx, msg, 932, 25, { size: 14, align: 'left', color: P.textDim, maxW: 62 }); ctx.restore();
+    });
+  }
+  function drawHud(ctx, s) {
+    var phase = S(s.phase, 'select');
+    if (phase === 'show') { drawHudShow(ctx, s); return; }
+    var dg = phase === 'dungeon', H = hudH(phase);
+    HUD_LAST_H = H;
+    ctx.fillStyle = 'rgba(12,15,22,0.94)'; ctx.fillRect(VX, 0, VW, H);
+    ctx.fillStyle = '#2c3446'; ctx.fillRect(VX, H - 2, VW, 2);
+    var day = Math.floor(N(s.day, 1)), dmax = Math.floor(N(s.dayMax, 4));
+    var dn = S(s.dungeonName, '') || (DUN[s.dungeon] ? DUN[s.dungeon].name : '');
+    var fl = Math.floor(N(s.floor, 1));
+    var meadow = dg && s.dungeon === 'meadow';
+    // 第 1 行左: 天數 + 地下城名「第 F 層」
+    hudGrp(ctx, 20, 25, phase, function () {
+      T(ctx, day <= 0 ? '見習日' : '第 ' + day + ' / ' + dmax + ' 天', 20, 25, { size: 20, align: 'left', color: day <= 0 ? P.select : P.text, maxW: 130 });
+      if (dg && dn) {
+        var dcol = DUN[s.dungeon] ? DUN[s.dungeon].color : P.text;
+        if (meadow || !(fl >= 1)) T(ctx, dn, 160, 25, { size: 20, align: 'left', color: dcol, maxW: 250 });
+        else {
+          ctx.save(); ctx.font = 'bold 20px ' + FONT; var dnw = Math.min(180, ctx.measureText(dn).width); ctx.restore();
+          T(ctx, dn, 160, 25, { size: 20, align: 'left', color: dcol, maxW: 180 });
+          T(ctx, '第 ' + fl + ' 層', 160 + dnw + 10, 25, { size: 20, align: 'left', color: '#ffffff', maxW: 300 - dnw - 10 });
+        }
+      }
+    });
+    // 第 1 行右: 金幣、名聲
+    hudGrp(ctx, 1268, 25, phase, function () {
+      coinIcon(ctx, 1000, 25, 10);
+      T(ctx, String(Math.floor(N(s.gold, 0))), 1016, 25, { size: 20, align: 'left', color: P.gold, maxW: 106 });
+      repIcon(ctx, 1132, 25, 11);
+      T(ctx, String(Math.floor(N(s.rep, 0))), 1148, 25, { size: 20, align: 'left', color: P.rep, maxW: 120 });
+    });
+    var tmax = N(s.timeMax, 0), tl = N(s.timeLeft, 0), msg = S(s.message, '');
+    // 第 1 行中: 時間條 + 秒數(見習草地這裡給任務列)
+    if (tmax > 0 && !meadow) hudGrp(ctx, 640, 25, phase, function () {
+      timeBar(ctx, 470, 16, 260, 18, tl, tmax);
+      T(ctx, Math.ceil(Math.max(0, tl)) + ' 秒', 744, 25, { size: 19, align: 'left', color: tl / tmax < 0.2 ? '#ff8a8a' : P.text });
+    });
+    if (!dg) {
+      if (phase === 'setup1') { if (msg) richLine(ctx, msg, 480, 685, { size: 17, color: '#d8e0ee', maxW: 400 }); return; }
+      if (msg) hudGrp(ctx, 640, 25, phase, function () { richLine(ctx, msg, tmax > 0 ? 880 : 640, 25, { size: 17, color: '#d8e0ee', maxW: tmax > 0 ? 200 : 600 }); });
+      return;
+    }
+    // 第 2 行左: 捕捉繩 + 收服列
+    var rm = clamp(Math.floor(N(s.ropeMax, 5)), 0, 9), ro = clamp(Math.floor(N(s.ropes, 0)), 0, rm);
+    hudGrp(ctx, 20, 74, phase, function () {
+      for (var k = 0; k < rm; k++) ropeIcon(ctx, 40 + k * 22, 74, 10, k < ro);
+      caughtRow(ctx, Array.isArray(s.caught) ? s.caught : []);
+    });
+    // 第 2 行: 武器小圖示 + 攻擊加成(緊接在收服列最多 10 格之後)
+    var atk = clamp(Math.floor(N(s.atk, 0)), 0, 9);
+    hudGrp(ctx, 726, 74, phase, function () {
+      iconWeapon(ctx, wpKey(s.weapon), 744, 75, 22);
+      T(ctx, '+' + atk, 784, 74, { size: 19, color: atk > 0 ? P.boost : '#c8b880', strokeColor: '#3a2600', strokeW: 4, maxW: 40 });
+    });
+    // 第 2 行右: 按鍵提示 / 訊息(靠右, 寬度到武器那塊為止)
+    var xm = N(s.xCdMax, 0), xl = N(s.xCdLeft, 0), xcd = (xm > 0 && xl > 0) ? p01(xl, xm) : 0;
+    var mcol = msg.indexOf('爆炸桶') >= 0 ? '#ff6b78' : ((msg.indexOf('繞') >= 0 || msg.indexOf('丟繩') >= 0) ? P.capture : '#d8e0ee');
+    if (msg) {
+      var kk = hudK(phase), wEnd = hudPt(812, 74).x;
+      hudGrp(ctx, 1260, 74, phase, function () { richLine(ctx, msg, 1260, 74, { size: 16, color: mcol, maxW: (HR - wEnd - 24) / kk, xCd: xcd, align: 'right' }); });
+    }
   }
 
   // ───────────── 開始畫面 ─────────────
@@ -3849,6 +3983,11 @@
     // 附註(note): 單行扁泡泡(338×38, 含 2px 框線剛好在 noteBubble 340×40 內)、顏色較淡(淡紙底 + 灰墨細框 + 灰字), 不畫按鍵;
     // RD 固定傳 bx,by = (186,26)、side up: 泡泡整個在 HUD 帶 y 6~46 內, 尾巴從下緣朝下指向繩列正中央, 根部 x 跟著尖端 x
     var note = S(s.kind, 'main') === 'note';
+    // 教學泡泡最多放大 1.35 倍(選單畫面的泡泡貼著卡片, 再大會蓋到卡片內容); 附註泡泡跟 HUD 同倍數
+    var tk = note ? hudK('dungeon') : Math.min(1.35, (window.PVDX && window.PVDX.on) ? HUD_KM : HUD_KD);
+    if (note) { var np = hudPt(bx, by); tx = np.x + (tx - bx); ty = np.y + (ty - by); bx = np.x; by = np.y; }
+    // 頭上的愛心跟著放大後往上長了, 指向角色的泡泡一起往上移, 尾巴不壓到愛心
+    else if (S(s.side, 'up') !== 'down') { var lift = 16 * (hudK('dungeon') - 1); by -= lift; ty -= lift; }
     var HW = note ? 169 : 158, HH = note ? 19 : 46;
     var INK = note ? '#5a6274' : P.tutorInk, BG = note ? 'rgba(255,250,236,0.92)' : P.tutorBg, LW = note ? 2 : 3;
     if (note) keys = [];
@@ -3858,7 +3997,11 @@
     var alpha = done && dq > 0.65 ? Math.max(0, 1 - (dq - 0.65) / 0.35) : 1;
     ctx.globalAlpha *= alpha * (ap >= 1 ? 1 : 0.4 + 0.6 * ap);
     var TB = note ? HW - 22 : HW - 28; // 尾巴根部可移動範圍(主 bx ± 130; 附註 bx ± 147 → 附註根部 x 幾乎都直接等於尖端 x)
-    ctx.translate(clamp(tx, bx - TB, bx + TB), baseY); ctx.scale(sc, sc); ctx.translate(-clamp(tx, bx - TB, bx + TB), -baseY);
+    var root0 = clamp(tx, bx - TB, bx + TB);
+    // 放大後的泡泡要留在 HUD 帶之下、畫面之內: 空間不夠就少放大一點(最少維持原大小)
+    if (!note) tk = Math.max(1, Math.min(tk, (up ? baseY - HUD_LAST_H - 4 : 716 - baseY) / (2 * HH + 4)));
+    ctx.translate(root0, baseY); ctx.scale(sc * tk, sc * tk); ctx.translate(-root0, -baseY);
+    tx = root0 + (tx - root0) / tk; ty = baseY + (ty - baseY) / tk;   // 尾巴尖端在放大後仍指在原目標
     // 尾巴: 從泡泡邊緣指向目標(停在目標前 6px, 不蓋住目標)
     var tb = clamp(tx, bx - TB, bx + TB), tw0 = note ? 8 : 13;
     var dxv = tx - tb, dyv = ty - baseY, dl = Math.sqrt(dxv * dxv + dyv * dyv) || 1;
@@ -4001,9 +4144,9 @@
     if (ph === 'shrink') {
       // 0.5 秒: 中心 (640,380) → (640,25)、720×220 → 400×40(緩出); 壓暗 0.45 → 0; 卡片內容淡出、任務列內容淡入
       var p = clamp(t / dur, 0, 1), k = 1 - Math.pow(1 - p, 3);
-      var cy = 380 + (25 - 380) * k, w = 720 + (400 - 720) * k, h = 220 + (40 - 220) * k;
+      var qp = hudPt(640, 25), cy = 380 + (qp.y - 380) * k, w = 720 + (400 * qp.k - 720) * k, h = 220 + (40 * qp.k - 220) * k;
       if (k < 1) { ctx.fillStyle = 'rgba(0,0,0,' + (0.45 * (1 - k)).toFixed(3) + ')'; ctx.fillRect(VX, 0, VW, 720); }
-      ctx.translate(640, cy);
+      ctx.translate(640 + (qp.x - 640) * k, cy);
       var r = 20 + (11 - 20) * k;
       rr(ctx, -w / 2, -h / 2, w, h, r); ctx.fillStyle = 'rgba(30,37,52,0.98)'; ctx.fill();
       ctx.save(); rr(ctx, -w / 2, -h / 2, w, h, r); ctx.clip();
@@ -4011,13 +4154,13 @@
       var ca = clamp(1 - k / 0.6, 0, 1);
       if (ca > 0) { ctx.save(); ctx.scale(cs, cs); drawCard(ca); ctx.restore(); }
       var ba = clamp((k - 0.4) / 0.6, 0, 1);
-      if (ba > 0) { ctx.save(); ctx.globalAlpha *= ba; barText(false); ctx.restore(); }
+      if (ba > 0) { ctx.save(); ctx.globalAlpha *= ba; ctx.scale(w / 400, w / 400); barText(false); ctx.restore(); }
       ctx.restore();
       rr(ctx, -w / 2, -h / 2, w, h, r); ctx.strokeStyle = P.capture; ctx.lineWidth = 4 + (2.5 - 4) * k; ctx.stroke();
       return;
     }
-    // ── 任務列 / 任務完成: 400×40 @ (640,25) ──
-    ctx.translate(640, 25);
+    // ── 任務列 / 任務完成: 400×40 @ (640,25), 跟著 HUD 放大 ──
+    var qb = hudPt(640, 25); ctx.translate(qb.x, qb.y); ctx.scale(qb.k, qb.k);
     if (ph === 'done') {
       // 前 0.4 秒整條 1.0 → 1.1 → 1.0(放大後 440×44, 在 HUD 帶 y 3~47 內)
       var dq = clamp(t / 0.4, 0, 1), bs = t < 0.4 ? 1 + 0.1 * Math.sin(Math.PI * dq) : 1;
@@ -4469,12 +4612,12 @@
       guideKey(ctx, 292, 76, prog, ready, '繼續', t);
       ctx.restore();
     } else {
-      var cx = N(s.cardX, 640), cy = N(s.cardY, 360) + flyY;
-      var ca = fade * (0.25 + 0.75 * easeOut(aq)), cs = 0.85 + 0.15 * easeOut(aq);
+      var cx = N(s.cardX, 640), cy = N(s.cardY, 360) + flyY, gk = menuK();
+      var ca = fade * (0.25 + 0.75 * easeOut(aq)), cs = (0.85 + 0.15 * easeOut(aq)) * gk;
       // 箭頭: 卡片矩形上離尖端最近的點 → (tipX, tipY); tipX 為 null 不畫
       if (typeof s.tipX === 'number' && isFinite(s.tipX) && typeof s.tipY === 'number' && isFinite(s.tipY)) {
         var tx = s.tipX, tyy = s.tipY + flyY;
-        var nx = clamp(tx, cx - 220, cx + 220), ny = clamp(tyy, cy - 70, cy + 70);
+        var nx = clamp(tx, cx - 250 * gk, cx + 250 * gk), ny = clamp(tyy, cy - 70 * gk, cy + 70 * gk);
         if (nx !== tx || ny !== tyy) { ctx.save(); ctx.globalAlpha *= ca; guideArrow(ctx, nx, ny, tx, tyy, 6, 18); ctx.restore(); }
       }
       // 出口在畫面外(edgeAngle): 聚光燈圓內畫朝出口方向的大箭頭, 沿方向輕輕來回
@@ -4487,15 +4630,15 @@
       }
       ctx.save(); ctx.globalAlpha *= ca; ctx.translate(cx, cy); ctx.scale(cs, cs);
       ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 14;
-      rr(ctx, -218.5, -68.5, 437, 137, 16); ctx.fillStyle = P.tutorBg; ctx.fill(); ctx.restore();
-      rr(ctx, -218.5, -68.5, 437, 137, 16); ctx.strokeStyle = GUIDE_INK; ctx.lineWidth = 3; ctx.stroke();
-      rr(ctx, -214, -64, 8, 128, 4); ctx.fillStyle = deco[0]; ctx.fill();
-      guideBadge(ctx, -186, -38, 16, which, deco);
+      rr(ctx, -248.5, -68.5, 497, 137, 16); ctx.fillStyle = P.tutorBg; ctx.fill(); ctx.restore();
+      rr(ctx, -248.5, -68.5, 497, 137, 16); ctx.strokeStyle = GUIDE_INK; ctx.lineWidth = 3; ctx.stroke();
+      rr(ctx, -244, -64, 8, 128, 4); ctx.fillStyle = deco[0]; ctx.fill();
+      guideBadge(ctx, -216, -38, 16, which, deco);
       var mainY = sub ? -26 : -14;
-      richLines(ctx, text, 14, mainY, { size: 26, color: GUIDE_INK, stroke: false, maxW: 350, maxLines: 2, lineH: 32 });
-      if (sub) T(ctx, sub, -6, 30, { size: 17, color: '#5a6274', stroke: false, maxW: 220 });
+      richLines(ctx, text, 14, mainY, { size: 26, color: GUIDE_INK, stroke: false, maxW: 410, maxLines: 2, lineH: 32 });
+      if (sub) T(ctx, sub, -6, 30, { size: 17, color: '#5a6274', stroke: false, maxW: 260 });
       guideDots(ctx, -24, 52, idx, tot, deco[0]);
-      guideKey(ctx, 180, 40, prog, ready, '下一張', t);
+      guideKey(ctx, 210, 40, prog, ready, '下一張', t);
       ctx.restore();
     }
     // 小暫停符號固定 (1236,144) 40×40(整段引導都在; outro 跟著淡出)
@@ -4588,6 +4731,7 @@
     drawFloatText: wrap(drawFloatText),
     drawResultPanel: wrap(drawResultPanel),
     drawHud: wrap(drawHud),
+    hudH: hudH, hudPt: hudPt, hudRect: hudRect, showPt: showPt, showRect: showRect,
     drawQuestBanner: wrap(drawQuestBanner),
     drawTutorial: wrap(drawTutorial),
     drawGuide: wrap(drawGuide)

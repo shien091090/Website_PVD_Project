@@ -380,7 +380,7 @@ function keyName(e) {
 }
 // 按下 / 放開 / 全放開: 鍵盤與觸控按鈕(touch.js)共用同一條路徑
 function inputDown(k) {
-  if (window.PVDX && PVDX.paused) return;   // 網站暫停 / 直拿提示中不收輸入
+  if (window.PVDX && PVDX.paused) return;   // 網站暫停 / 直拿提示 / Esc 暫停中不收輸入
   Snd.init();
   keys[k] = true;
   pressed[k] = true;
@@ -392,6 +392,13 @@ function inputReset() {
   pressed = {};
 }
 window.addEventListener('keydown', function (e) {
+  // M: 靜音開關(通用鍵, 哪個畫面都能按; 和出發準備的聲音按鈕切同一個設定)
+  if (e.code === 'KeyM' || e.key === 'm' || e.key === 'M') {
+    e.preventDefault();
+    if (e.repeat || (window.PVDX && PVDX.paused)) return;
+    Snd.init(); Snd.toggleMute(); Snd.play('ui_confirm');
+    return;
+  }
   const k = keyName(e);
   if (!k) return;
   e.preventDefault();
@@ -709,6 +716,13 @@ const GUIDE_READ = 3.0, GUIDE_APPEAR = 0.3, GUIDE_PAUSE = 0.8, GUIDE_OUTRO = 0.4
 function guideGeo(id) {
   const base = { text: '', sub: '', grand: false, spot: { shape: 'none', x: 0, y: 0, w: 0, h: 0, r: 0 }, cardX: 640, cardY: 340, tipX: null, tipY: null, edgeAngle: null };
   const rect = (x, y, w, h) => ({ shape: 'rect', x, y, w, h, r: 0 });
+  // HUD 上的東西照美術的 HUD 放大換算位置
+  const hp = (x, y) => (Art.hudPt ? Art.hudPt(x, y) : { x, y, k: 1 });
+  const hrect = (x, y, w, h) => { const p = hp(x, y); return rect(p.x, p.y, w * p.k, h * p.k); };
+  const hdy = (Art.hudH ? Art.hudH('dungeon') : 100) - 100;
+  // 表演場 HUD(熱度表)也放大了
+  const sp2 = (x, y) => (Art.showPt ? Art.showPt(x, y) : { x, y, k: 1 });
+  const srect = (x, y, w, h) => { const p = sp2(x, y); return rect(p.x, p.y, w * p.k, h * p.k); };
   const circ = (x, y, r) => ({ shape: 'circle', x, y, w: 0, h: 0, r });
   switch (id) {
     case 13: return Object.assign(base, { text: '怪物在表演了 會照你排的節目演出', sub: '表演中不可操作', spot: rect(322, 691, 212, 56), cardX: 430, cardY: 560, tipX: 322, tipY: 661 });
@@ -729,15 +743,15 @@ function guideGeo(id) {
       }
       return Object.assign(base, g);
     }
-    case 15: return Object.assign(base, { text: '怪物表演得越賣力 觀眾熱度就越高', spot: rect(640, 25, 428, 46), cardX: 640, cardY: 190, tipX: 686, tipY: 50 });
+    case 15: return Object.assign(base, { text: '怪物表演得越賣力 觀眾熱度就越高', spot: srect(640, 25, 428, 46), cardX: sp2(640, 25).x, cardY: 200, tipX: sp2(686, 50).x, tipY: sp2(686, 50).y });
     case 16: return Object.assign(base, { text: '透過你的表演安排 讓場子熱起來吧!', grand: true });
     case 21: {
       const p = scr(D.tamer.x, D.tamer.y), below = p.y < 426;
       return Object.assign(base, { text: '在地下城自由探索 抓怪、拿道具、變強', spot: circ(p.x, p.y - 16, 90),
         cardX: clamp(p.x, 240, 1040), cardY: clamp(below ? p.y + 168 : p.y - 200, 190, 650), tipX: p.x, tipY: below ? p.y + 76 : p.y - 108 });
     }
-    case 22: return Object.assign(base, { text: '每次進地下城 捕捉繩都會補回 ' + ropeMaxNow() + ' 條', spot: rect(140, 74, 248, 40), cardX: 300, cardY: 200, tipX: 140, tipY: 96 });
-    case 23: return Object.assign(base, { text: '要注意時間限制 時間到就收工', spot: rect(631, 25, 340, 36), cardX: 631, cardY: 175, tipX: 600, tipY: 45 });
+    case 22: return Object.assign(base, { text: '每次進地下城 捕捉繩都會補回 ' + ropeMaxNow() + ' 條', spot: hrect(140, 74, 248, 40), cardX: Math.max(300, hp(140, 74).x + 160), cardY: 200 + hdy, tipX: hp(140, 96).x, tipY: hp(140, 96).y });
+    case 23: return Object.assign(base, { text: '要注意時間限制 時間到就收工', spot: hrect(631, 25, 340, 36), cardX: hp(631, 25).x, cardY: 175 + hdy, tipX: hp(600, 45).x, tipY: hp(600, 45).y });
     case 24: {
       const p = D.exit ? scr(D.exit.x, D.exit.y) : { x: 640, y: 400 };
       let sx = p.x, sy = p.y, edge = null;
@@ -971,8 +985,9 @@ function camOf() {
   // 可視寬 CW(1680): 地圖比可視寬窄時置中(兩側露出的是地下城背景底色), 否則跟著玩家並夾在地圖範圍內
   const mapW = D.W * TILE;
   const cx = mapW <= CW ? -(CW - mapW) / 2 : clamp(T.x - CW / 2, 0, mapW - CW);
-  const cy = clamp(T.y - 310, 0, Math.max(0, D.H * TILE - 620));
-  return { x: cx + OX, y: cy - 100 };   // 設計座標畫面 = 世界 − cam(x 已含平移 OX)
+  const HH = Art.hudH ? Art.hudH('dungeon') : 100;   // HUD 帶高度(放大後可能超過 100), 地圖從它下面開始
+  const cy = clamp(T.y - 310 - (HH - 100) / 2, 0, Math.max(0, D.H * TILE - (CH - HH)));
+  return { x: cx + OX, y: cy - HH };   // 設計座標畫面 = 世界 − cam(x 已含平移 OX)
 }
 function monStat(sp) {
   const base = SP[sp];
@@ -2925,6 +2940,7 @@ function toResult() {
   const stars = G.rep >= STAR_AT[2] ? 3 : G.rep >= STAR_AT[1] ? 2 : G.rep >= STAR_AT[0] ? 1 : 0;
   RS = { t: 0, stars, shown: 0 };
   setScene('result');
+  if (window.PVDX) PVDX.finish();   // 玩完一局: 通知網站(touch.js)
 }
 function resultInput(dt) {
   RS.t += dt;
@@ -3018,7 +3034,7 @@ function drawHazards(list, areaPhase, ox, oy, killer) {
   }
 }
 function tileKind(ch) { return ch === '#' ? 'wall' : ch === 'o' ? 'pillar' : ch === 'L' ? 'hurt' : ch === 'W' ? 'slow' : ch === 'G' ? 'bush' : 'floor'; }
-function onScr(x, y, m) { return x > -OX - m && x < DW + OX + m && y > 100 - m && y < CH + m; }
+function onScr(x, y, m) { return x > -OX - m && x < DW + OX + m && y > (Art.hudH ? Art.hudH('dungeon') : 100) - m && y < CH + m; }
 const STATIC_FLOAT = { hint: true, boost: true, confetti: true, unlock: true };
 
 function renderDungeon() {
@@ -3369,7 +3385,7 @@ function frame(ts) {
   const dt = Math.min((ts - lastTs) / 1000, 1 / 30);
   lastTs = ts;
   try {
-    if (!(window.PVDX && PVDX.paused)) update(dt);   // 網站暫停 / 直拿提示時凍結(touch.js)
+    if (!(window.PVDX && PVDX.paused)) update(dt);   // 網站暫停 / 直拿提示 / Esc 暫停時凍結(touch.js)
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, CW, CH);
     render();
