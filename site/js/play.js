@@ -50,10 +50,13 @@ export function renderPlay() {
   } else psheet.innerHTML = '';
   if (!mob && sel != null) {
     const g = GAMES[sel];
+    const meta = `<dl class="meta"><dt>時長</dt><dd>${esc(g.time)}</dd><dt>裝置</dt><dd>${devHtml(g)}</dd></dl>`;
+    // 有橫幅: 圖示壓在橫幅左下角, 標題與時長裝置排在圖示右邊
     detail.innerHTML = `
-      <div class="dl">
-        <div class="hd">${ico(g)}<b>${esc(g.name)}</b></div>
-        <dl class="meta"><dt>時長</dt><dd>${esc(g.time)}</dd><dt>裝置</dt><dd>${devHtml(g)}</dd></dl>
+      <div class="dl${g.banner ? ' has-cover' : ''}">
+        ${g.banner
+          ? `<div class="cover"><img src="${esc(g.banner)}" alt=""></div><div class="hd">${ico(g)}<div class="ht"><b>${esc(g.name)}</b>${meta}</div></div>`
+          : `<div class="hd">${ico(g)}<b>${esc(g.name)}</b></div>${meta}`}
         <p>${esc(g.intro)}</p>
         ${startBtn(g)}
       </div>

@@ -41,10 +41,10 @@ export function checkRelease(dir) {
 const q = s => `'${String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
 
 // 只換掉 games.js 裡這款遊戲的那一筆, 其他內容原樣保留
-export function applyInfo(src, info, icon) {
+export function applyInfo(src, info, icon, banner) {
   const re = new RegExp(`  \\{ code: '${info.code}',[\\s\\S]*?\\},\\n`);
   if (!re.test(src)) throw new Error(`games.js 裡找不到 ${info.code}`);
   const entry = `  { code: ${q(info.code)}, name: ${q(info.name)}, letter: ${q([...info.name][0])}, time: ${q(info.time)}, `
-    + `mobile: ${info.mobile}, bg: ${q(info.color)}, fg: ${q(info.textColor)}, icon: ${q(icon)},\n    intro: ${q(info.intro)} },\n`;
+    + `mobile: ${info.mobile}, bg: ${q(info.color)}, fg: ${q(info.textColor)}, icon: ${q(icon)}, banner: ${q(banner)},\n    intro: ${q(info.intro)} },\n`;
   return src.replace(re, () => entry);
 }

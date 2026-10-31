@@ -75,13 +75,13 @@ test('網站沒有的遊戲代號要擋', () => {
 
 test('套用遊戲資料只改這一款, 其他款不動', async () => {
   const src = readFileSync('site/js/games.js', 'utf8');
-  const out = applyInfo(src, { ...INFO, intro: "有'引號'的介紹" }, 'media/games/dungeon-zoo.png');
+  const out = applyInfo(src, { ...INFO, intro: "有'引號'的介紹" }, 'media/games/dungeon-zoo.png', 'media/games/dungeon-zoo-banner.png');
   const { GAMES } = await import('data:text/javascript,' + encodeURIComponent(out));
   const { GAMES: before } = await import('../../site/js/games.js');
   const g = GAMES.find(x => x.code === 'dungeon-zoo');
   assert.deepEqual(g, {
     code: 'dungeon-zoo', name: INFO.name, letter: '來', time: INFO.time, mobile: true,
-    bg: INFO.color, fg: INFO.textColor, icon: 'media/games/dungeon-zoo.png', intro: "有'引號'的介紹",
+    bg: INFO.color, fg: INFO.textColor, icon: 'media/games/dungeon-zoo.png', banner: 'media/games/dungeon-zoo-banner.png', intro: "有'引號'的介紹",
   });
   assert.deepEqual(GAMES.filter(x => x.code !== 'dungeon-zoo'), before.filter(x => x.code !== 'dungeon-zoo'));
 });

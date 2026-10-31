@@ -121,3 +121,35 @@ test('手機橫拿: 返回鈕放進瀏海保留區, 遊戲左邊不多空一條'
   assert.match(await page.locator('#pg-game .back').textContent(), /返回/);
   await ctx.close();
 });
+
+test('試玩頁介紹: 有橫幅的遊戲頂端放 21:9 橫幅, 圖示壓在橫幅左下角; 沒橫幅的照舊', async () => {
+  const ctx = await browser.newContext(PC);
+  const page = await ctx.newPage();
+  await page.goto(srv.url + '#play/dungeon-zoo');
+  const cover = page.locator('#detail .cover');
+  await cover.waitFor();
+  assert.match(await cover.locator('img').getAttribute('src'), /dungeon-zoo-banner\.png$/);
+  await page.waitForFunction(() => document.querySelector('#detail .cover img').complete);
+  const c = await cover.locator('img').boundingBox(), dl = await page.locator('#detail .dl').boundingBox();
+  const ic = await page.locator('#detail .hd .icon').boundingBox();
+  assert.ok(Math.abs(c.width / c.height - 21 / 9) < 0.03, `橫幅比例 ${c.width}x${c.height}`);
+  assert.ok(Math.abs(c.width - dl.width) < 2 && Math.abs(c.y - dl.y) < 4, '橫幅貼齊左半頂端');
+  assert.ok(ic.y < c.y + c.height && ic.y + ic.height > c.y + c.height, '圖示跨在橫幅下緣');
+  assert.ok(ic.x - c.x < c.width * 0.25, '圖示在左邊');
+  await page.goto(srv.url + '#play/slime-tetris');
+  await page.locator('#detail .hd').waitFor();
+  assert.equal(await page.locator('#detail .cover').count(), 0);
+  await ctx.close();
+});
+
+test('試玩頁介紹: 窄螢幕標題不壓進橫幅, 開始鈕不用捲動就看得到', async () => {
+  const ctx = await browser.newContext({ viewport: { width: 1366, height: 640 } }); // 1366×768 筆電扣掉瀏覽器工具列
+  const page = await ctx.newPage();
+  await page.goto(srv.url + '#play/dungeon-zoo');
+  await page.locator('#detail .cover img').waitFor();
+  const c = await page.locator('#detail .cover').boundingBox(), t = await page.locator('#detail .hd b').boundingBox();
+  if (t.height > 1) assert.ok(t.y >= c.y + c.height, `標題頂 ${t.y} 在橫幅底 ${c.y + c.height} 之下`);
+  const b = await page.locator('#detail .startbtn').boundingBox(), dl = await page.locator('#detail .dl').boundingBox();
+  assert.ok(b.y + b.height <= dl.y + dl.height, `開始鈕底 ${b.y + b.height} 超出介紹區底 ${dl.y + dl.height}`);
+  await ctx.close();
+});
