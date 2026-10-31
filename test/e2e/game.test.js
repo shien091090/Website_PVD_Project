@@ -92,3 +92,18 @@ test('遊戲圖示塞滿圓角框, 不會撐出框外', async () => {
     await ctx.close();
   }
 });
+
+test('遊戲框是 21:9, 電腦四周留白較多, 手機橫拿只留一點', async () => {
+  for (const [opts, gap] of [[PC, 40], [PHONE_L, 8]]) {
+    const ctx = await browser.newContext(opts);
+    const page = await ctx.newPage();
+    await page.goto(srv.url + '#game/slime-tetris');
+    await page.locator('#scr iframe').waitFor();
+    const area = await page.locator('.gwrap').boundingBox();
+    const scr = await page.locator('#scr').boundingBox();
+    assert.ok(Math.abs(scr.width / scr.height - 21 / 9) < 0.02, `比例 ${scr.width}x${scr.height}`);
+    const side = Math.min(scr.x - area.x, area.x + area.width - scr.x - scr.width, scr.y - area.y, area.y + area.height - scr.y - scr.height);
+    assert.ok(Math.abs(side - gap) <= 1, `最窄留白 ${side}, 應為 ${gap}`);
+    await ctx.close();
+  }
+});

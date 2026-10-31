@@ -420,13 +420,13 @@ img.logo { border: 0; object-fit: contain; }
   .links a { padding: 10px 16px; font-size: 14px; }
 }
 
-/* ---------- WebGame 遊玩頁: 返回 bar + 16:9 遊戲; 手機直拿擋住並要求轉橫 ---------- */
+/* ---------- WebGame 遊玩頁: 返回 bar + 21:9 遊戲; 手機直拿擋住並要求轉橫 ---------- */
 #pg-game { background: var(--paper); }
 .gbar { flex: none; height: 56px; display: flex; align-items: center; padding: 0 16px; border-bottom: 2px solid var(--ink); box-sizing: border-box; }
 .back { display: inline-flex; align-items: center; gap: 4px; border: 2px solid var(--ink); border-radius: 999px; padding: 7px 14px 7px 10px; font: 700 14px/1 var(--font); text-decoration: none; color: var(--ink); background: var(--paper); white-space: nowrap; }
 .back:hover { background: var(--ink); color: var(--on-ink); }
-.gwrap { flex: 1; min-height: 0; container-type: size; display: grid; place-items: center; }
-.scr { position: relative; width: min(100cqw, 100cqh * 16 / 9); aspect-ratio: 16 / 9; background: #000; overflow: hidden; touch-action: none; overscroll-behavior: contain; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.gwrap { flex: 1; min-height: 0; container-type: size; display: grid; place-items: center; padding: 40px; box-sizing: border-box; }
+.scr { position: relative; width: min(100cqw, 100cqh * 21 / 9); aspect-ratio: 21 / 9; background: #000; overflow: hidden; touch-action: none; overscroll-behavior: contain; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 .scr iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; }
 .rot { display: none; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 24px; text-align: center; }
 .rot svg { width: 150px; height: 150px; animation: tilt 2.4s ease-in-out infinite; }
@@ -445,6 +445,7 @@ img.logo { border: 0; object-fit: contain; }
   #pg-game { flex-direction: row; }
   .gbar { width: 84px; height: auto; flex-direction: column; justify-content: flex-start; padding: 12px 0; border-bottom: 0; border-right: 2px solid var(--ink); }
   .back { padding: 7px 10px 7px 8px; font-size: 13px; }
+  .gwrap { padding: 8px; }
 }
 
 /* 投票尚未開放 / 投票錯誤提示 */
