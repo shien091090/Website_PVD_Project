@@ -3624,7 +3624,10 @@
     });
     if (!dg) {
       if (phase === 'setup1') { if (msg) richLine(ctx, msg, 480, 685, { size: 17, color: '#d8e0ee', maxW: 400 }); return; }
-      if (msg) hudGrp(ctx, 640, 25, phase, function () { richLine(ctx, msg, tmax > 0 ? 880 : 640, 25, { size: 17, color: '#d8e0ee', maxW: tmax > 0 ? 200 : 600 }); });
+      // 按鍵提示置中, 最寬到左塊(天數)與右塊(金幣)之間的空間為止
+      var km = hudK(phase), mc = hudPt(640, 25).x, lx = HL + (152 - 20) * km, rx = HR + (988 - 1268) * km;
+      var mw = Math.max(120, Math.min(600, 2 * (Math.min(mc - lx, rx - mc) / km - 12)));
+      if (msg) hudGrp(ctx, 640, 25, phase, function () { richLine(ctx, msg, tmax > 0 ? 880 : 640, 25, { size: 17, color: '#d8e0ee', maxW: tmax > 0 ? 200 : mw }); });
       return;
     }
     // 第 2 行左: 捕捉繩 + 收服列
@@ -4713,6 +4716,28 @@
     }
   }
 
+  // 聲音開關圖示(電腦版): 畫面右上角、頂端資訊列下方; 開 = 喇叭 + 聲波, 關 = 灰喇叭 + 紅叉; 右下角小 [M] 鍵帽。
+  // s.muted: 是否靜音; s.hud: 這個畫面有沒有畫頂端資訊列(有就放在它下方)
+  function drawSoundIcon(ctx, s) {
+    var k = menuK(), sz = 40 * k, x = HR - sz, y = (B(s.hud) ? HUD_LAST_H : 0) + 12 * k, muted = B(s.muted);
+    rr(ctx, x, y, sz, sz, 9 * k); ctx.fillStyle = 'rgba(12,15,22,0.72)'; ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.save();
+    ctx.translate(x + sz / 2 - 3 * k, y + sz / 2); ctx.scale(k, k);
+    ctx.beginPath(); ctx.moveTo(-11, -5); ctx.lineTo(-5, -5); ctx.lineTo(2, -11); ctx.lineTo(2, 11); ctx.lineTo(-5, 5); ctx.lineTo(-11, 5); ctx.closePath();
+    ctx.fillStyle = muted ? '#8a93a6' : '#f2f4f9'; ctx.fill();
+    ctx.lineWidth = 2.6; ctx.lineCap = 'round';
+    if (muted) {
+      ctx.strokeStyle = '#ff6b6b'; ctx.beginPath(); ctx.moveTo(7, -6); ctx.lineTo(17, 6); ctx.moveTo(17, -6); ctx.lineTo(7, 6); ctx.stroke();
+    } else {
+      ctx.strokeStyle = '#f2f4f9';
+      ctx.beginPath(); ctx.arc(3, 0, 7, -0.9, 0.9); ctx.stroke();
+      ctx.beginPath(); ctx.arc(3, 0, 13, -0.9, 0.9); ctx.stroke();
+    }
+    ctx.restore();
+    keyCap(ctx, 'M', x + sz - 3 * k, y + sz - 3 * k, 16 * k);
+  }
+
   // ───────────── 匯出 ─────────────
   window.Art = {
     canvas: { width: VW, height: 720 },
@@ -4777,6 +4802,7 @@
     hudH: hudH, hudPt: hudPt, hudRect: hudRect, showPt: showPt, showRect: showRect,
     drawQuestBanner: wrap(drawQuestBanner),
     drawTutorial: wrap(drawTutorial),
-    drawGuide: wrap(drawGuide)
+    drawGuide: wrap(drawGuide),
+    drawSoundIcon: wrap(drawSoundIcon)
   };
 })();

@@ -3305,7 +3305,13 @@ function renderShop() {
 
 function render() {
   ctx.save(); ctx.translate(OX, 0);
-  try { renderScene(); } finally { ctx.restore(); }
+  try { renderScene(); renderSoundIcon(); } finally { ctx.restore(); }
+}
+// 聲音開關圖示(跟 M 鍵同步): 只有電腦版畫(手機聲音交給手機本身); 引導卡蓋滿畫面時藏起來
+const NO_HUD_SCENES = { title: true, calendar: true, intermission: true };
+function renderSoundIcon() {
+  if ((window.PVDX && PVDX.on) || GD) return;
+  Art.drawSoundIcon(ctx, { muted: !!Snd.muted, hud: !NO_HUD_SCENES[scene] });
 }
 function renderScene() {
   switch (scene) {
