@@ -450,6 +450,11 @@ html:has(body[data-pg="game"]), body[data-pg="game"] { touch-action: manipulatio
 .gwrap { flex: 1; min-height: 0; container-type: size; display: grid; place-items: center; padding: 40px; box-sizing: border-box; }
 .scr { position: relative; width: min(100cqw, 100cqh * 16 / 9); aspect-ratio: 16 / 9; background: #000; overflow: hidden; touch-action: none; overscroll-behavior: contain; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 .scr iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; }
+.gload { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; background: #000; color: #fff; font: 700 16px/1.4 var(--font); }
+.gload i { width: min(240px, 50%); height: 8px; border-radius: 99px; background: rgba(255, 255, 255, .18); position: relative; overflow: hidden; }
+.gload i::after { content: ""; position: absolute; inset: 0 auto 0 0; width: 40%; border-radius: inherit; background: #fff; animation: gload 1.1s ease-in-out infinite; }
+@keyframes gload { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+@media (prefers-reduced-motion: reduce) { .gload i::after { animation-duration: 3s; } }
 .rot { display: none; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 24px; text-align: center; }
 .rot svg { width: 150px; height: 150px; animation: tilt 2.4s ease-in-out infinite; }
 @keyframes tilt { 0%, 30% { transform: rotate(0); } 55%, 85% { transform: rotate(-90deg); } 100% { transform: rotate(0); } }

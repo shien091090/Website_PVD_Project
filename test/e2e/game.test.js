@@ -216,3 +216,18 @@ test('手機遊戲清單: 有橫幅的用橫幅當按鈕, 沒有的用主色暫�
   assert.equal(await p2.locator('#glist .gh.bn').count(), 0);
   await pc.close();
 });
+
+test('遊戲還在載入時遊戲框顯示載入中, 載完就收起', async () => {
+  const ctx = await browser.newContext(PC);
+  const page = await ctx.newPage();
+  let release;
+  const gate = new Promise(r => { release = r; });
+  await page.route(/\/games\/ghost-echo\/.+\.js/, async route => { await gate; await route.continue(); });
+  await page.goto(srv.url + '#game/ghost-echo', { waitUntil: 'commit' });
+  const ld = page.locator('#pg-game .gload');
+  await ld.waitFor({ state: 'visible' });
+  assert.match(await ld.textContent(), /載入中/);
+  release();
+  await ld.waitFor({ state: 'hidden', timeout: 15000 });
+  await ctx.close();
+});

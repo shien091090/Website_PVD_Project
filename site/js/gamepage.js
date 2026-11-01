@@ -47,7 +47,9 @@ function sync() {
     frame.title = byCode(code).name;
     frame.allow = 'autoplay; fullscreen; gamepad';
     scr.appendChild(frame);
-    frame.addEventListener('load', () => { if (!frame) return; blockZoom(frame.contentWindow); frame.focus(); });
+    // 遊戲檔案載完前遊戲框是全黑, 先蓋一層載入中, 免得玩家以為壞掉
+    scr.insertAdjacentHTML('beforeend', `<div class="gload" role="status"><i></i><b>遊戲載入中…</b></div>`);
+    frame.addEventListener('load', () => { if (!frame) return; scr.querySelector('.gload')?.remove(); blockZoom(frame.contentWindow); frame.focus(); });
   }
   const shouldPause = portraitQ.matches || document.hidden;
   if (frame && shouldPause !== paused) { paused = shouldPause; post(paused ? 'pvd:pause' : 'pvd:resume'); }
@@ -68,6 +70,7 @@ export function leaveGame() {
   setRunning(false);
   const s = lap();
   frame?.remove();
+  scr.querySelector('.gload')?.remove();
   frame = null; code = null;
   return s;
 }
