@@ -11,7 +11,6 @@ const RELEASE = {
 };
 const SRC = {
   'bubble-catcher': 'E:/Project/Game/WebGame_BubbleCatcher/game',
-  'slime-tetris': 'E:/Project/Game/WebGame_SlimeTetris/game',
   'ghost-echo': 'E:/Project/Game/WebGame_GhostEchoV2/polish/game/game',
 };
 const LIMIT = 25 * 1024 * 1024; // Cloudflare Pages 單檔上限

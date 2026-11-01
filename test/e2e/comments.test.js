@@ -15,7 +15,7 @@ test('送出留言後出現在最上面, 別的瀏覽器也看得到, 連送被�
   const ctx = await browser.newContext(PC);
   const page = await ctx.newPage();
   await page.goto(srv.url + '#play');
-  await pick(page, '史萊姆擴張');
+  await pick(page, '魂匠守衛者');
   await page.fill('.board .cform input', '好玩');
   await page.click('.board .cform button:has-text("送出")');
   await page.waitForFunction(() => document.querySelector('.board .cms .cm .t')?.textContent === '好玩', null, { timeout: 15000 });
@@ -29,7 +29,7 @@ test('送出留言後出現在最上面, 別的瀏覽器也看得到, 連送被�
 
   const other = await browser.newContext(PC);
   const p2 = await other.newPage();
-  await p2.goto(srv.url + '#play/slime-tetris');
+  await p2.goto(srv.url + '#play/soul-smith-defense');
   await p2.waitForFunction(() => document.querySelector('.board .cms .cm .t')?.textContent === '好玩');
   await other.close();
   await ctx.close();
@@ -145,7 +145,7 @@ test('點進留言框就先做驗證, 按送出時不用再等驗證', async () 
   const ctx = await browser.newContext(PC);
   const page = await ctx.newPage();
   await page.route('**/turnstile/v0/api.js*', r => r.fulfill({ contentType: 'text/javascript', body: SLOW_TS }));
-  await page.goto(srv.url + '#play/slime-tetris'); // 前面的測試鎖了 dungeon-zoo
+  await page.goto(srv.url + '#play/soul-smith-defense'); // 前面的測試鎖了 dungeon-zoo
   await page.locator('.board .cms').waitFor();
   await page.click('.board .cform input');
   await page.waitForFunction(() => window.__ex === 1);

@@ -26,7 +26,7 @@ function setup() {
 test('進行中: 狀態不含任何票數, 可改投且只算一票', async () => {
   const s = setup();
   await s.round(T0 - H, T0 + H);
-  assert.deepEqual((await s.vote('slime-tetris')).body, { myVote: 'slime-tetris', changed: false });
+  assert.deepEqual((await s.vote('bubble-catcher')).body, { myVote: 'bubble-catcher', changed: false });
   assert.deepEqual((await s.vote('ghost-echo')).body, { myVote: 'ghost-echo', changed: true });
   const st = await s.state();
   assert.equal(st.body.phase, 'live');
@@ -34,19 +34,19 @@ test('進行中: 狀態不含任何票數, 可改投且只算一票', async () =
   assert.equal(st.body.results, null);
   assert.ok(!/counts|total|votes/.test(st.text), st.text);
   const admin = await s.call(roundsApi.onRequestGet, 'GET', '/api/admin/rounds');
-  assert.deepEqual(admin.body.rounds[0].counts, { 'bubble-catcher': 0, 'slime-tetris': 0, 'dungeon-zoo': 0, 'ghost-echo': 1, 'soul-smith-defense': 0 });
+  assert.deepEqual(admin.body.rounds[0].counts, { 'bubble-catcher': 0, 'dungeon-zoo': 0, 'ghost-echo': 1, 'soul-smith-defense': 0 });
 });
 
 test('截止後投票 409 ended', async () => {
   const s = setup();
   await s.round(T0 - 2 * H, T0 - H);
-  assert.equal((await s.vote('slime-tetris')).body.error.code, 'ended');
+  assert.equal((await s.vote('bubble-catcher')).body.error.code, 'ended');
 });
 
 test('沒有任何輪次: phase none, 投票 409 no_round', async () => {
   const s = setup();
   assert.equal((await s.state()).body.phase, 'none');
-  assert.equal((await s.vote('slime-tetris')).body.error.code, 'no_round');
+  assert.equal((await s.vote('bubble-catcher')).body.error.code, 'no_round');
 });
 
 test('不存在的遊戲 404', async () => {
@@ -66,7 +66,7 @@ test('結束且 0 票: 結果統計中, 不帶票數', async () => {
 test('同票: 統計中, 後台指定後顯示勝出與票數', async () => {
   const s = setup();
   await s.round(T0 - H, T0 + H);
-  await s.vote('slime-tetris', { vid: 'a' }); await s.vote('slime-tetris', { vid: 'b' });
+  await s.vote('bubble-catcher', { vid: 'a' }); await s.vote('bubble-catcher', { vid: 'b' });
   await s.vote('ghost-echo', { vid: 'c' }); await s.vote('ghost-echo', { vid: 'd' });
   s.set(T0 + 2 * H);
   assert.deepEqual((await s.state()).body.results, { pending: true });
@@ -77,7 +77,7 @@ test('同票: 統計中, 後台指定後顯示勝出與票數', async () => {
   assert.equal(r.pending, false);
   assert.equal(r.winner, 'ghost-echo');
   assert.equal(r.total, 4);
-  assert.equal(r.counts['slime-tetris'], 2);
+  assert.equal(r.counts['bubble-catcher'], 2);
 });
 
 test('唯一最高票直接勝出; 非同票不能指定', async () => {
@@ -94,7 +94,7 @@ test('只能指定同票最高的其中一款', async () => {
   await s.round(T0 - H, T0 + H);
   await s.vote('dungeon-zoo', { vid: 'a' }); await s.vote('ghost-echo', { vid: 'b' });
   s.set(T0 + 2 * H);
-  assert.equal((await s.call(winnerApi.onRequestPut, 'PUT', '/api/admin/winner', { roundId: 1, game: 'slime-tetris' })).body.error.code, 'not_top');
+  assert.equal((await s.call(winnerApi.onRequestPut, 'PUT', '/api/admin/winner', { roundId: 1, game: 'bubble-catcher' })).body.error.code, 'not_top');
 });
 
 test('winnerOf 規則', () => {
@@ -108,11 +108,11 @@ test('上一輪結束、下一輪未開始: 顯示上一輪結果與下一輪開
   const s = setup();
   await s.round(T0 - 3 * H, T0 - H);
   await s.round(T0 + H, T0 + 5 * H);
-  await s.db.prepare('INSERT INTO votes VALUES (1, ?, ?, ?, ?, ?)').bind('v1', 'slime-tetris', 'h', 1, 1).run();
+  await s.db.prepare('INSERT INTO votes VALUES (1, ?, ?, ?, ?, ?)').bind('v1', 'bubble-catcher', 'h', 1, 1).run();
   let st = (await s.state()).body;
   assert.equal(st.phase, 'ended');
   assert.equal(st.round.id, 1);
-  assert.equal(st.results.winner, 'slime-tetris');
+  assert.equal(st.results.winner, 'bubble-catcher');
   assert.deepEqual(st.next, { startsAt: T0 + H });
   s.set(T0 + 2 * H);
   st = (await s.state()).body;
@@ -124,8 +124,8 @@ test('上一輪結束、下一輪未開始: 顯示上一輪結果與下一輪開
 test('同 IP 第 31 個新訪客 429', async () => {
   const s = setup();
   await s.round(T0 - H, T0 + H);
-  for (let i = 0; i < 30; i++) assert.equal((await s.vote('slime-tetris', { vid: 'n' + i, ipHash: 'same' })).status, 200);
-  assert.equal((await s.vote('slime-tetris', { vid: 'n30', ipHash: 'same' })).body.error.code, 'ip_limit');
+  for (let i = 0; i < 30; i++) assert.equal((await s.vote('bubble-catcher', { vid: 'n' + i, ipHash: 'same' })).status, 200);
+  assert.equal((await s.vote('bubble-catcher', { vid: 'n30', ipHash: 'same' })).body.error.code, 'ip_limit');
   assert.equal((await s.vote('ghost-echo', { vid: 'n0', ipHash: 'same' })).status, 200, '已投過的人改投不受限');
 });
 
@@ -142,7 +142,7 @@ test('後台刪除輪次連同票一起刪, 前台回到上一輪或沒有輪次
   const s = setup();
   await s.round(T0 - 3 * H, T0 - 2 * H);
   await s.round(T0 - H, T0 - 1);
-  await s.db.prepare('INSERT INTO votes VALUES (2, ?, ?, ?, ?, ?)').bind('v1', 'slime-tetris', 'h', 1, 1).run();
+  await s.db.prepare('INSERT INTO votes VALUES (2, ?, ?, ?, ?, ?)').bind('v1', 'bubble-catcher', 'h', 1, 1).run();
   assert.equal((await s.call(roundsApi.onRequestDelete, 'DELETE', '/api/admin/rounds?id=2')).status, 200);
   assert.equal(await s.db.prepare('SELECT COUNT(*) AS n FROM votes WHERE round_id = 2').first('n'), 0);
   assert.equal((await s.state()).body.round.id, 1);

@@ -55,7 +55,7 @@ test('不在正式網址(預覽網址)時不載入數據服務, 頁面照常出�
   await page.route('**/static/array.full.js', r => { loaded = true; r.fulfill({ contentType: 'text/javascript', body: FAKE('dark') }); });
   await page.goto(srv.url + '#play');
   await page.waitForFunction(() => !document.documentElement.classList.contains('pvd-wait') && localStorage.getItem('pvd:theme'));
-  await page.click('.gh:has-text("史萊姆擴張")');
+  await page.click('.gh:has-text("幽影接力")');
   await page.waitForTimeout(500);
   assert.equal(loaded, false);
   assert.equal(await page.evaluate(() => window.posthog), undefined);
@@ -81,15 +81,15 @@ test('旗標沒回來: 1.5 秒內頁面出現並隨機分組', async () => {
 test('點遊戲、開始玩、離開都有事件', async () => {
   const { ctx, page, calls } = await open('light', '#play');
   await page.waitForFunction(() => window.posthog?.calls.some(c => c[1] === '$pageview'));
-  await page.click('.gh:has-text("史萊姆擴張")');
+  await page.click('.gh:has-text("幽影接力")');
   await page.click('.detail .startbtn');
-  await page.waitForFunction(() => location.hash === '#game/slime-tetris');
+  await page.waitForFunction(() => location.hash === '#game/ghost-echo');
   await page.click('text=‹ 返回');
   await page.waitForFunction(() => window.posthog.calls.some(c => c[1] === 'game_leave'));
   const ev = events(await calls()).map(c => c[1]);
   for (const e of ['play_page_view', 'game_detail_open', 'game_start', 'game_leave']) assert.ok(ev.includes(e), e);
   const leave = events(await calls()).find(c => c[1] === 'game_leave')[2];
-  assert.equal(leave.game, 'slime-tetris');
+  assert.equal(leave.game, 'ghost-echo');
   assert.equal(typeof leave.seconds, 'number');
   await ctx.close();
 });
@@ -149,7 +149,7 @@ test('遊玩時間只算真正在玩: 分頁切走的時間不算; 玩完一局�
     r.fulfill({ response: res, body: (await res.text()).replace("posthogKey: ''", "posthogKey: 'phc_test'").replace('analyticsHosts: [', "analyticsHosts: ['localhost', ") });
   });
   await page.route('**/static/array.full.js', r => r.fulfill({ contentType: 'text/javascript', body: FAKE('light') }));
-  await page.goto(srv.url + '#game/slime-tetris');
+  await page.goto(srv.url + '#game/ghost-echo');
   await page.locator('#pg-game iframe').waitFor();
   const setHidden = h => page.evaluate(h => {
     Object.defineProperty(document, 'hidden', { configurable: true, get: () => h });
@@ -167,7 +167,7 @@ test('遊玩時間只算真正在玩: 分頁切走的時間不算; 玩完一局�
   const s = (await ev('game_leave'))[0][2].seconds;
   assert.ok(s >= 15 && s < 45, `遊玩 ${s} 秒`);
   // 第二次進來玩 20 秒後玩完: 累計 35 秒
-  await page.evaluate(() => { location.hash = '#game/slime-tetris'; });
+  await page.evaluate(() => { location.hash = '#game/ghost-echo'; });
   await page.locator('#pg-game iframe').waitFor();
   await page.clock.runFor(20000);
   const f = await (await page.$('#pg-game iframe')).contentFrame();
@@ -175,7 +175,7 @@ test('遊玩時間只算真正在玩: 分頁切走的時間不算; 玩完一局�
   await f.evaluate(() => parent.postMessage({ type: 'pvd:finish' }, location.origin));
   await page.waitForFunction(() => window.posthog.calls.some(c => c[1] === 'game_finish'));
   const fin = (await ev('game_finish'))[0][2];
-  assert.equal(fin.game, 'slime-tetris');
+  assert.equal(fin.game, 'ghost-echo');
   assert.ok(fin.play_seconds >= s + 20 && fin.play_seconds < s + 50, `累計 ${fin.play_seconds} 秒`);
   await ctx.close();
 });

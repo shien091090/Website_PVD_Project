@@ -21,12 +21,12 @@ test('後台 middleware 驗不過回 401, 驗過放行', async () => {
 
 test('刪除留言: 前台看不到, 後台看得到且標記已刪', async () => {
   const db = makeD1();
-  const posted = await run(pub.onRequestPost, ctxOf(db, 'POST', '/api/comments', { game: 'slime-tetris', avatar: 1, body: '要刪的', token: 't' }));
+  const posted = await run(pub.onRequestPost, ctxOf(db, 'POST', '/api/comments', { game: 'bubble-catcher', avatar: 1, body: '要刪的', token: 't' }));
   const id = posted.body.comment.id;
   assert.equal((await run(adminComments.onRequestDelete, ctxOf(db, 'DELETE', `/api/admin/comments?id=${id}`))).status, 200);
-  const front = await run(pub.onRequestGet, ctxOf(db, 'GET', '/api/comments?game=slime-tetris'));
+  const front = await run(pub.onRequestGet, ctxOf(db, 'GET', '/api/comments?game=bubble-catcher'));
   assert.equal(front.body.count, 0);
-  const back = await run(adminComments.onRequestGet, ctxOf(db, 'GET', '/api/admin/comments?game=slime-tetris'));
+  const back = await run(adminComments.onRequestGet, ctxOf(db, 'GET', '/api/admin/comments?game=bubble-catcher'));
   assert.equal(back.body.comments.length, 1);
   assert.equal(back.body.comments[0].deleted, 1);
   assert.equal(back.body.comments[0].body, '要刪的');
@@ -42,7 +42,7 @@ test('鎖留言開關: 鎖住後前台不能留言, 解鎖後可以', async () =
   const put = locked => run(adminLocks.onRequestPut, ctxOf(db, 'PUT', '/api/admin/locks', { game: 'ghost-echo', locked }));
   assert.equal((await put(true)).status, 200);
   const list = await run(adminLocks.onRequestGet, ctxOf(db, 'GET', '/api/admin/locks'));
-  assert.deepEqual(list.body, { 'bubble-catcher': false, 'slime-tetris': false, 'dungeon-zoo': false, 'ghost-echo': true, 'soul-smith-defense': false });
+  assert.deepEqual(list.body, { 'bubble-catcher': false, 'dungeon-zoo': false, 'ghost-echo': true, 'soul-smith-defense': false });
   const post = () => run(pub.onRequestPost, ctxOf(db, 'POST', '/api/comments', { game: 'ghost-echo', avatar: 0, body: 'x', token: 't' }));
   assert.equal((await post()).body.error.code, 'locked');
   await put(false);
