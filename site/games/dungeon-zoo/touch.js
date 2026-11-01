@@ -53,8 +53,8 @@
   // ───────── 版面(以 1680×720 為準; 右邊的按鈕對齊右緣, 換算成實際畫布寬) ─────────
   var CW = (window.Art && Art.canvas && Art.canvas.width) || 1680, CH = (window.Art && Art.canvas && Art.canvas.height) || 720;
   var LAYOUT = {
-    // 圓弧方向鍵: 中心 (x, y), 外圈半徑 Ro、內圈半徑 Ri, 四段之間留 gap 寬的細縫; 可按範圍半徑 R(比外圈大, 手指偏出去也算), 中心 dead 內不算
-    dpad: { x: 192, y: CH - 182, Ro: 168, Ri: 58, gap: 8, R: 190, dead: 26 },
+    // 圓弧方向鍵: 中心 (x, y), 外圈半徑 Ro、內圈半徑 Ri, 四段相連不留縫(gap 0, 方便斜按時同時壓到兩段; 要留縫才調大); 可按範圍半徑 R(比外圈大, 手指偏出去也算), 中心 dead 內不算
+    dpad: { x: 192, y: CH - 182, Ro: 168, Ri: 58, gap: 0, R: 190, dead: 26 },
     a: { x: CW - 100, y: CH - 116, r: 80, hit: 96 },
     b: { x: CW - 262, y: CH - 68, r: 62, hit: 76 },
     c: { x: CW - 82, y: CH - 292, r: 54, hit: 66 },
@@ -89,7 +89,7 @@
       var d = LAYOUT.dpad, K = CONFIG.keys, i;
       ctx.save();
       if (vis.dpad) {
-        // 圓弧方向鍵: 一圈切成上右下左四段, 段與段之間留固定寬度的細縫
+        // 圓弧方向鍵: 一圈切成上右下左四段, 段與段相連, 只靠各段外框分界
         var dirs = [['up', -Math.PI / 2], ['right', 0], ['down', Math.PI / 2], ['left', Math.PI]], q = Math.PI / 4;
         for (i = 0; i < dirs.length; i++) {
           var c = dirs[i][1], lit = !!held[K[dirs[i][0]]], go = d.gap / 2 / d.Ro, gi = d.gap / 2 / d.Ri;
