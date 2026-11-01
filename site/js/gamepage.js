@@ -7,6 +7,8 @@ import * as store from './store.js';
 const scr = document.getElementById('scr');
 const portraitQ = matchMedia('(orientation: portrait) and (max-width: 720px)'); // 與 CSS 的直拿條件一致
 let code = null, frame = null, paused = false;
+let reporting = false; // 這款遊戲會自己回報載入進度(pvd:progress / pvd:loaded)
+const hideLoad = () => scr.querySelector('.gload')?.remove();
 let onFinish = () => {};
 
 // 遊玩時間只算真正在玩: 遊戲框載入且沒暫停(分頁切走、手機轉直)才計時
@@ -51,7 +53,13 @@ function sync() {
     // 遊戲檔案載完前遊戲框是全黑, 先蓋一層載入中, 免得玩家以為壞掉
     const hint = recHint(byCode(code));
     scr.insertAdjacentHTML('beforeend', `<div class="gload" role="status"><i></i><b>遊戲載入中…</b>${hint ? `<p class="rec">${hint}</p>` : ''}</div>`);
-    frame.addEventListener('load', () => { if (!frame) return; scr.querySelector('.gload')?.remove(); blockZoom(frame.contentWindow); frame.focus(); });
+    reporting = false;
+    // 遊戲框載完就收起; 會回報進度的遊戲框載完時檔案可能還在載, 改等遊戲說載完(稍等一下, 讓進度訊息先到)
+    frame.addEventListener('load', () => {
+      if (!frame) return;
+      blockZoom(frame.contentWindow); frame.focus();
+      setTimeout(() => { if (!reporting) hideLoad(); }, 300);
+    });
   }
   const shouldPause = portraitQ.matches || document.hidden;
   if (frame && shouldPause !== paused) { paused = shouldPause; post(paused ? 'pvd:pause' : 'pvd:resume'); }
@@ -72,7 +80,7 @@ export function leaveGame() {
   setRunning(false);
   const s = lap();
   frame?.remove();
-  scr.querySelector('.gload')?.remove();
+  hideLoad();
   frame = null; code = null;
   return s;
 }
@@ -88,7 +96,15 @@ export function initGamePage(opts = {}) {
   document.addEventListener('visibilitychange', sync);
   addEventListener('message', e => {
     if (e.origin !== location.origin || !frame || e.source !== frame.contentWindow) return;
-    if (e.data?.type !== 'pvd:finish') return;
+    const type = e.data?.type;
+    if (type === 'pvd:progress') {
+      reporting = true;
+      const el = scr.querySelector('.gload'), pct = Math.floor(Math.min(1, Math.max(0, +e.data.progress || 0)) * 100);
+      if (el) { el.classList.add('pct'); el.style.setProperty('--p', pct + '%'); el.querySelector('b').textContent = `遊戲載入中 ${pct}%`; }
+      return;
+    }
+    if (type === 'pvd:loaded') { reporting = true; return hideLoad(); }
+    if (type !== 'pvd:finish') return;
     // 玩完一局: 帶上這款累計的遊玩時間, 然後歸零, 下一局重新累計
     const t = saveTotal(), total = Math.round(t[code] / 1000);
     t[code] = 0; store.set('playtime', t);

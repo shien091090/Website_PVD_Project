@@ -265,3 +265,19 @@ test('用的裝置與建議不同時, 遊戲載入畫面也提示', async () => 
   assert.match(await page.locator('#pg-game .gload').textContent(), /建議使用電腦遊玩，以獲得最佳體驗/);
   await ctx.close();
 });
+
+test('遊戲有回報載入進度時, 載入畫面顯示百分比, 等遊戲說載完才收起', async () => {
+  const ctx = await browser.newContext(PC);
+  const page = await ctx.newPage();
+  let release;
+  const gate = new Promise(r => { release = r; });
+  await page.route(/\/games\/dungeon-zoo\/audio\/sound\.js/, async route => { await gate; await route.continue(); });
+  await page.goto(srv.url + '#game/dungeon-zoo', { waitUntil: 'commit' });
+  const ld = page.locator('#pg-game .gload');
+  await page.waitForFunction(() => /\d+%/.test(document.querySelector('#pg-game .gload')?.textContent || ''));
+  await page.waitForTimeout(800); // 遊戲框本身已載完, 但遊戲還在載, 載入畫面要留著
+  assert.ok(await ld.isVisible());
+  release();
+  await ld.waitFor({ state: 'hidden', timeout: 15000 });
+  await ctx.close();
+});

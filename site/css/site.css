@@ -449,6 +449,7 @@ html:has(body[data-pg="game"]), body[data-pg="game"] { touch-action: manipulatio
 .gload { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; background: #000; color: #fff; font: 700 16px/1.4 var(--font); }
 .gload i { width: min(240px, 50%); height: 8px; border-radius: 99px; background: rgba(255, 255, 255, .18); position: relative; overflow: hidden; }
 .gload i::after { content: ""; position: absolute; inset: 0 auto 0 0; width: 40%; border-radius: inherit; background: #fff; animation: gload 1.1s ease-in-out infinite; }
+.gload.pct i::after { animation: none; transform: none; width: var(--p, 0%); transition: width .15s; }
 @keyframes gload { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
 @media (prefers-reduced-motion: reduce) { .gload i::after { animation-duration: 3s; } }
 .rot { display: none; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 24px; text-align: center; }
