@@ -17,7 +17,7 @@
       else if (touch) {
         var a = window.screen || {}, sw = a.width || 0, sh = a.height || 0, iw = window.innerWidth || 0, ih = window.innerHeight || 0;
         var r = sw > 0 && sh > 0 ? Math.max(sw, sh) / Math.min(sw, sh) : 0;
-        if (iw > ih && ih > 0) r = Math.max(r, iw / ih);
+        if (iw > ih && ih > 0) r = iw / ih;   // 橫拿時以實際可視區為準(網站框會扣掉瀏海安全區, 比整個螢幕窄; 取螢幕比例會上下留邊)
         if (r > 0) w = 720 * r;
       }
     } catch (e) { /* 取不到就用 1280 */ }
