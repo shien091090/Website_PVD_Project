@@ -27,14 +27,14 @@ test('進行中: 狀態不含任何票數, 可改投且只算一票', async () =
   const s = setup();
   await s.round(T0 - H, T0 + H);
   assert.deepEqual((await s.vote('bubble-catcher')).body, { myVote: 'bubble-catcher', changed: false });
-  assert.deepEqual((await s.vote('ghost-echo')).body, { myVote: 'ghost-echo', changed: true });
+  assert.deepEqual((await s.vote('jelly-jinni')).body, { myVote: 'jelly-jinni', changed: true });
   const st = await s.state();
   assert.equal(st.body.phase, 'live');
-  assert.equal(st.body.myVote, 'ghost-echo');
+  assert.equal(st.body.myVote, 'jelly-jinni');
   assert.equal(st.body.results, null);
   assert.ok(!/counts|total|votes/.test(st.text), st.text);
   const admin = await s.call(roundsApi.onRequestGet, 'GET', '/api/admin/rounds');
-  assert.deepEqual(admin.body.rounds[0].counts, { 'bubble-catcher': 0, 'dungeon-zoo': 0, 'ghost-echo': 1, 'soul-smith-defense': 0 });
+  assert.deepEqual(admin.body.rounds[0].counts, { 'bubble-catcher': 0, 'dungeon-zoo': 0, 'jelly-jinni': 1, 'soul-smith-defense': 0 });
 });
 
 test('截止後投票 409 ended', async () => {
@@ -67,15 +67,15 @@ test('同票: 統計中, 後台指定後顯示勝出與票數', async () => {
   const s = setup();
   await s.round(T0 - H, T0 + H);
   await s.vote('bubble-catcher', { vid: 'a' }); await s.vote('bubble-catcher', { vid: 'b' });
-  await s.vote('ghost-echo', { vid: 'c' }); await s.vote('ghost-echo', { vid: 'd' });
+  await s.vote('jelly-jinni', { vid: 'c' }); await s.vote('jelly-jinni', { vid: 'd' });
   s.set(T0 + 2 * H);
   assert.deepEqual((await s.state()).body.results, { pending: true });
   const rounds = await s.call(roundsApi.onRequestGet, 'GET', '/api/admin/rounds');
   assert.equal(rounds.body.rounds[0].tie, true);
-  assert.equal((await s.call(winnerApi.onRequestPut, 'PUT', '/api/admin/winner', { roundId: 1, game: 'ghost-echo' })).status, 200);
+  assert.equal((await s.call(winnerApi.onRequestPut, 'PUT', '/api/admin/winner', { roundId: 1, game: 'jelly-jinni' })).status, 200);
   const r = (await s.state()).body.results;
   assert.equal(r.pending, false);
-  assert.equal(r.winner, 'ghost-echo');
+  assert.equal(r.winner, 'jelly-jinni');
   assert.equal(r.total, 4);
   assert.equal(r.counts['bubble-catcher'], 2);
 });
@@ -83,16 +83,16 @@ test('同票: 統計中, 後台指定後顯示勝出與票數', async () => {
 test('唯一最高票直接勝出; 非同票不能指定', async () => {
   const s = setup();
   await s.round(T0 - H, T0 + H);
-  await s.vote('dungeon-zoo', { vid: 'a' }); await s.vote('dungeon-zoo', { vid: 'b' }); await s.vote('ghost-echo', { vid: 'c' });
+  await s.vote('dungeon-zoo', { vid: 'a' }); await s.vote('dungeon-zoo', { vid: 'b' }); await s.vote('jelly-jinni', { vid: 'c' });
   s.set(T0 + 2 * H);
   assert.equal((await s.state()).body.results.winner, 'dungeon-zoo');
-  assert.equal((await s.call(winnerApi.onRequestPut, 'PUT', '/api/admin/winner', { roundId: 1, game: 'ghost-echo' })).body.error.code, 'not_tie');
+  assert.equal((await s.call(winnerApi.onRequestPut, 'PUT', '/api/admin/winner', { roundId: 1, game: 'jelly-jinni' })).body.error.code, 'not_tie');
 });
 
 test('只能指定同票最高的其中一款', async () => {
   const s = setup();
   await s.round(T0 - H, T0 + H);
-  await s.vote('dungeon-zoo', { vid: 'a' }); await s.vote('ghost-echo', { vid: 'b' });
+  await s.vote('dungeon-zoo', { vid: 'a' }); await s.vote('jelly-jinni', { vid: 'b' });
   s.set(T0 + 2 * H);
   assert.equal((await s.call(winnerApi.onRequestPut, 'PUT', '/api/admin/winner', { roundId: 1, game: 'bubble-catcher' })).body.error.code, 'not_top');
 });
@@ -126,7 +126,7 @@ test('同 IP 第 31 個新訪客 429', async () => {
   await s.round(T0 - H, T0 + H);
   for (let i = 0; i < 30; i++) assert.equal((await s.vote('bubble-catcher', { vid: 'n' + i, ipHash: 'same' })).status, 200);
   assert.equal((await s.vote('bubble-catcher', { vid: 'n30', ipHash: 'same' })).body.error.code, 'ip_limit');
-  assert.equal((await s.vote('ghost-echo', { vid: 'n0', ipHash: 'same' })).status, 200, '已投過的人改投不受限');
+  assert.equal((await s.vote('jelly-jinni', { vid: 'n0', ipHash: 'same' })).status, 200, '已投過的人改投不受限');
 });
 
 test('後台新增與修改輪次, 結束時間要晚於開始', async () => {

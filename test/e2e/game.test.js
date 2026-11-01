@@ -9,23 +9,24 @@ after(async () => { await browser?.close(); await srv?.stop(); });
 test('電腦開遊玩頁載入遊戲並記成玩過', async () => {
   const ctx = await browser.newContext(PC);
   const page = await ctx.newPage();
-  await page.goto(srv.url + '#game/ghost-echo');
+  await page.goto(srv.url + '#game/jelly-jinni');
   const frame = page.locator('#pg-game iframe');
   await frame.waitFor();
-  assert.match(await frame.getAttribute('src'), /\/games\/ghost-echo\/$/);
+  assert.match(await frame.getAttribute('src'), /\/games\/jelly-jinni\/$/);
   const title = await page.frameLocator('#pg-game iframe').locator('title').textContent({ timeout: 10000 });
-  assert.match(title, /幽影接力/);
+  // 遊戲自己的標題, 新發布版同步前還是舊名
+  assert.match(title, /接力吉尼|幽影接力/);
   const played = await page.evaluate(() => JSON.parse(localStorage.getItem('pvd:played')));
-  assert.ok(played.includes('ghost-echo'));
+  assert.ok(played.includes('jelly-jinni'));
   await ctx.close();
 });
 
 test('手機玩到一半轉直再轉回, 遊戲不重新載入', async () => {
   const ctx = await browser.newContext(PHONE_L);
   const page = await ctx.newPage();
-  await page.goto(srv.url + '#game/ghost-echo');
+  await page.goto(srv.url + '#game/jelly-jinni');
   await page.locator('#pg-game iframe').waitFor();
-  const f = page.frame({ url: /ghost-echo/ });
+  const f = page.frame({ url: /jelly-jinni/ });
   await f.waitForLoadState();
   await f.evaluate(() => { window.__mark = 1; });
   await page.setViewportSize(PHONE.viewport);
@@ -33,14 +34,14 @@ test('手機玩到一半轉直再轉回, 遊戲不重新載入', async () => {
   assert.ok(await page.locator('text=把手機轉成橫向').isVisible());
   await page.setViewportSize(PHONE_L.viewport);
   await page.waitForTimeout(300);
-  assert.equal(await page.frame({ url: /ghost-echo/ }).evaluate(() => window.__mark), 1);
+  assert.equal(await page.frame({ url: /jelly-jinni/ }).evaluate(() => window.__mark), 1);
   await ctx.close();
 });
 
 test('手機直拿進遊玩頁不載入遊戲, 只顯示轉向提示', async () => {
   const ctx = await browser.newContext(PHONE);
   const page = await ctx.newPage();
-  await page.goto(srv.url + '#game/ghost-echo');
+  await page.goto(srv.url + '#game/jelly-jinni');
   await page.waitForTimeout(500);
   assert.equal(await page.locator('#pg-game iframe').count(), 0);
   assert.ok(await page.locator('text=把手機轉成橫向').isVisible());
@@ -50,20 +51,20 @@ test('手機直拿進遊玩頁不載入遊戲, 只顯示轉向提示', async () 
 test('返回回到試玩頁並選回該款', async () => {
   const ctx = await browser.newContext(PC);
   const page = await ctx.newPage();
-  await page.goto(srv.url + '#game/ghost-echo');
+  await page.goto(srv.url + '#game/jelly-jinni');
   await page.click('text=‹ 返回');
-  await page.waitForFunction(() => location.hash === '#play/ghost-echo');
+  await page.waitForFunction(() => location.hash === '#play/jelly-jinni');
   assert.equal(await page.locator('#pg-game iframe').count(), 0);
-  assert.equal(await page.locator('.gi.sel .nm b').textContent(), '幽影接力');
+  assert.equal(await page.locator('.gi.sel .nm b').textContent(), '接力吉尼(Jelly Jinni)');
   await ctx.close();
 });
 
 test('遊戲收到暫停訊息', async () => {
   const ctx = await browser.newContext(PHONE_L);
   const page = await ctx.newPage();
-  await page.goto(srv.url + '#game/ghost-echo');
+  await page.goto(srv.url + '#game/jelly-jinni');
   await page.waitForFunction(() => document.querySelector('#pg-game iframe')?.contentDocument?.readyState === 'complete'
-    && /ghost-echo/.test(document.querySelector('#pg-game iframe').contentWindow.location.href));
+    && /jelly-jinni/.test(document.querySelector('#pg-game iframe').contentWindow.location.href));
   // 從上層在遊戲視窗掛監聽, 避免拿到轉址前的舊 frame
   await page.evaluate(() => { window.__msgs = []; document.querySelector('#pg-game iframe').contentWindow.addEventListener('message', e => window.__msgs.push(e.data.type)); });
   await page.setViewportSize(PHONE.viewport);
@@ -98,7 +99,7 @@ test('電腦遊戲框是 16:9 四周留白 40; 手機橫拿不限比例, 填滿�
   for (const [opts, gap, ratio] of [[PC, 40, 16 / 9], [PHONE_L, 8, null]]) {
     const ctx = await browser.newContext(opts);
     const page = await ctx.newPage();
-    await page.goto(srv.url + '#game/ghost-echo');
+    await page.goto(srv.url + '#game/jelly-jinni');
     await page.locator('#scr iframe').waitFor();
     const area = await page.locator('.gwrap').boundingBox();
     const scr = await page.locator('#scr').boundingBox();
@@ -114,7 +115,7 @@ test('電腦遊戲框是 16:9 四周留白 40; 手機橫拿不限比例, 填滿�
 test('手機橫拿: 返回鈕放進瀏海保留區, 遊戲左邊不多空一條', async () => {
   const ctx = await browser.newContext(PHONE_L);
   const page = await ctx.newPage();
-  await page.goto(srv.url + '#game/ghost-echo');
+  await page.goto(srv.url + '#game/jelly-jinni');
   await page.locator('#scr iframe').waitFor();
   await page.addStyleTag({ content: '.page { --sal: 92px; }' }); // 模擬 iPhone 左邊瀏海保留區
   const scr = await page.locator('#scr').boundingBox();
@@ -139,7 +140,7 @@ test('試玩頁介紹: 有橫幅的遊戲頂端放 21:9 橫幅, 圖示壓在橫�
   assert.ok(Math.abs(c.width - dl.width) < 2 && Math.abs(c.y - dl.y) < 4, '橫幅貼齊左半頂端');
   assert.ok(ic.y < c.y + c.height && ic.y + ic.height > c.y + c.height, '圖示跨在橫幅下緣');
   assert.ok(ic.x - c.x < c.width * 0.25, '圖示在左邊');
-  await page.goto(srv.url + '#play/ghost-echo');
+  await page.goto(srv.url + '#play/jelly-jinni');
   await page.locator('#detail .hd').waitFor();
   assert.equal(await page.locator('#detail .cover').count(), 0);
   await ctx.close();
@@ -160,14 +161,14 @@ test('試玩頁介紹: 窄螢幕標題不壓進橫幅, 開始鈕不用捲動就�
 test('遊玩頁擋掉雙擊放大, 離開後恢復可縮放', async () => {
   const ctx = await browser.newContext(PHONE_L);
   const page = await ctx.newPage();
-  await page.goto(srv.url + '#game/ghost-echo');
+  await page.goto(srv.url + '#game/jelly-jinni');
   await page.locator('#pg-game iframe').waitFor();
   const vp = () => page.locator('meta[name=viewport]').getAttribute('content');
   const ta = () => page.evaluate(() => [getComputedStyle(document.documentElement).touchAction, getComputedStyle(document.body).touchAction]);
   assert.match(await vp(), /maximum-scale=1/);
   assert.match(await vp(), /user-scalable=no/);
   assert.deepEqual(await ta(), ['manipulation', 'manipulation']);
-  await page.evaluate(() => { location.hash = '#play/ghost-echo'; });
+  await page.evaluate(() => { location.hash = '#play/jelly-jinni'; });
   await page.waitForTimeout(200);
   assert.doesNotMatch(await vp(), /user-scalable/);
   assert.deepEqual(await ta(), ['auto', 'auto']);
@@ -177,7 +178,7 @@ test('遊玩頁擋掉雙擊放大, 離開後恢復可縮放', async () => {
 test('遊玩頁擋掉 iPhone 的雙指縮放手勢(網頁與遊戲框內都擋)', async () => {
   const ctx = await browser.newContext(PHONE_L);
   const page = await ctx.newPage();
-  await page.goto(srv.url + '#game/ghost-echo');
+  await page.goto(srv.url + '#game/jelly-jinni');
   const f = await (await page.waitForSelector('#pg-game iframe')).contentFrame();
   await f.waitForLoadState();
   await page.waitForTimeout(300);
@@ -186,7 +187,7 @@ test('遊玩頁擋掉 iPhone 的雙指縮放手勢(網頁與遊戲框內都擋)'
     assert.ok(await blocked(page, t), `網頁 ${t}`);
     assert.ok(await blocked(f, t), `遊戲框 ${t}`);
   }
-  await page.evaluate(() => { location.hash = '#play/ghost-echo'; });
+  await page.evaluate(() => { location.hash = '#play/jelly-jinni'; });
   await page.waitForTimeout(200);
   assert.equal(await blocked(page, 'gesturestart'), false);
   await ctx.close();
@@ -222,8 +223,8 @@ test('遊戲還在載入時遊戲框顯示載入中, 載完就收起', async () 
   const page = await ctx.newPage();
   let release;
   const gate = new Promise(r => { release = r; });
-  await page.route(/\/games\/ghost-echo\/.+\.js/, async route => { await gate; await route.continue(); });
-  await page.goto(srv.url + '#game/ghost-echo', { waitUntil: 'commit' });
+  await page.route(/\/games\/jelly-jinni\/.+\.js/, async route => { await gate; await route.continue(); });
+  await page.goto(srv.url + '#game/jelly-jinni', { waitUntil: 'commit' });
   const ld = page.locator('#pg-game .gload');
   await ld.waitFor({ state: 'visible' });
   assert.match(await ld.textContent(), /載入中/);
@@ -248,7 +249,7 @@ test('建議裝置: 清單不放裝置圖示; 詳情寫建議裝置; 用的裝�
 
   const ph = await browser.newContext(PHONE);
   const p2 = await ph.newPage();
-  await p2.goto(srv.url + '#play/ghost-echo');
+  await p2.goto(srv.url + '#play/jelly-jinni');
   await p2.locator('.psheet .startbtn').waitFor();
   assert.equal(await p2.locator('#glist .devs, .psheet .devs').count(), 0);
   assert.equal(await p2.locator('.psheet .rec').textContent(), '建議使用電腦遊玩，以獲得最佳體驗');
@@ -259,8 +260,8 @@ test('建議裝置: 清單不放裝置圖示; 詳情寫建議裝置; 用的裝�
 test('用的裝置與建議不同時, 遊戲載入畫面也提示', async () => {
   const ctx = await browser.newContext(PHONE_L);
   const page = await ctx.newPage();
-  await page.route(/\/games\/ghost-echo\/.+\.js/, () => {});
-  await page.goto(srv.url + '#game/ghost-echo', { waitUntil: 'commit' });
+  await page.route(/\/games\/jelly-jinni\/.+\.js/, () => {});
+  await page.goto(srv.url + '#game/jelly-jinni', { waitUntil: 'commit' });
   await page.locator('#pg-game .gload').waitFor();
   assert.match(await page.locator('#pg-game .gload').textContent(), /建議使用電腦遊玩，以獲得最佳體驗/);
   await ctx.close();

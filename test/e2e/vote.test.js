@@ -21,18 +21,18 @@ test('投票、重新整理仍記得、改投, 倒數歸零自動切成結果', 
   await Promise.all([voted(), page.click('.vr[data-k="bubble-catcher"]')]);
   await page.reload();
   await page.locator('.vr.on[data-k="bubble-catcher"]').waitFor();
-  await Promise.all([voted(), page.click('.vr[data-k="ghost-echo"]')]);
-  await page.locator('.vr.on[data-k="ghost-echo"]').waitFor();
+  await Promise.all([voted(), page.click('.vr[data-k="jelly-jinni"]')]);
+  await page.locator('.vr.on[data-k="jelly-jinni"]').waitFor();
   assert.equal(await page.locator('.vr.on').count(), 1);
   // 截止後 3 秒內自動顯示勝出卡(唯一一票)
-  await page.locator('#winbox:has-text("幽影接力")').waitFor({ timeout: 20000 });
+  await page.locator('#winbox:has-text("接力吉尼")').waitFor({ timeout: 20000 });
   assert.ok(await page.locator('#pg-vote.end').count());
   await ctx.close();
 });
 
 test('已結束: 勝出卡與 4 條長條, 全站結束狀態', async () => {
   round(-7200000, -3600000);
-  votes([['a', 'bubble-catcher'], ['b', 'bubble-catcher'], ['c', 'bubble-catcher'], ['d', 'ghost-echo']]);
+  votes([['a', 'bubble-catcher'], ['b', 'bubble-catcher'], ['c', 'bubble-catcher'], ['d', 'jelly-jinni']]);
   const ctx = await browser.newContext(PC);
   const page = await ctx.newPage();
   await page.goto(srv.url + '#vote');
@@ -94,7 +94,7 @@ test('快速連點兩款: 畫面打勾與伺服器記錄一致, 不出現錯誤'
   await page.goto(srv.url + '#vote');
   await page.locator('#deadline:has-text("截止")').waitFor();
   await page.click('.vr[data-k="bubble-catcher"]');
-  await page.click('.vr[data-k="ghost-echo"]');
+  await page.click('.vr[data-k="jelly-jinni"]');
   await page.waitForTimeout(6000);
   const shown = await page.locator('.vr.on').getAttribute('data-k');
   assert.equal(await page.locator('.verr:visible').count(), 0);

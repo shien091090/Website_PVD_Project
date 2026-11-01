@@ -11,7 +11,7 @@ const RELEASE = {
 };
 const SRC = {
   'bubble-catcher': 'E:/Project/Game/WebGame_BubbleCatcher/game',
-  'ghost-echo': 'E:/Project/Game/WebGame_GhostEchoV2/polish/game/game',
+  'jelly-jinni': 'E:/Project/Game/WebGame_GhostEchoV2/polish/game/game',
 };
 const LIMIT = 25 * 1024 * 1024; // Cloudflare Pages 單檔上限
 const GAMES_JS = 'site/js/games.js';

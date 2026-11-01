@@ -39,11 +39,11 @@ test('刪除不存在的留言 404', async () => {
 
 test('鎖留言開關: 鎖住後前台不能留言, 解鎖後可以', async () => {
   const db = makeD1();
-  const put = locked => run(adminLocks.onRequestPut, ctxOf(db, 'PUT', '/api/admin/locks', { game: 'ghost-echo', locked }));
+  const put = locked => run(adminLocks.onRequestPut, ctxOf(db, 'PUT', '/api/admin/locks', { game: 'jelly-jinni', locked }));
   assert.equal((await put(true)).status, 200);
   const list = await run(adminLocks.onRequestGet, ctxOf(db, 'GET', '/api/admin/locks'));
-  assert.deepEqual(list.body, { 'bubble-catcher': false, 'dungeon-zoo': false, 'ghost-echo': true, 'soul-smith-defense': false });
-  const post = () => run(pub.onRequestPost, ctxOf(db, 'POST', '/api/comments', { game: 'ghost-echo', avatar: 0, body: 'x', token: 't' }));
+  assert.deepEqual(list.body, { 'bubble-catcher': false, 'dungeon-zoo': false, 'jelly-jinni': true, 'soul-smith-defense': false });
+  const post = () => run(pub.onRequestPost, ctxOf(db, 'POST', '/api/comments', { game: 'jelly-jinni', avatar: 0, body: 'x', token: 't' }));
   assert.equal((await post()).body.error.code, 'locked');
   await put(false);
   assert.equal((await post()).status, 201);

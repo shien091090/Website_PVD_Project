@@ -50,7 +50,7 @@ test('伺服器錯誤時顯示失敗且保留文字', async () => {
   const page = await ctx.newPage();
   await page.route('**/api/comments', r => r.request().method() === 'POST'
     ? r.fulfill({ status: 500, contentType: 'application/json', body: '{"error":{"code":"server_error"}}' }) : r.continue());
-  await page.goto(srv.url + '#play/ghost-echo');
+  await page.goto(srv.url + '#play/jelly-jinni');
   await page.fill('.board .cform input', '測試失敗');
   await page.click('.board .cform button:has-text("送出")');
   await page.locator('.cerr:has-text("送出失敗，請稍後再試")').waitFor({ timeout: 15000 });
@@ -73,7 +73,7 @@ test('手機抽屜裡也能留言', async () => {
   const ctx = await browser.newContext(PHONE);
   const page = await ctx.newPage();
   await page.goto(srv.url + '#play');
-  await pick(page, '幽影接力');
+  await pick(page, '接力吉尼');
   await page.fill('.psheet .cform input', '手機留言');
   await page.click('.psheet .cform button:has-text("送出")');
   await page.waitForFunction(() => document.querySelector('.psheet .cms .cm .t')?.textContent === '手機留言', null, { timeout: 15000 });
@@ -123,7 +123,7 @@ test('送出後按鈕立刻顯示送出中', async () => {
     if (r.request().method() !== 'POST') return r.continue();
     await new Promise(res => setTimeout(res, 2000)); r.continue();
   });
-  await page.goto(srv.url + '#play/ghost-echo');
+  await page.goto(srv.url + '#play/jelly-jinni');
   await page.locator('.board .cms').waitFor();
   await page.fill('.board .cform input', '等一下');
   await page.click('.board .cform button:has-text("送出")');
@@ -164,7 +164,7 @@ test('打開留言板就先做驗證, 不用等點進留言框', async () => {
   const page = await ctx.newPage();
   await page.route('**/turnstile/v0/api.js*', r => r.fulfill({ contentType: 'text/javascript', body: SLOW_TS }));
   await page.goto(srv.url + '#play');
-  await page.click('.gh:has-text("幽影接力")');
+  await page.click('.gh:has-text("接力吉尼")');
   await page.waitForFunction(() => window.__ex === 1, null, { timeout: 5000 });
   await page.click('.gh:has-text("捕泡手")');
   await page.waitForTimeout(500);
