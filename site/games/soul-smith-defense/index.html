@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>魂匠守衛者</title>
+<style>
+html,body{margin:0;height:100%;background:#111;overflow:hidden}
+body{display:flex;align-items:center;justify-content:center}
+/* 畫布顯示比例 16:9(--cw 預設 1280, 發布加寬時才會變); 實際尺寸由 game.js 依視窗等比算出(留黑邊, 不裁切不拉伸) */
+canvas{display:block;width:min(100vw,calc(100vh * var(--cw,1280) / 720));height:auto;aspect-ratio:var(--cw,1280) / 720}
+@supports (height:100dvh){canvas{width:min(100vw,calc(100dvh * var(--cw,1280) / 720))}}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script src="art/art.js"></script>
+<script src="audio/sound.js"></script>
+<script src="game.js"></script>
+<script src="touch.js"></script>
+</body>
+</html>

@@ -34,7 +34,7 @@ test('進行中: 狀態不含任何票數, 可改投且只算一票', async () =
   assert.equal(st.body.results, null);
   assert.ok(!/counts|total|votes/.test(st.text), st.text);
   const admin = await s.call(roundsApi.onRequestGet, 'GET', '/api/admin/rounds');
-  assert.deepEqual(admin.body.rounds[0].counts, { 'bubble-catcher': 0, 'slime-tetris': 0, 'dungeon-zoo': 0, 'ghost-echo': 1 });
+  assert.deepEqual(admin.body.rounds[0].counts, { 'bubble-catcher': 0, 'slime-tetris': 0, 'dungeon-zoo': 0, 'ghost-echo': 1, 'soul-smith-defense': 0 });
 });
 
 test('截止後投票 409 ended', async () => {

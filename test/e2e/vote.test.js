@@ -30,7 +30,7 @@ test('投票、重新整理仍記得、改投, 倒數歸零自動切成結果', 
   await ctx.close();
 });
 
-test('已結束: 勝出卡與 4 條長條, 全站結束狀態', async () => {
+test('已結束: 勝出卡與 5 條長條, 全站結束狀態', async () => {
   round(-7200000, -3600000);
   votes([['a', 'slime-tetris'], ['b', 'slime-tetris'], ['c', 'slime-tetris'], ['d', 'ghost-echo']]);
   const ctx = await browser.newContext(PC);
@@ -38,7 +38,7 @@ test('已結束: 勝出卡與 4 條長條, 全站結束狀態', async () => {
   await page.goto(srv.url + '#vote');
   await page.locator('#winbox:has-text("史萊姆擴張")').waitFor();
   assert.match(await page.locator('#winbox').textContent(), /3 票 · 佔 75%/);
-  assert.equal(await page.locator('#ranked .rr').count(), 4);
+  assert.equal(await page.locator('#ranked .rr').count(), 5);
   assert.ok(await page.locator('#pg-vote .tab[data-k="vote"] .badge').isVisible());
   await page.goto(srv.url + '#play');
   assert.ok(await page.locator('.vnote:has-text("投票已結束，但遊戲仍可以試玩")').isVisible());

@@ -7,6 +7,7 @@ import { checkRelease, applyInfo } from './release.mjs';
 
 const RELEASE = {
   'dungeon-zoo': 'E:/Project/Game/WebGame_DungeonZoo/release',
+  'soul-smith-defense': 'E:/Project/Game/WebGame_SoulSmithDefense/release',
 };
 const SRC = {
   'bubble-catcher': 'E:/Project/Game/WebGame_BubbleCatcher/game',

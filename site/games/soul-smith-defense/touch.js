@@ -1,0 +1,360 @@
+'use strict';
+/* 觸控層 + 網站訊息(PVD計畫網站)。發布階段由 RD 從 game-studio-lab 的 references/touch-template.js 複製, 只改下面的 CONFIG。
+   傳統 script, 在 game.js 之後載入。網站版與打磨版共用同一份。
+   - 觸控模式(手機 / 網址帶 ?touch=1):
+     鍵盤遊戲 → 畫面上層畫虛擬按鈕, 輸入走遊戲的 inputDown / inputUp(和鍵盤同一條路徑), 鍵帽字換成手機版;
+     滑鼠遊戲 → 不畫按鈕, 點擊就等於觸控(需要時把觸控轉成滑鼠事件), 遊戲區拖曳不捲動頁面;
+     直拿手機時蓋提示並暫停。手機不放任何聲音按鈕, 交給手機本身的靜音與音量
+   - 電腦與手機都有: 收 pvd:pause / pvd:resume 暫停 / 繼續(含音效)、Esc 暫停(CONFIG.escPause)、PVDX.finish() 通知網站玩完一局
+   遊戲要掛的鉤子(設計見 game-studio-lab docs/2026-10-31-release-mobile-design.md):
+     每幀 `if (!(window.PVDX && PVDX.paused)) update(dt);`, 畫完 `if (window.PVDX) PVDX.draw(ctx);`;
+     一局結束 `if (window.PVDX) PVDX.finish();`;
+     鍵盤遊戲另有全域 inputDown(k) / inputUp(k) / inputReset(), inputDown 開頭 `if (window.PVDX && PVDX.paused) return;` */
+(function () {
+  // ───────── 每款遊戲要改的設定 ─────────
+  var CONFIG = {
+    // 'keys': 鍵盤遊戲(虛擬按鈕)
+    mode: 'keys',
+    mouseEvents: false,
+    // 遊戲自己已有 Esc 暫停(遊戲中 Esc 暫停 / 繼續、圖鑑中關圖鑑)
+    escPause: false,
+    // 鍵名照 game.js 的 inputDown: L R U D Z X S(空白鍵)
+    // d: 圖鑑鈕(C), 畫在遊玩區右上角(電腦版聲音開關圖示的位置)
+    keys: { up: 'U', down: 'D', left: 'L', right: 'R', a: 'Z', b: 'X', c: 'S', d: 'C' },
+    // 遊戲裡畫的鍵帽字 → 手機版: Z → A、X → B、空白 → 第三鍵圖示
+    keycaps: { 'Z': 'A', 'X': 'B', '空白': 'icon' },
+    // 哪些按鈕要顯示: 會疊在畫面上要按鍵才關得掉的東西(引導卡、合成演出、圖鑑、彈窗)先判斷, 再判斷整組不畫的場景
+    // b(X)與 c(空白鍵)共用同一個位置: 兩者不會同時有用(X 只在詢問 / 彈窗 / 圖鑑, 空白鍵只在自由走動且靠近主堡)
+    visible: function () {
+      var none = { dpad: false, a: false, b: false, c: false, d: false };
+      try {
+        if (typeof G === 'undefined') return none;
+        if (G.screen === 'title') {
+          if (G.tt.clear) return { dpad: false, a: true, b: false, c: false, d: false };  // 通關大提示: 只收 Z
+          if (G.tt.adv) return none;                                                     // 推進動畫: 不能操作
+          if (G.tc) return { dpad: true, a: true, b: true, c: false, d: false };         // 教學種類詢問: 左右 / Z / X
+          return { dpad: true, a: true, b: false, c: false, d: false };                  // 關卡預覽: 左右選卡 + Z
+        }
+        if (G.screen === 'result') return { dpad: true, a: true, b: false, c: false, d: false }; // 結算: 左右選按鈕 + Z
+        if (G.guide || G.reveal) return { dpad: false, a: true, b: false, c: false, d: false };  // 引導卡、合成演出: 只收 Z
+        if (G.bossIntro) return none;                                                   // Boss 出場演出: 不能操作
+        if (G.codex) return { dpad: false, a: false, b: true, c: false, d: false };     // 圖鑑: X 關閉
+        if (G.paused) return none;
+        if (G.steal && G.steal.locked) return none;                                     // 第一次搶奪鎖: 全部無效
+        if (G.popup) return { dpad: true, a: true, b: true, c: false, d: true };        // 單位選單 / 商店 / 替換彈窗
+        var h = shopHolder(), near = !!h && dist(G.player, h) <= 110;                    // 空白鍵只在購買區有用
+        return { dpad: true, a: true, b: false, c: near, d: true };
+      } catch (e) { return { dpad: true, a: true, b: false, c: false, d: false }; }
+    },
+    // 遊戲中自由移動的場景可以斜走(沒有彈窗 / 引導 / 演出 / 暫停)
+    diagonal: function () {
+      try { return G.screen === 'play' && !G.popup && !G.guide && !G.reveal && !G.codex && !G.paused && !G.bossIntro; } catch (e) { return false; }
+    },
+    // 第三鍵(空白鍵 = 開商店)圖示: 購物袋(提把 + 袋身 + 中間金幣); 畫成大按鈕時(s ≥ 40)袋子上移、下方加「購買」兩字
+    drawIcon: function (ctx, x, y, s, color) {
+      ctx.save();
+      var big = s >= 40, by = big ? y - s * 0.12 : y, w = s * 0.34, top = by - s * 0.14, bot = by + s * 0.3;
+      ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineJoin = 'round';
+      ctx.lineWidth = Math.max(1.4, s * 0.07);
+      ctx.beginPath(); ctx.arc(x, top, s * 0.15, Math.PI, 0); ctx.stroke();                     // 提把
+      ctx.lineWidth = Math.max(1.6, s * 0.08);
+      ctx.beginPath(); ctx.moveTo(x - w, top); ctx.lineTo(x + w, top); ctx.lineTo(x + w * 1.12, bot); ctx.lineTo(x - w * 1.12, bot); ctx.closePath(); ctx.stroke();  // 袋身
+      ctx.beginPath(); ctx.arc(x, (top + bot) / 2 + s * 0.02, s * 0.1, 0, Math.PI * 2); ctx.fill();   // 金幣
+      if (big) {
+        ctx.font = 'bold ' + Math.round(s * 0.26) + 'px "Microsoft JhengHei","PingFang TC","Noto Sans TC",sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        origFill.call(ctx, '購買', x, by + s * 0.56);
+      }
+      ctx.restore();
+    },
+    // 圖鑑鈕圖示: 打開的書(左右兩頁 + 中線)
+    drawCodexIcon: function (ctx, x, y, s, color) {
+      ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = Math.max(1.6, s * 0.09); ctx.lineJoin = 'round';
+      var w = s * 0.4, h = s * 0.3;
+      ctx.beginPath();
+      ctx.moveTo(x, y - h * 0.8); ctx.quadraticCurveTo(x - w * 0.5, y - h * 1.1, x - w, y - h * 0.8); ctx.lineTo(x - w, y + h); ctx.quadraticCurveTo(x - w * 0.5, y + h * 0.7, x, y + h);
+      ctx.quadraticCurveTo(x + w * 0.5, y + h * 0.7, x + w, y + h); ctx.lineTo(x + w, y - h * 0.8); ctx.quadraticCurveTo(x + w * 0.5, y - h * 1.1, x, y - h * 0.8);
+      ctx.lineTo(x, y + h); ctx.stroke();
+      ctx.restore();
+    },
+    // 暫停時整個聲音靜音, 繼續時還原成遊戲自己的靜音設定(不動遊戲的靜音開關)
+    setAudioPaused: function (paused) {
+      try { if (typeof Sound !== 'undefined' && Sound.setMuted) Sound.setMuted(!!paused || (typeof S !== 'undefined' && !!S.muted)); } catch (e) { /* 略過 */ }
+    },
+    // 第一次輸入時的聲音初始化(和遊戲 inputDown 的初始化相同)
+    initAudio: function () {
+      try {
+        if (typeof G === 'undefined' || G.inited) return;
+        G.inited = true;
+        if (typeof Sound !== 'undefined' && Sound.init) Sound.init();
+        setMusic(G.music);
+      } catch (e) { /* 略過 */ }
+    },
+  };
+
+  // ───────── 版面: 觸控時遊戲畫面上下貼邊、不縮小(縮小後 HUD 字太小), 兩側塗黑, 按鈕靠兩側擺, 寬度不夠時壓到遊戲畫面邊緣 ─────────
+  var CW = (window.Art && Art.canvas && Art.canvas.width) || 1280, CH = (window.Art && Art.canvas && Art.canvas.height) || 720;
+  var VK = 1;
+  var VIEW = { k: VK, x: (CW - 1280 * VK) / 2, y: (CH - 720 * VK) / 2 };   // 遊戲畫面在畫布上的縮放與左上角
+  // 按鈕中心: 黑塊夠寬就置中在黑塊裡, 不夠寬就貼著畫面外緣(離邊 16)
+  var SW = VIEW.x, RO = 124, BR = 72;
+  var DX = Math.max(SW / 2, RO + 16), AX = CW - Math.max(SW / 2, BR + 20);
+  var LAYOUT = {
+    // 圓弧方向鍵: 中心 (x, y), 外圈半徑 Ro、內圈半徑 Ri, 四段之間留 gap 寬的細縫; 可按範圍半徑 R(比外圈大, 手指偏出去也算), 中心 dead 內不算
+    dpad: { x: DX, y: CH - RO - 80, Ro: RO, Ri: RO * 0.36, gap: 8, R: RO + 24, dead: 20 },
+    a: { x: AX, y: CH - BR - 80, r: BR, hit: BR + 16 },
+    // b 與 c 同一位置(不會同時出現)
+    b: { x: AX, y: CH - BR * 3 - 104, r: BR * 0.8, hit: BR * 0.8 + 16 },
+    c: { x: AX, y: CH - BR * 3 - 104, r: BR * 0.8, hit: BR * 0.8 + 16 },
+    // 圖鑑鈕: 遊玩區右上角(設計座標 (992, 74), 電腦版聲音開關圖示的位置)
+    d: { x: VIEW.x + 992 * 1.25 * VK, y: VIEW.y + 74 * 1.25 * VK, r: 30, hit: 44 },
+  };
+
+  // ───────── 是不是觸控模式 ─────────
+  var forced = /[?&]touch=1(&|$)/.test(location.search);
+  var coarse = false, hover = false;
+  try { coarse = !!(window.matchMedia && matchMedia('(pointer: coarse)').matches); } catch (e) { /* 略過 */ }
+  try { hover = !!(window.matchMedia && matchMedia('(hover: hover)').matches); } catch (e) { /* 略過 */ }
+  var hasTouch = (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0) || ('ontouchstart' in window);
+  var ON = CONFIG.mode !== 'none' && (forced || coarse || (hasTouch && !hover));
+  var KEYS = CONFIG.mode === 'keys';
+
+  var PVDX = { on: ON, paused: false, held: {}, draw: function () { }, finish: function () { } };
+  if (ON && KEYS) PVDX.view = VIEW;   // game.js 照它縮放遊戲畫面
+  window.PVDX = PVDX;
+  function call(fn, arg) { try { fn(arg); } catch (e) { console.error(e); } }
+
+  // ───────── 虛擬按鈕的畫法 ─────────
+  var Pad = {
+    body: function (ctx, lit) {
+      ctx.fillStyle = lit ? 'rgba(255,210,74,0.85)' : 'rgba(26,32,48,0.5)'; ctx.fill();
+      ctx.lineWidth = 3; ctx.strokeStyle = lit ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.55)'; ctx.stroke();
+    },
+    arrow: function (ctx, x, y, rot, s, lit) {
+      ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.scale(s, s);
+      ctx.beginPath(); ctx.moveTo(0, -9); ctx.lineTo(8, 1.5); ctx.lineTo(3, 1.5); ctx.lineTo(3, 9); ctx.lineTo(-3, 9); ctx.lineTo(-3, 1.5); ctx.lineTo(-8, 1.5); ctx.closePath();
+      ctx.fillStyle = lit ? '#1a2030' : 'rgba(255,255,255,0.88)'; ctx.fill();
+      ctx.restore();
+    },
+    draw: function (ctx, held, vis) {
+      var d = LAYOUT.dpad, K = CONFIG.keys, i;
+      ctx.save();
+      if (vis.dpad) {
+        // 圓弧方向鍵: 一圈切成上右下左四段, 段與段之間留固定寬度的細縫
+        var dirs = [['up', -Math.PI / 2], ['right', 0], ['down', Math.PI / 2], ['left', Math.PI]], q = Math.PI / 4;
+        for (i = 0; i < dirs.length; i++) {
+          var c = dirs[i][1], lit = !!held[K[dirs[i][0]]], go = d.gap / 2 / d.Ro, gi = d.gap / 2 / d.Ri;
+          if (!K[dirs[i][0]]) continue;
+          ctx.beginPath(); ctx.arc(d.x, d.y, d.Ro, c - q + go, c + q - go); ctx.arc(d.x, d.y, d.Ri, c + q - gi, c - q + gi, true); ctx.closePath();
+          this.body(ctx, lit);
+          var mr = (d.Ro + d.Ri) / 2 + 4;
+          this.arrow(ctx, d.x + Math.cos(c) * mr, d.y + Math.sin(c) * mr, c + Math.PI / 2, 2.4, lit);
+        }
+        ctx.beginPath(); ctx.arc(d.x, d.y, d.Ri - d.gap, 0, Math.PI * 2); ctx.fillStyle = 'rgba(26,32,48,0.3)'; ctx.fill();
+      }
+      var btns = [['a', 'A', Math.round(LAYOUT.a.r * 0.8)], ['b', 'B', Math.round(LAYOUT.b.r * 0.8)], ['c', null, 0], ['d', null, 0]];
+      for (i = 0; i < btns.length; i++) {
+        var id = btns[i][0], b = LAYOUT[id];
+        if (!vis[id] || !K[id]) continue;
+        var on = !!held[K[id]], fg = on ? '#1a2030' : 'rgba(255,255,255,0.9)';
+        ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); this.body(ctx, on);
+        if (btns[i][1]) {
+          ctx.font = 'bold ' + btns[i][2] + 'px "Microsoft JhengHei","PingFang TC","Noto Sans TC",sans-serif';
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = fg;
+          origFill.call(ctx, btns[i][1], b.x, b.y + 2);
+        } else if (id === 'd') call(function () { CONFIG.drawCodexIcon(ctx, b.x, b.y, b.r * 1.5, fg); });
+        else call(function () { CONFIG.drawIcon(ctx, b.x, b.y, b.r * 1.15, fg); });
+      }
+      ctx.restore();
+    },
+  };
+  var proto = window.CanvasRenderingContext2D && CanvasRenderingContext2D.prototype;
+  var origFill = proto && proto.fillText;
+
+  // ───────── 暫停(網站訊息、直拿、Esc) ─────────
+  var sitePause = false, needTap = false, portrait = false, keyPause = false, audioHeld = false, ov = null, ovKey = '';
+  function showOverlay(big, small) {
+    if (!ov) {
+      ov = document.createElement('div');
+      ov.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;display:none;align-items:center;justify-content:center;flex-direction:column;' +
+        'background:rgba(8,10,16,0.9);color:#fff;z-index:99;text-align:center;font-family:"Microsoft JhengHei","PingFang TC","Noto Sans TC",sans-serif;' +
+        'user-select:none;-webkit-user-select:none;padding:20px;box-sizing:border-box;';
+      document.body.appendChild(ov);
+    }
+    var key = big + '|' + small;
+    if (key !== ovKey) {
+      ovKey = key; ov.innerHTML = '';
+      var a = document.createElement('div'); a.style.cssText = 'font-size:26px;font-weight:bold;line-height:1.5;'; a.textContent = big; ov.appendChild(a);
+      if (small) { var b = document.createElement('div'); b.style.cssText = 'font-size:16px;color:#9aa6bd;margin-top:8px;'; b.textContent = small; ov.appendChild(b); }
+    }
+    ov.style.display = 'flex';
+  }
+  function hideOverlay() { if (ov) { ov.style.display = 'none'; ovKey = ''; } }
+  function applyPause() {
+    var p = sitePause || needTap || portrait || keyPause;
+    if (p && !PVDX.paused) {
+      releaseAll();   // 暫停那一刻放開所有按住的鍵(含鍵盤)
+      if (KEYS && typeof inputReset === 'function') call(inputReset);
+    }
+    PVDX.paused = p;
+    if (p !== audioHeld) { audioHeld = p; call(CONFIG.setAudioPaused, p); }
+    if (!p) hideOverlay();
+    else if (portrait) showOverlay('請把手機轉成橫向', '轉成橫向後遊戲會繼續');
+    else if (needTap) showOverlay(ON ? '點一下繼續' : '點擊或按任意鍵繼續', '');
+    else if (keyPause) showOverlay('遊戲暫停中', '按 Esc 繼續');
+    else showOverlay('遊戲暫停中', '');
+  }
+  window.addEventListener('message', function (e) {
+    if (e.origin !== location.origin) return;
+    var d = e.data;
+    if (!d || typeof d !== 'object') return;
+    if (d.type === 'pvd:pause') { sitePause = true; needTap = false; applyPause(); }
+    else if (d.type === 'pvd:resume') { if (sitePause) { sitePause = false; needTap = true; applyPause(); } }
+  });
+  // 等「點一下繼續」: 這一下只拿來解除暫停, 不傳給遊戲
+  function tapResume() {
+    if (!needTap || sitePause) return false;
+    needTap = false; applyPause();
+    call(CONFIG.initAudio);
+    return true;
+  }
+  window.addEventListener('keydown', function (e) {
+    var esc = CONFIG.escPause && (e.key === 'Escape' || e.key === 'Esc' || e.code === 'Escape');
+    if (esc) {
+      e.preventDefault(); e.stopImmediatePropagation();
+      if (e.repeat || sitePause || portrait) return;
+      if (!tapResume()) { keyPause = !keyPause; applyPause(); }
+      return;
+    }
+    if (!PVDX.paused) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    tapResume();
+  }, true);
+  window.addEventListener('keyup', function (e) { if (PVDX.paused) e.stopImmediatePropagation(); }, true);
+  // 暫停中滑鼠 / 觸控事件不進遊戲(捕獲階段在遊戲自己的監聽之前); 等點一下繼續時, 按下那一下用來解除暫停
+  ['mousedown', 'mouseup', 'mousemove', 'click', 'pointerdown', 'pointerup', 'pointermove', 'wheel'].forEach(function (t) {
+    window.addEventListener(t, function (e) {
+      if (!PVDX.paused) return;
+      e.stopImmediatePropagation();
+      if (t === 'mousedown' || t === 'pointerdown') tapResume();
+    }, true);
+  });
+
+  // 玩完一局: 通知上層網站(不在 iframe 裡就不送)
+  PVDX.finish = function () {
+    try { if (window.parent && window.parent !== window) window.parent.postMessage({ type: 'pvd:finish' }, location.origin); } catch (e) { /* 本機 file:// 開啟時略過 */ }
+  };
+
+  // ───────── 觸控模式 ─────────
+  var held = {}, cur = {}, touches = {};   // held: 目前要按住的鍵; cur: 已經送進遊戲的; touches: id → {x, y}(邏輯座標)
+  function releaseAll() {
+    var k;
+    if (KEYS) for (k in cur) { if (cur[k] && typeof inputUp === 'function') call(inputUp, k); }
+    cur = {}; held = {}; touches = {}; PVDX.held = held; mouseId = null;
+  }
+
+  if (!ON) return;
+
+  // 頁面設定: 固定視窗、不捲動 / 縮放 / 選取
+  (function () {
+    var meta = document.querySelector('meta[name=viewport]');
+    if (!meta) { meta = document.createElement('meta'); meta.name = 'viewport'; document.head.appendChild(meta); }
+    meta.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover');
+    var st = document.createElement('style');
+    st.textContent = 'html,body{position:fixed;left:0;top:0;width:100%;height:100%;touch-action:none;overscroll-behavior:none;' +
+      '-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;}' +
+      'canvas{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}';
+    document.head.appendChild(st);
+    document.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+    document.addEventListener('selectstart', function (e) { e.preventDefault(); });
+  })();
+
+  var cv = document.querySelector('canvas');
+  function toLogical(t) {
+    var r = cv.getBoundingClientRect();
+    return { x: (t.clientX - r.left) * CW / (r.width || 1), y: (t.clientY - r.top) * CH / (r.height || 1) };
+  }
+  // 一根手指對應到哪些鍵
+  function keysAt(p, out, vis) {
+    var d = LAYOUT.dpad, K = CONFIG.keys, dx = p.x - d.x, dy = p.y - d.y, dd = Math.hypot(dx, dy);
+    if (vis.dpad && dd <= d.R && dd >= d.dead) {
+      var ax = Math.abs(dx), ay = Math.abs(dy), ratio = ax > 0 ? ay / ax : 99, h = K[dx < 0 ? 'left' : 'right'], v = K[dy < 0 ? 'up' : 'down'];
+      if (CONFIG.diagonal() && ratio > 0.58 && ratio < 1.73) { if (h) out[h] = true; if (v) out[v] = true; }
+      else if (ax >= ay) { if (h) out[h] = true; }
+      else if (v) out[v] = true;
+      return;
+    }
+    var best = null, bd = 1e9;
+    ['a', 'b', 'c', 'd'].forEach(function (id) {
+      if (!vis[id] || !K[id]) return;
+      var b = LAYOUT[id], dist = Math.hypot(p.x - b.x, p.y - b.y);
+      if (dist <= b.hit && dist < bd) { bd = dist; best = K[id]; }
+    });
+    if (best) out[best] = true;
+  }
+  function recompute() {
+    var want = {}, id, k, vis = CONFIG.visible();
+    if (!PVDX.paused) for (id in touches) keysAt(touches[id], want, vis);
+    for (k in want) if (!cur[k]) { cur[k] = true; call(inputDown, k); }
+    for (k in cur) if (cur[k] && !want[k]) { cur[k] = false; call(inputUp, k); }
+    held = want; PVDX.held = held;
+  }
+  // 滑鼠遊戲: 第一根手指當成滑鼠
+  var mouseId = null;
+  function fireMouse(type, t) {
+    if (!CONFIG.mouseEvents) return;
+    var ev = new MouseEvent(type, { bubbles: true, cancelable: true, view: window, clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY, button: 0, buttons: type === 'mouseup' || type === 'click' ? 0 : 1 });
+    (document.elementFromPoint(t.clientX, t.clientY) || cv).dispatchEvent(ev);
+  }
+  function onTouch(e) {
+    e.preventDefault();
+    var list = e.changedTouches, i, t, end = e.type === 'touchend' || e.type === 'touchcancel';
+    if (e.type === 'touchstart' && !PVDX.paused) call(CONFIG.initAudio);
+    if (e.type === 'touchend') { call(CONFIG.initAudio); if (needTap) { tapResume(); return; } }
+    if (PVDX.paused) return;
+    for (i = 0; i < list.length; i++) {
+      t = list[i];
+      if (KEYS) { if (end) delete touches[t.identifier]; else touches[t.identifier] = toLogical(t); continue; }
+      if (e.type === 'touchstart' && mouseId === null) { mouseId = t.identifier; fireMouse('mousemove', t); fireMouse('mousedown', t); }
+      else if (t.identifier === mouseId) {
+        if (e.type === 'touchmove') fireMouse('mousemove', t);
+        else if (end) { mouseId = null; fireMouse('mouseup', t); if (e.type === 'touchend') fireMouse('click', t); }
+      }
+    }
+    if (KEYS) recompute();
+  }
+  var opt = { passive: false };
+  ['touchstart', 'touchmove', 'touchend', 'touchcancel'].forEach(function (t) { window.addEventListener(t, onTouch, opt); });
+  window.addEventListener('blur', function () { releaseAll(); mouseId = null; });
+
+  // 直拿提示
+  function checkOrient() {
+    var p = window.innerHeight > window.innerWidth;
+    if (p !== portrait) { portrait = p; applyPause(); }
+  }
+  window.addEventListener('resize', checkOrient);
+  window.addEventListener('orientationchange', function () { setTimeout(checkOrient, 100); });
+  checkOrient();
+
+  // 鍵帽換成手機版: 遊戲裡用 fillText 畫的鍵帽字照 CONFIG.keycaps 換字或改畫第三鍵圖示
+  if (KEYS && proto && origFill) {
+    proto.fillText = function (str, x, y, mw) {
+      var to = Object.prototype.hasOwnProperty.call(CONFIG.keycaps, str) ? CONFIG.keycaps[str] : null;
+      if (to === 'icon') {
+        var m = /([0-9.]+)px/.exec(this.font), size = m ? parseFloat(m[1]) : 16, ctx = this;
+        call(function () { CONFIG.drawIcon(ctx, x, y, size * 1.5, ctx.fillStyle); });
+        return;
+      }
+      if (to !== null) str = to;
+      return mw === undefined ? origFill.call(this, str, x, y) : origFill.call(this, str, x, y, mw);
+    };
+  }
+
+  // 每幀畫在遊戲畫面上層
+  PVDX.draw = function (ctx) {
+    checkOrient();
+    if (!KEYS) return;
+    for (var id in touches) { recompute(); break; }   // 場景換了(按鈕顯示變了)而手指還按著: 重新判定
+    Pad.draw(ctx, held, CONFIG.visible());
+  };
+})();
