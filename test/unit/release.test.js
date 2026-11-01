@@ -7,7 +7,7 @@ import { checkRelease, applyInfo } from '../../tools/release.mjs';
 
 const INFO = {
   code: 'dungeon-zoo', name: '來馬戲團看一點大場面', intro: '深入地下城戰鬥、捕捉怪物。', time: '18–30 分鐘',
-  mobile: true, color: '#f29cac', textColor: '#2d2144', ratio: '16:9', mobileRatio: '16:9-21:9',
+  device: 'pc', color: '#f29cac', textColor: '#2d2144', ratio: '16:9', mobileRatio: '16:9-21:9',
 };
 
 // 做一個合格的 release 資料夾, edit 可以在檢查前改掉某些檔案
@@ -61,12 +61,12 @@ test('沒有圖示、橫幅或遊戲資料要擋', () => {
 });
 
 test('遊戲資料欄位缺漏或格式錯要擋', () => {
-  const bad = { ...INFO, color: 'pink', mobile: '是' };
+  const bad = { ...INFO, color: 'pink', device: '都可以' };
   delete bad.intro;
   const e = errorsOf({ 'assets/info.json': JSON.stringify(bad) }).join('\n');
   assert.match(e, /intro/);
   assert.match(e, /color/);
-  assert.match(e, /mobile/);
+  assert.match(e, /device/);
 });
 
 test('網站沒有的遊戲代號要擋', () => {
@@ -80,16 +80,17 @@ test('套用遊戲資料只改這一款, 其他款不動', async () => {
   const { GAMES: before } = await import('../../site/js/games.js');
   const g = GAMES.find(x => x.code === 'dungeon-zoo');
   assert.deepEqual(g, {
-    code: 'dungeon-zoo', name: INFO.name, letter: '來', time: INFO.time, mobile: true,
+    code: 'dungeon-zoo', name: INFO.name, letter: '來', time: INFO.time, device: 'pc',
     bg: INFO.color, fg: INFO.textColor, icon: 'media/games/dungeon-zoo.png', banner: 'media/games/dungeon-zoo-banner.png', intro: "有'引號'的介紹",
   });
   assert.deepEqual(GAMES.filter(x => x.code !== 'dungeon-zoo'), before.filter(x => x.code !== 'dungeon-zoo'));
 });
 
-test('畫面比例寫法不對, 或手機可玩卻沒寫手機比例要擋', () => {
+test('畫面比例寫法不對, 或沒寫手機比例要擋(每款都要支援手機)', () => {
   assert.match(errorsOf({ 'assets/info.json': JSON.stringify({ ...INFO, ratio: '16比9' }) }).join('\n'), /ratio/);
   const { mobileRatio, ...noMobileRatio } = INFO;
   assert.match(errorsOf({ 'assets/info.json': JSON.stringify(noMobileRatio) }).join('\n'), /mobileRatio/);
   assert.match(errorsOf({ 'assets/info.json': JSON.stringify({ ...INFO, mobileRatio: '寬' }) }).join('\n'), /mobileRatio/);
-  assert.deepEqual(errorsOf({ 'assets/info.json': JSON.stringify({ ...noMobileRatio, mobile: false }) }), []);
+  assert.match(errorsOf({ 'assets/info.json': JSON.stringify({ ...noMobileRatio, device: 'mobile' }) }).join('\n'), /mobileRatio/);
+  assert.deepEqual(errorsOf({ 'assets/info.json': JSON.stringify({ ...INFO, device: 'mobile' }) }), []);
 });

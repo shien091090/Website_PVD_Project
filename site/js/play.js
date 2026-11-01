@@ -16,11 +16,15 @@ export const ico = (g, cls = '') => g.icon
 
 const DEV_PC = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4" width="19" height="12.5" rx="2" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M9 20.5h6M12 16.5v4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
 const DEV_PH = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M10.5 18.2h3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
-const devHtml = g => `<span class="devs" role="img" aria-label="${g.mobile ? '支援電腦與手機' : '僅支援電腦遊玩'}">${DEV_PC}${g.mobile ? DEV_PH : ''}</span>`;
-// 不支援手機的遊戲, 在觸控裝置上試玩鈕改成「僅支援電腦遊玩」
-const startBtn = g => (!g.mobile && touchQ.matches)
-  ? '<span class="startbtn off">僅支援電腦遊玩</span>'
-  : `<a class="startbtn" href="#game/${g.code}">▶ 開始試玩</a>`;
+const DEV_INFO = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M12 10.5v6M12 7.2v.1" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>';
+const devName = d => d === 'mobile' ? '手機' : '電腦';
+const devHtml = g => `<span class="recd">${g.device === 'mobile' ? DEV_PH : DEV_PC}${devName(g.device)}</span>`;
+// 每款都能玩, 只是建議其一: 用的裝置(觸控 = 手機)和建議不同時提示
+export const recHint = g => (g.device === 'mobile') === touchQ.matches ? '' : `建議使用${devName(g.device)}遊玩，以獲得最佳體驗`;
+const startBtn = g => {
+  const h = recHint(g);
+  return (h ? `<p class="rec">${DEV_INFO}${h}</p>` : '') + `<a class="startbtn" href="#game/${g.code}">▶ 開始試玩</a>`;
+};
 
 // 留言板內容由外部提供(留言模組), 這裡只決定放在哪
 let board = { html: () => '', mount: () => {} };
@@ -37,11 +41,11 @@ export function renderPlay() {
       <button class="gh bn" data-i="${i}" aria-haspopup="dialog">${g.banner
         ? `<img class="cv" src="${esc(g.banner)}" alt=""><b class="sr">${esc(g.name)}</b>`
         : `<span class="fb">${ico(g)}<b>${esc(g.name)}</b></span>`}
-        <span class="chip">${esc(g.time)}${devHtml(g)}</span></button>
+        <span class="chip">${esc(g.time)}</span></button>
     </div>` : `
     <div class="gi${i === sel ? ' sel' : ''}" style="--c:${g.bg};--fc:${g.fg}">
       <button class="gh" data-i="${i}" aria-pressed="${i === sel}">${ico(g)}
-        <span class="nm"><b>${esc(g.name)}</b><span class="tm">${esc(g.time)}<span class="devs" role="img" aria-label="${g.mobile ? '支援電腦與手機' : '僅支援電腦'}">${DEV_PC}${g.mobile ? DEV_PH : ''}</span></span></span>
+        <span class="nm"><b>${esc(g.name)}</b><span class="tm">${esc(g.time)}</span></span>
         <span class="arr">›</span><span class="pm">+</span></button>
     </div>`).join('');
   const open = mob && sel != null;
@@ -50,14 +54,14 @@ export function renderPlay() {
     const g = GAMES[sel];
     psheet.innerHTML = `<div class="bd"></div>
       <div class="pn" role="dialog" aria-modal="true" aria-label="${esc(g.name)}" style="--c:${g.bg};--fc:${g.fg}">
-        <div class="ph">${ico(g)}<span class="nm"><b>${esc(g.name)}</b><span>${esc(g.time)}${devHtml(g)}</span></span><button class="x" aria-label="關閉">✕</button></div>
+        <div class="ph">${ico(g)}<span class="nm"><b>${esc(g.name)}</b><span>${esc(g.time)}</span></span><button class="x" aria-label="關閉">✕</button></div>
         <div class="gb"><p>${esc(g.intro)}</p>${startBtn(g)}<div class="board" data-code="${g.code}" style="display:contents">${board.html(g.code)}</div></div>
       </div>`;
     board.mount(psheet.querySelector('.board'), g.code);
   } else psheet.innerHTML = '';
   if (!mob && sel != null) {
     const g = GAMES[sel];
-    const meta = `<dl class="meta"><dt>時長</dt><dd>${esc(g.time)}</dd><dt>裝置</dt><dd>${devHtml(g)}</dd></dl>`;
+    const meta = `<dl class="meta"><dt>時長</dt><dd>${esc(g.time)}</dd><dt>建議裝置</dt><dd>${devHtml(g)}</dd></dl>`;
     // 有橫幅: 圖示壓在橫幅左下角, 標題與時長裝置排在圖示右邊
     detail.innerHTML = `
       <div class="dl${g.banner ? ' has-cover' : ''}">

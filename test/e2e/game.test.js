@@ -231,3 +231,37 @@ test('遊戲還在載入時遊戲框顯示載入中, 載完就收起', async () 
   await ld.waitFor({ state: 'hidden', timeout: 15000 });
   await ctx.close();
 });
+
+test('建議裝置: 清單不放裝置圖示; 詳情寫建議裝置; 用的裝置不同才提示', async () => {
+  const ctx = await browser.newContext(PC);
+  const page = await ctx.newPage();
+  await page.goto(srv.url + '#play/dungeon-zoo');
+  await page.locator('.detail .startbtn').waitFor();
+  assert.equal(await page.locator('#glist .devs').count(), 0);
+  assert.match(await page.locator('.detail .meta').textContent(), /建議裝置\s*電腦/);
+  assert.equal(await page.locator('.detail .rec').count(), 0, '電腦看建議電腦的遊戲不提示');
+  await page.click('.gh:has-text("捕泡手")');
+  assert.match(await page.locator('.detail .meta').textContent(), /建議裝置\s*手機/);
+  assert.equal(await page.locator('.detail .rec').textContent(), '建議使用手機遊玩，以獲得最佳體驗');
+  assert.ok(await page.locator('.detail .rec + .startbtn').isVisible(), '提示放在開始試玩正上方');
+  await ctx.close();
+
+  const ph = await browser.newContext(PHONE);
+  const p2 = await ph.newPage();
+  await p2.goto(srv.url + '#play/ghost-echo');
+  await p2.locator('.psheet .startbtn').waitFor();
+  assert.equal(await p2.locator('#glist .devs, .psheet .devs').count(), 0);
+  assert.equal(await p2.locator('.psheet .rec').textContent(), '建議使用電腦遊玩，以獲得最佳體驗');
+  assert.equal(await p2.locator('.psheet a.startbtn').count(), 1, '手機也能開始試玩');
+  await ph.close();
+});
+
+test('用的裝置與建議不同時, 遊戲載入畫面也提示', async () => {
+  const ctx = await browser.newContext(PHONE_L);
+  const page = await ctx.newPage();
+  await page.route(/\/games\/ghost-echo\/.+\.js/, () => {});
+  await page.goto(srv.url + '#game/ghost-echo', { waitUntil: 'commit' });
+  await page.locator('#pg-game .gload').waitFor();
+  assert.match(await page.locator('#pg-game .gload').textContent(), /建議使用電腦遊玩，以獲得最佳體驗/);
+  await ctx.close();
+});

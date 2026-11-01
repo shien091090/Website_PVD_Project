@@ -1,4 +1,5 @@
 import { byCode } from './games.js';
+import { recHint } from './play.js';
 import * as store from './store.js';
 
 // 遊玩頁: 返回 bar + 遊戲 iframe(電腦 16:9, 手機橫拿填滿)。手機直拿不載入, 轉橫才載入;
@@ -48,7 +49,8 @@ function sync() {
     frame.allow = 'autoplay; fullscreen; gamepad';
     scr.appendChild(frame);
     // 遊戲檔案載完前遊戲框是全黑, 先蓋一層載入中, 免得玩家以為壞掉
-    scr.insertAdjacentHTML('beforeend', `<div class="gload" role="status"><i></i><b>遊戲載入中…</b></div>`);
+    const hint = recHint(byCode(code));
+    scr.insertAdjacentHTML('beforeend', `<div class="gload" role="status"><i></i><b>遊戲載入中…</b>${hint ? `<p class="rec">${hint}</p>` : ''}</div>`);
     frame.addEventListener('load', () => { if (!frame) return; scr.querySelector('.gload')?.remove(); blockZoom(frame.contentWindow); frame.focus(); });
   }
   const shouldPause = portraitQ.matches || document.hidden;

@@ -20,7 +20,7 @@
 :root.dark :is(.page, .intro) :is(.cform button, .homebtn:hover, .back:hover, .links a:hover, .badge) { background: var(--fg); color: var(--on-ink); }
 .dev h2 span { color: var(--dk); } /* 黃色編號塊上的數字固定深色 */
 /* 暗色的試玩鈕: 大面積紅太刺眼, 換成較深但不灰的紅 */
-:root.dark .page .startbtn:not(.off) { background: #c9403a; color: #fdf3f1; filter: none; }
+:root.dark .page .startbtn { background: #c9403a; color: #fdf3f1; filter: none; }
 :root.dark .page .cd.live .n.sec b { color: #26a3bf; }
 html, body { height: 100%; }
 body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font); }
@@ -118,16 +118,13 @@ body.vend .tab[data-k="vote"] .badge { display: block; }
 body.vend .vnote { display: flex; }
 @media (max-width: 720px) { .vnote { margin: 0 16px 10px; padding: 8px 12px; font-size: 13px; } .vnote svg { width: 17px; height: 17px; } }
 /* 支援裝置圖示 */
-.devs { display: inline-flex; align-items: center; gap: 6px; vertical-align: middle; }
-.devs svg { width: 20px; height: 20px; }
-.devs small { margin-left: 2px; }
+.recd { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; vertical-align: middle; }
+.recd svg { width: 20px; height: 20px; display: block; }
+.rec { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; padding: 9px 12px; border: 2px dashed currentColor; border-radius: 12px; font: 700 14px/1.4 var(--font); opacity: .85; }
+.rec svg { width: 18px; height: 18px; flex: none; }
+.gload .rec { margin: 4px 0 0; color: #fff; border-color: rgba(255, 255, 255, .5); }
 /* 清單卡片: 時長後面接裝置圖示 */
 .gh .nm .tm { display: flex; align-items: center; gap: 12px; }
-.gh .nm .tm .devs { gap: 4px; padding-left: 12px; border-left: 2px solid currentColor; opacity: .85; }
-.gh .nm .tm .devs svg { width: 18px; height: 18px; }
-.psheet .ph .devs { margin-left: 8px; gap: 4px; }
-.psheet .ph .devs svg { width: 16px; height: 16px; }
-.psheet .ph .devs small { font: 700 12px/1 var(--font); color: inherit; }
 .tab:not(.cur):hover .pl { transform: translateY(-2px); }
 .tab:focus-visible .pl { outline: 3px solid var(--teal); outline-offset: 5px; }
 .sh { height: 72px; }
@@ -177,7 +174,6 @@ body.vend .vnote { display: flex; }
 .clock { flex: none; text-align: center; font: 700 14px/1.4 var(--font); color: var(--muted); padding: 12px 0 4px; border-top: 2px dashed var(--line); }
 .startbtn { display: flex; align-items: center; justify-content: center; gap: 10px; background: var(--red); color: #fff; border: 3px solid var(--ink); border-radius: 18px; padding: 20px; font: 900 24px/1 var(--font); text-decoration: none; box-shadow: 0 6px 0 var(--hard); transition: transform .1s, box-shadow .1s; }
 .startbtn:hover { transform: translateY(2px); box-shadow: 0 4px 0 var(--hard); }
-.startbtn.off { background: var(--chip); color: var(--muted); box-shadow: none; border-style: dashed; border-color: var(--faint); pointer-events: none; font-size: 18px; }
 .tag-played { background: #aaefd5; color: var(--dk); border-radius: 999px; padding: 7px 14px; font: 700 15px/1 var(--font); white-space: nowrap; }
 .tag-un { border: 2px dashed var(--faint); border-radius: 999px; padding: 5px 12px; font: 700 15px/1 var(--font); color: var(--muted); white-space: nowrap; }
 .gotry { font: 700 14px/1 var(--font); color: var(--ink); white-space: nowrap; }
@@ -220,7 +216,7 @@ body.vend .vnote { display: flex; }
 .dl .hd { display: flex; align-items: center; gap: 16px; }
 .dl .hd .icon { width: 72px; height: 72px; border-radius: 16px; font-size: 40px; }
 .dl .hd b { font: 900 clamp(30px, 3.4vw, 44px)/1 var(--font); }
-.meta { display: grid; grid-template-columns: auto 1fr; gap: 10px 18px; font: 700 15px/1.4 var(--font); }
+.meta { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 10px 18px; font: 700 15px/1.4 var(--font); }
 .meta dt { color: var(--muted); }
 .meta dd { margin: 0; }
 .meta small { font-weight: 500; color: var(--muted); font-size: 14px; }
@@ -274,7 +270,6 @@ body.vend .vnote { display: flex; }
   .gh.bn .fb .icon { width: 64px; height: 64px; font-size: 36px; background: #fff; color: var(--dk); flex: none; }
   .gh.bn .fb b { font: 900 22px/1.15 var(--font); }
   .gh.bn .chip { position: absolute; left: 8px; bottom: 8px; display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,.92); color: #2d2144; border: 2px solid #2d2144; border-radius: 999px; padding: 5px 10px; font: 700 13px/1 var(--font); }
-  .gh.bn .chip .devs { display: inline-flex; gap: 3px; color: inherit; }
   .gh.bn .chip svg { width: 15px; height: 15px; }
   /* 展開一款: 它撐滿剩餘高度, 其他收成矮條 */
   /* 手機: 點一款從底部拉出抽屜 (方案 1a), 清單本身不變 */
@@ -282,7 +277,8 @@ body.vend .vnote { display: flex; }
   .psheet .pn { height: min(88svh, 760px); }
   .gb p { font-size: 14px; line-height: 1.7; }
   .gb .startbtn { border-radius: 999px; padding: 12px; font-size: 17px; box-shadow: none; }
-  .gb .startbtn.off { font-size: 14px; }
+  .gb .rec { padding: 5px 10px; margin: 0 0 8px; gap: 6px; font-size: 12.5px; border-width: 1.5px; border-radius: 10px; }
+  .gb .rec svg { width: 15px; height: 15px; }
   .gb h3 { font-size: 14px; margin-top: 4px; }
   .gb .cms { gap: 8px; }
   .gb .av { width: 26px; height: 26px; }
