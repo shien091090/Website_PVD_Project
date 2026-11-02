@@ -7,7 +7,7 @@ export const GAMES = [
     intro: '深入地下城戰鬥、捕捉怪物，再送牠們上馬戲團舞台賺取掌聲和收益。攻略越深，陣容越熱鬧，一起炒熱全場氣氛吧！' },
   { code: 'jelly-jinni', name: '接力吉尼(Jelly Jinni)', letter: '接', time: '5–12 分鐘', bg: '#4776c3', fg: '#ffffff', icon: 'media/games/jelly-jinni.png', banner: 'media/games/jelly-jinni-banner.png', pattern: 'media/games/jelly-jinni-pattern.png',
     intro: '死掉不是結束！和上一代的自己攜手，接力跳躍、破解機關，共同抵達終點吧!' },
-  { code: 'soul-smith-defense', name: '魂匠守衛者', letter: '魂', time: '12–20 分鐘', bg: '#a8cf9c', fg: '#2d2144', icon: 'media/games/soul-smith-defense.png', banner: 'media/games/soul-smith-defense-banner.png',
+  { code: 'soul-smith-defense', name: '魂匠守衛者', letter: '魂', time: '12–20 分鐘', bg: '#a8cf9c', fg: '#2d2144', icon: 'media/games/soul-smith-defense.png', banner: 'media/games/soul-smith-defense-banner.png', pattern: 'media/games/soul-smith-defense-pattern.png',
     intro: '會衝上前砍怪的箭塔？拔敵人的攻擊招式來用？一款所有能力都能自由拼裝的塔防，發揮想像力守住主堡！' },
 ];
 export const GAME_CODES = GAMES.map(g => g.code);
