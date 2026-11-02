@@ -7,7 +7,7 @@ import { checkRelease, applyInfo } from '../../tools/release.mjs';
 
 const INFO = {
   code: 'dungeon-zoo', name: '來馬戲團看一點大場面', intro: '深入地下城戰鬥、捕捉怪物。', time: '18–30 分鐘',
-  device: 'pc', color: '#f29cac', textColor: '#2d2144', ratio: '16:9', mobileRatio: '16:9-21:9',
+  color: '#f29cac', textColor: '#2d2144', ratio: '16:9', mobileRatio: '16:9-21:9',
 };
 
 // 做一個合格的 release 資料夾, edit 可以在檢查前改掉某些檔案
@@ -61,12 +61,11 @@ test('沒有圖示、橫幅或遊戲資料要擋', () => {
 });
 
 test('遊戲資料欄位缺漏或格式錯要擋', () => {
-  const bad = { ...INFO, color: 'pink', device: '都可以' };
+  const bad = { ...INFO, color: 'pink' };
   delete bad.intro;
   const e = errorsOf({ 'assets/info.json': JSON.stringify(bad) }).join('\n');
   assert.match(e, /intro/);
   assert.match(e, /color/);
-  assert.match(e, /device/);
 });
 
 test('網站沒有的遊戲代號要擋', () => {
@@ -80,7 +79,7 @@ test('套用遊戲資料只改這一款, 其他款不動', async () => {
   const { GAMES: before } = await import('../../site/js/games.js');
   const g = GAMES.find(x => x.code === 'dungeon-zoo');
   assert.deepEqual(g, {
-    code: 'dungeon-zoo', name: INFO.name, letter: '來', time: INFO.time, device: 'pc',
+    code: 'dungeon-zoo', name: INFO.name, letter: '來', time: INFO.time,
     bg: INFO.color, fg: INFO.textColor, icon: 'media/games/dungeon-zoo.png', banner: 'media/games/dungeon-zoo-banner.png', intro: "有'引號'的介紹",
   });
   assert.deepEqual(GAMES.filter(x => x.code !== 'dungeon-zoo'), before.filter(x => x.code !== 'dungeon-zoo'));
@@ -93,4 +92,10 @@ test('畫面比例寫法不對, 或沒寫手機比例要擋(每款都要支援�
   assert.match(errorsOf({ 'assets/info.json': JSON.stringify({ ...INFO, mobileRatio: '寬' }) }).join('\n'), /mobileRatio/);
   assert.match(errorsOf({ 'assets/info.json': JSON.stringify({ ...noMobileRatio, device: 'mobile' }) }).join('\n'), /mobileRatio/);
   assert.deepEqual(errorsOf({ 'assets/info.json': JSON.stringify({ ...INFO, device: 'mobile' }) }), []);
+});
+
+test('不用再提供建議裝置; 舊的 info.json 還帶著也不擋、不寫進網站', async () => {
+  assert.deepEqual(errorsOf({ 'assets/info.json': JSON.stringify({ ...INFO, device: 'mobile' }) }), []);
+  const out = applyInfo(readFileSync('site/js/games.js', 'utf8'), { ...INFO, device: 'mobile' }, null, null);
+  assert.doesNotMatch(out, /device/);
 });

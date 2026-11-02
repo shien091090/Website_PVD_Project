@@ -14,15 +14,12 @@ export const ico = (g, cls = '') => g.icon
   ? `<span class="icon ${cls}" style="--c:${g.bg};--fc:${g.fg}"><img src="${esc(g.icon)}" alt=""></span>`
   : `<span class="icon ${cls}" style="--c:${g.bg};--fc:${g.fg}">${esc(g.letter)}</span>`;
 
-const DEV_PC = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4" width="19" height="12.5" rx="2" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M9 20.5h6M12 16.5v4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
-const DEV_PH = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M10.5 18.2h3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
 const DEV_INFO = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M12 10.5v6M12 7.2v.1" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>';
-const devName = d => d === 'mobile' ? '手機' : '電腦';
-const devHtml = g => `<span class="recd">${g.device === 'mobile' ? DEV_PH : DEV_PC}${devName(g.device)}</span>`;
 // 每款都能玩, 只是建議其一: 用的裝置(觸控 = 手機)和建議不同時提示
-export const recHint = g => (g.device === 'mobile') === touchQ.matches ? '' : `建議使用${devName(g.device)}遊玩，以獲得最佳體驗`;
+// PVD 的遊戲最後都上架 Steam, 一律建議用電腦玩; 用手機看才提示
+export const recHint = () => touchQ.matches ? '建議使用電腦遊玩，以獲得最佳體驗' : '';
 const startBtn = g => {
-  const h = recHint(g);
+  const h = recHint();
   return (h ? `<p class="rec">${DEV_INFO}${h}</p>` : '') + `<a class="startbtn" href="#game/${g.code}">▶ 開始試玩</a>`;
 };
 
@@ -61,7 +58,7 @@ export function renderPlay() {
   } else psheet.innerHTML = '';
   if (!mob && sel != null) {
     const g = GAMES[sel];
-    const meta = `<dl class="meta"><dt>時長</dt><dd>${esc(g.time)}</dd><dt>建議裝置</dt><dd>${devHtml(g)}</dd></dl>`;
+    const meta = `<dl class="meta"><dt>時長</dt><dd>${esc(g.time)}</dd></dl>`;
     // 有橫幅: 圖示壓在橫幅左下角, 標題與時長裝置排在圖示右邊
     detail.innerHTML = `
       <div class="dl${g.banner ? ' has-cover' : ''}">

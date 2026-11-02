@@ -118,8 +118,6 @@ body.vend .tab[data-k="vote"] .badge { display: block; }
 body.vend .vnote { display: flex; }
 @media (max-width: 720px) { .vnote { margin: 0 16px 10px; padding: 8px 12px; font-size: 13px; } .vnote svg { width: 17px; height: 17px; } }
 /* 支援裝置圖示 */
-.recd { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; vertical-align: middle; }
-.recd svg { width: 20px; height: 20px; display: block; }
 .rec { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; padding: 9px 12px; border: 2px dashed currentColor; border-radius: 12px; font: 700 14px/1.4 var(--font); opacity: .85; }
 .rec svg { width: 18px; height: 18px; flex: none; }
 .gload .rec { margin: 4px 0 0; color: #fff; border-color: rgba(255, 255, 255, .5); }

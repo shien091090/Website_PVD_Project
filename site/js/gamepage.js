@@ -51,7 +51,7 @@ function sync() {
     frame.allow = 'autoplay; fullscreen; gamepad';
     scr.appendChild(frame);
     // 遊戲檔案載完前遊戲框是全黑, 先蓋一層載入中, 免得玩家以為壞掉
-    const hint = recHint(byCode(code));
+    const hint = recHint();
     scr.insertAdjacentHTML('beforeend', `<div class="gload" role="status"><i></i><b>遊戲載入中…</b>${hint ? `<p class="rec">${hint}</p>` : ''}</div>`);
     reporting = false;
     // 遊戲框載完就收起; 會回報進度的遊戲框載完時檔案可能還在載, 改等遊戲說載完(稍等一下, 讓進度訊息先到)

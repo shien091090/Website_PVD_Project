@@ -32,7 +32,6 @@ export function checkRelease(dir) {
   }
   if (info) {
     for (const k of TEXT) if (typeof info[k] !== 'string' || !info[k].trim()) errors.push(`info.json 缺少 ${k}`);
-    if (!['pc', 'mobile'].includes(info.device)) errors.push('info.json 的 device(建議裝置)要是 pc 或 mobile');
     for (const k of ['color', 'textColor']) if (!COLOR.test(info[k] || '')) errors.push(`info.json 的 ${k} 要是 # 加 6 碼色碼`);
     if (typeof info.ratio === 'string' && info.ratio.trim() && !RATIO.test(info.ratio)) errors.push('info.json 的 ratio 要寫成「16:9」這種格式');
     if (!RATIO_RANGE.test(info.mobileRatio || '')) errors.push('每款都要支援手機, info.json 要有 mobileRatio, 寫成「16:9-21:9」或「16:9」');
@@ -48,6 +47,6 @@ export function applyInfo(src, info, icon, banner) {
   const re = new RegExp(`  \\{ code: '${info.code}',[\\s\\S]*?\\},\\n`);
   if (!re.test(src)) throw new Error(`games.js 裡找不到 ${info.code}`);
   const entry = `  { code: ${q(info.code)}, name: ${q(info.name)}, letter: ${q([...info.name][0])}, time: ${q(info.time)}, `
-    + `device: ${q(info.device)}, bg: ${q(info.color)}, fg: ${q(info.textColor)}, icon: ${q(icon)}, banner: ${q(banner)},\n    intro: ${q(info.intro)} },\n`;
+    + `bg: ${q(info.color)}, fg: ${q(info.textColor)}, icon: ${q(icon)}, banner: ${q(banner)},\n    intro: ${q(info.intro)} },\n`;
   return src.replace(re, () => entry);
 }
