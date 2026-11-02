@@ -153,7 +153,7 @@ test('試玩頁介紹: 頂端是主題色圖樣色帶(沒圖樣用純主色), �
   await ctx.close();
 });
 
-test('試玩頁介紹: 筆電矮螢幕名稱照樣顯示, 開始鈕不用捲動就看得到', async () => {
+test('筆電矮螢幕: 介紹名稱照樣顯示、開始鈕不用捲動; 清單 4 款一次看完不捲動', async () => {
   const ctx = await browser.newContext({ viewport: { width: 1366, height: 640 } }); // 1366×768 筆電扣掉瀏覽器工具列
   const page = await ctx.newPage();
   await page.goto(srv.url + '#play/jelly-jinni');
@@ -161,6 +161,15 @@ test('試玩頁介紹: 筆電矮螢幕名稱照樣顯示, 開始鈕不用捲動�
   assert.ok(await page.locator('#detail .hd b').isVisible());
   const b = await page.locator('#detail .startbtn').boundingBox(), dl = await page.locator('#detail .dl').boundingBox();
   assert.ok(b.y + b.height <= dl.y + dl.height, `開始鈕底 ${b.y + b.height} 超出介紹區底 ${dl.y + dl.height}`);
+  // 遊戲清單 4 款一次看完, 不捲動, 橫幅不裁切
+  await page.waitForFunction(() => [...document.querySelectorAll('#glist img.cv')].every(i => i.complete));
+  const lst = await page.locator('#glist').evaluate(el => ({ sh: el.scrollHeight, ch: el.clientHeight, bottom: el.getBoundingClientRect().bottom,
+    items: [...el.querySelectorAll('.gh')].map(g => { const r = g.getBoundingClientRect(); return [r.bottom, r.width / r.height]; }) }));
+  assert.ok(lst.sh <= lst.ch, `清單會捲動 ${lst.sh} > ${lst.ch}`);
+  for (const [bottom, ratio] of lst.items) {
+    assert.ok(bottom <= lst.bottom + 1, `有遊戲超出清單底 ${bottom} > ${lst.bottom}`);
+    assert.ok(Math.abs(ratio - 21 / 9) < 0.05, `橫幅比例 ${ratio}`);
+  }
   await ctx.close();
 });
 

@@ -177,9 +177,11 @@ body.vend .vnote { display: flex; }
 .gotry:hover { color: var(--red); }
 
 /* ---------- 試玩頁 (1b): 左清單 + 右詳情; 手機改手風琴 ---------- */
-.pmain { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(280px, 420px) minmax(0, 1fr); gap: 28px; padding: 4px 32px 32px; }
-/* 遊戲清單: 電腦手機都用橫幅當按鈕(名稱藏起來給讀屏), 時長放左下角(橫幅規格本來就留空); 電腦放不下就捲動 */
-.glist { display: flex; flex-direction: column; gap: 14px; min-height: 0; overflow-y: auto; padding: 0 20px 8px 0; margin-right: -20px; scrollbar-width: thin; scrollbar-color: var(--faint) transparent; }
+/* 清單欄寬跟著螢幕高度縮: 4 張 21:9 橫幅一次放得下(175 = 標頭 89 + 上下留白 36 + 3 個間距 42 + 陰影 8); 選中時往右推的 20 由清單的負右邊距借用 */
+.pmain { flex: 1; min-height: 0; display: grid; grid-template-columns: clamp(200px, calc((100vh - 175px) / 4 * 21 / 9), 400px) minmax(0, 1fr); gap: 28px; padding: 4px 32px 32px; }
+@supports (height: 100svh) { .pmain { grid-template-columns: clamp(200px, calc((100svh - 175px) / 4 * 21 / 9), 400px) minmax(0, 1fr); } }
+/* 遊戲清單: 電腦手機都用橫幅當按鈕(名稱藏起來給讀屏), 時長放左下角(橫幅規格本來就留空) */
+.glist { display: flex; flex-direction: column; gap: 14px; min-height: 0; padding: 0 20px 8px 0; margin-right: -20px; }
 .gi { flex: none; display: flex; flex-direction: column; }
 .gh { width: 100%; border: 3px solid var(--ink); border-radius: 20px; cursor: pointer; transition: transform .2s, box-shadow .2s; box-sizing: border-box; }
 .gh.bn { position: relative; display: block; padding: 0; overflow: hidden; background: var(--c); aspect-ratio: 21 / 9; }
@@ -247,7 +249,7 @@ body.vend .vnote { display: flex; }
 
   .pmain { display: flex; flex-direction: column; padding: 0 16px calc(20px + env(safe-area-inset-bottom, 0px)); gap: 0; }
   .detail { display: none; }
-  .glist { flex: 1; gap: 12px; overflow: visible; padding: 0; margin: 0; }
+  .glist { flex: 1; gap: 12px; padding: 0; margin: 0; }
   .gi { flex: 1; min-height: 0; }
   .gh.bn { flex: 1; aspect-ratio: auto; }
   .gh:hover { transform: none; }
