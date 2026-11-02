@@ -59,10 +59,10 @@ test('伺服器錯誤時顯示失敗且保留文字', async () => {
 });
 
 test('HTML 以純文字顯示', async () => {
-  srv.sql("INSERT INTO comments (game, avatar, body, vid, ip_hash, created_at) VALUES ('bubble-catcher', 0, '<img src=x onerror=window.__xss=1>', 'z', 'z', 1)");
+  srv.sql("INSERT INTO comments (game, avatar, body, vid, ip_hash, created_at) VALUES ('bubble-tempo', 0, '<img src=x onerror=window.__xss=1>', 'z', 'z', 1)");
   const ctx = await browser.newContext(PC);
   const page = await ctx.newPage();
-  await page.goto(srv.url + '#play/bubble-catcher');
+  await page.goto(srv.url + '#play/bubble-tempo');
   await page.waitForFunction(() => document.querySelector('.board .cms .cm .t')?.textContent.includes('<img'));
   assert.equal(await page.evaluate(() => window.__xss), undefined);
   assert.equal(await page.locator('.board .cms img').count(), 0);
@@ -92,7 +92,7 @@ test('送出途中留言板重畫, 錯誤訊息仍看得到且保留文字', asy
     r.fulfill({ status: 429, contentType: 'application/json', body: '{"error":{"code":"too_fast"}}' });
     answered();
   });
-  await page.goto(srv.url + '#play/bubble-catcher');
+  await page.goto(srv.url + '#play/bubble-tempo');
   await page.fill('.board .cform input', '讀取中送出');
   await page.click('.board .cform button:has-text("送出")');
   await page.waitForFunction(() => !document.querySelector('.board .cmsg')?.textContent.includes('讀取中'), null, { timeout: 15000 });
@@ -107,7 +107,7 @@ test('手機打到一半轉成電腦版面, 文字還在', async () => {
   const ctx = await browser.newContext(PHONE);
   const page = await ctx.newPage();
   await page.goto(srv.url + '#play');
-  await page.click('.gh:has-text("捕泡手")');
+  await page.click('.gh:has-text("Bubble Tempo")');
   await page.locator('.psheet .cform input').waitFor();
   await page.fill('.psheet .cform input', '轉向前打的字');
   await page.setViewportSize({ width: 1280, height: 800 });
@@ -166,7 +166,7 @@ test('打開留言板就先做驗證, 不用等點進留言框', async () => {
   await page.goto(srv.url + '#play');
   await page.click('.gh:has-text("接力吉尼")');
   await page.waitForFunction(() => window.__ex === 1, null, { timeout: 5000 });
-  await page.click('.gh:has-text("捕泡手")');
+  await page.click('.gh:has-text("Bubble Tempo")');
   await page.waitForTimeout(500);
   assert.equal(await page.evaluate(() => window.__ex), 1, '備用的驗證還沒用掉, 換一款不再驗證');
   await ctx.close();

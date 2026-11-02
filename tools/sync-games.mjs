@@ -6,11 +6,11 @@ import { join } from 'node:path';
 import { checkRelease, applyInfo } from './release.mjs';
 
 const RELEASE = {
+  'bubble-tempo': 'E:/Project/Game/WebGame_BubbleCatcher/release',
   'dungeon-zoo': 'E:/Project/Game/WebGame_DungeonZoo/release',
   'soul-smith-defense': 'E:/Project/Game/WebGame_SoulSmithDefense/release',
 };
 const SRC = {
-  'bubble-catcher': 'E:/Project/Game/WebGame_BubbleCatcher/game',
   'jelly-jinni': 'E:/Project/Game/WebGame_GhostEchoV2/polish/game/game',
 };
 const LIMIT = 25 * 1024 * 1024; // Cloudflare Pages 單檔上限

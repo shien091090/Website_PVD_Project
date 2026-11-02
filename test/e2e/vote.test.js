@@ -18,9 +18,9 @@ test('投票、重新整理仍記得、改投, 倒數歸零自動切成結果', 
   await page.goto(srv.url + '#vote');
   await page.locator('#deadline:has-text("截止")').waitFor();
   const voted = () => page.waitForResponse(r => r.url().endsWith('/api/vote') && r.status() === 200, { timeout: 15000 });
-  await Promise.all([voted(), page.click('.vr[data-k="bubble-catcher"]')]);
+  await Promise.all([voted(), page.click('.vr[data-k="bubble-tempo"]')]);
   await page.reload();
-  await page.locator('.vr.on[data-k="bubble-catcher"]').waitFor();
+  await page.locator('.vr.on[data-k="bubble-tempo"]').waitFor();
   await Promise.all([voted(), page.click('.vr[data-k="jelly-jinni"]')]);
   await page.locator('.vr.on[data-k="jelly-jinni"]').waitFor();
   assert.equal(await page.locator('.vr.on').count(), 1);
@@ -32,11 +32,11 @@ test('投票、重新整理仍記得、改投, 倒數歸零自動切成結果', 
 
 test('已結束: 勝出卡與 4 條長條, 全站結束狀態', async () => {
   round(-7200000, -3600000);
-  votes([['a', 'bubble-catcher'], ['b', 'bubble-catcher'], ['c', 'bubble-catcher'], ['d', 'jelly-jinni']]);
+  votes([['a', 'bubble-tempo'], ['b', 'bubble-tempo'], ['c', 'bubble-tempo'], ['d', 'jelly-jinni']]);
   const ctx = await browser.newContext(PC);
   const page = await ctx.newPage();
   await page.goto(srv.url + '#vote');
-  await page.locator('#winbox:has-text("捕泡手")').waitFor();
+  await page.locator('#winbox:has-text("Bubble Tempo")').waitFor();
   assert.match(await page.locator('#winbox').textContent(), /3 票 · 佔 75%/);
   assert.equal(await page.locator('#ranked .rr').count(), 4);
   assert.ok(await page.locator('#pg-vote .tab[data-k="vote"] .badge').isVisible());
@@ -93,7 +93,7 @@ test('快速連點兩款: 畫面打勾與伺服器記錄一致, 不出現錯誤'
   const page = await ctx.newPage();
   await page.goto(srv.url + '#vote');
   await page.locator('#deadline:has-text("截止")').waitFor();
-  await page.click('.vr[data-k="bubble-catcher"]');
+  await page.click('.vr[data-k="bubble-tempo"]');
   await page.click('.vr[data-k="jelly-jinni"]');
   await page.waitForTimeout(6000);
   const shown = await page.locator('.vr.on').getAttribute('data-k');

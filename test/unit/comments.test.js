@@ -8,7 +8,7 @@ const T0 = 1_800_000_000_000;
 function setup() {
   const db = makeD1();
   let now = T0, pass = true;
-  const call = async (method, { game = 'bubble-catcher', body, vid = 'v1', ipHash = 'h1' } = {}) => {
+  const call = async (method, { game = 'bubble-tempo', body, vid = 'v1', ipHash = 'h1' } = {}) => {
     const url = 'https://x.test/api/comments' + (method === 'GET' ? `?game=${game}` : '');
     const request = new Request(url, { method, body: body === undefined ? undefined : JSON.stringify(body) });
     const ctx = { request, env: { DB: db, TURNSTILE_SECRET: 's' }, data: { vid, ipHash, ip: '1.1.1.1', now: () => now, verify: async () => pass } };
@@ -17,7 +17,7 @@ function setup() {
       return { status: r.status, body: await r.json() };
     } catch (e) { return { status: e.status, body: { error: { code: e.code } } }; }
   };
-  const post = (text, o = {}) => call('POST', { ...o, body: { game: o.game || 'bubble-catcher', avatar: 3, body: text, token: 't' } });
+  const post = (text, o = {}) => call('POST', { ...o, body: { game: o.game || 'bubble-tempo', avatar: 3, body: text, token: 't' } });
   return { db, call, post, tick: ms => { now += ms; }, setPass: v => { pass = v; } };
 }
 
@@ -54,7 +54,7 @@ test('內容清理: 控制字元移除、換行變空白', () => {
 
 test('頭像要是 0–7', async () => {
   const s = setup();
-  const r = await s.call('POST', { body: { game: 'bubble-catcher', avatar: 8, body: 'x', token: 't' } });
+  const r = await s.call('POST', { body: { game: 'bubble-tempo', avatar: 8, body: 'x', token: 't' } });
   assert.equal(r.body.error.code, 'bad_avatar');
 });
 
@@ -94,7 +94,7 @@ test('Turnstile 沒過 403', async () => {
 test('鎖住後不能留言, 既有留言照常顯示', async () => {
   const s = setup();
   await s.post('鎖前');
-  await s.db.prepare('INSERT INTO locks (game, locked) VALUES (?, 1)').bind('bubble-catcher').run();
+  await s.db.prepare('INSERT INTO locks (game, locked) VALUES (?, 1)').bind('bubble-tempo').run();
   s.tick(31000);
   assert.equal((await s.post('鎖後')).body.error.code, 'locked');
   const r = await s.call('GET');

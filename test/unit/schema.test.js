@@ -12,7 +12,7 @@ test('migration 建出四張資料表', async () => {
 test('同一輪同一訪客只能有一票', async () => {
   const db = makeD1();
   const ins = () => db.prepare('INSERT INTO votes (round_id, vid, game, ip_hash, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)')
-    .bind(1, 'v1', 'bubble-catcher', 'h', 1, 1).run();
+    .bind(1, 'v1', 'bubble-tempo', 'h', 1, 1).run();
   await ins();
   await assert.rejects(ins);
 });

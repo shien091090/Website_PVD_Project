@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parse } from '../../site/js/router.js';
 
-test('遊玩頁帶遊戲代號', () => assert.deepEqual(parse('#game/bubble-catcher'), { page: 'game', arg: 'bubble-catcher' }));
+test('遊玩頁帶遊戲代號', () => assert.deepEqual(parse('#game/bubble-tempo'), { page: 'game', arg: 'bubble-tempo' }));
 test('未知遊戲回首頁', () => assert.deepEqual(parse('#game/nope'), { page: 'home', arg: null }));
 test('空 hash 是首頁', () => assert.deepEqual(parse(''), { page: 'home', arg: null }));
 test('試玩頁可帶代號', () => assert.deepEqual(parse('#play/dungeon-zoo'), { page: 'play', arg: 'dungeon-zoo' }));

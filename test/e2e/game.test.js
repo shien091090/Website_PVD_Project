@@ -203,9 +203,9 @@ test('手機遊戲清單: 有橫幅的用橫幅當按鈕, 沒有的用主色暫�
   assert.match(await zoo.locator('.chip').textContent(), /15–20 分鐘/);
   const box = await zoo.boundingBox();
   assert.ok(Math.abs(box.width / box.height - 21 / 9) < 0.35, `格子 ${box.width}x${box.height}`);
-  const bubble = page.locator('.gh:has-text("捕泡手")');
-  assert.equal(await bubble.locator('img.cv').count(), 0);
-  assert.ok(await bubble.locator('.fb').isVisible());
+  const nob = page.locator('.gh:has-text("接力吉尼")');
+  assert.equal(await nob.locator('img.cv').count(), 0);
+  assert.ok(await nob.locator('.fb').isVisible());
   await zoo.click();
   await page.locator('.psheet .pn').waitFor();
   assert.equal(await page.locator('.psheet .cover, .psheet img[src*="banner"]').count(), 0);
@@ -236,7 +236,7 @@ test('遊戲還在載入時遊戲框顯示載入中, 載完就收起', async () 
 test('不顯示建議裝置; 用手機看才提示建議用電腦, 放在開始試玩正上方', async () => {
   const ctx = await browser.newContext(PC);
   const page = await ctx.newPage();
-  await page.goto(srv.url + '#play/bubble-catcher');
+  await page.goto(srv.url + '#play/bubble-tempo');
   await page.locator('.detail .startbtn').waitFor();
   assert.doesNotMatch(await page.locator('.detail .meta').textContent(), /裝置/);
   assert.equal(await page.locator('.detail .rec').count(), 0, '電腦不提示');
@@ -244,7 +244,7 @@ test('不顯示建議裝置; 用手機看才提示建議用電腦, 放在開始�
 
   const ph = await browser.newContext(PHONE);
   const p2 = await ph.newPage();
-  await p2.goto(srv.url + '#play/bubble-catcher');
+  await p2.goto(srv.url + '#play/bubble-tempo');
   await p2.locator('.psheet .startbtn').waitFor();
   assert.equal(await p2.locator('.psheet .rec').textContent(), '建議使用電腦遊玩，以獲得最佳體驗');
   assert.ok(await p2.locator('.psheet .rec + .startbtn').isVisible(), '提示放在開始試玩正上方');
@@ -254,8 +254,8 @@ test('不顯示建議裝置; 用手機看才提示建議用電腦, 放在開始�
 test('用手機玩時, 遊戲載入畫面也提示建議用電腦', async () => {
   const ctx = await browser.newContext(PHONE_L);
   const page = await ctx.newPage();
-  await page.route(/\/games\/bubble-catcher\/.+\.js/, () => {});
-  await page.goto(srv.url + '#game/bubble-catcher', { waitUntil: 'commit' });
+  await page.route(/\/games\/bubble-tempo\/.+\.js/, () => {});
+  await page.goto(srv.url + '#game/bubble-tempo', { waitUntil: 'commit' });
   await page.locator('#pg-game .gload').waitFor();
   assert.match(await page.locator('#pg-game .gload').textContent(), /建議使用電腦遊玩，以獲得最佳體驗/);
   await ctx.close();
