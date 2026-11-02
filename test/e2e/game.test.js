@@ -227,7 +227,7 @@ test('遊戲還在載入時遊戲框顯示載入中, 載完就收起', async () 
   await page.goto(srv.url + '#game/jelly-jinni', { waitUntil: 'commit' });
   const ld = page.locator('#pg-game .gload');
   await ld.waitFor({ state: 'visible' });
-  assert.match(await ld.textContent(), /載入中/);
+  assert.match(await ld.textContent(), /遊戲載入中 0%/, '一開始就是 0%, 不先跑沒有百分比的動畫');
   release();
   await ld.waitFor({ state: 'hidden', timeout: 15000 });
   await ctx.close();
@@ -269,7 +269,12 @@ test('遊戲有回報載入進度時, 載入畫面顯示百分比, 等遊戲說�
   await page.route(/\/games\/dungeon-zoo\/audio\/sound\.js/, async route => { await gate; await route.continue(); });
   await page.goto(srv.url + '#game/dungeon-zoo', { waitUntil: 'commit' });
   const ld = page.locator('#pg-game .gload');
-  await page.waitForFunction(() => /\d+%/.test(document.querySelector('#pg-game .gload')?.textContent || ''));
+  await ld.waitFor({ state: 'visible' });
+  assert.match(await ld.textContent(), /遊戲載入中 0%/);
+  await page.waitForFunction(() => /[1-9]\d*%/.test(document.querySelector('#pg-game .gload')?.textContent || ''));
+  const before = parseInt((await ld.textContent()).match(/(\d+)%/)[1]);
+  await page.frames()[1].evaluate(() => parent.postMessage({ type: 'pvd:progress', progress: 0 }, location.origin));
+  assert.ok(parseInt((await ld.textContent()).match(/(\d+)%/)[1]) >= before, '百分比不倒退');
   await page.waitForTimeout(800); // 遊戲框本身已載完, 但遊戲還在載, 載入畫面要留著
   assert.ok(await ld.isVisible());
   release();

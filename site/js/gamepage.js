@@ -9,6 +9,12 @@ const portraitQ = matchMedia('(orientation: portrait) and (max-width: 720px)'); 
 let code = null, frame = null, paused = false;
 let reporting = false; // 這款遊戲會自己回報載入進度(pvd:progress / pvd:loaded)
 const hideLoad = () => scr.querySelector('.gload')?.remove();
+// 載入畫面一開始就是 0%; 只往前不倒退
+const setLoad = pct => {
+  const el = scr.querySelector('.gload');
+  if (!el || pct < +el.dataset.p) return;
+  el.dataset.p = pct; el.style.setProperty('--p', pct + '%'); el.querySelector('b').textContent = `遊戲載入中 ${pct}%`;
+};
 let onFinish = () => {};
 
 // 遊玩時間只算真正在玩: 遊戲框載入且沒暫停(分頁切走、手機轉直)才計時
@@ -52,13 +58,13 @@ function sync() {
     scr.appendChild(frame);
     // 遊戲檔案載完前遊戲框是全黑, 先蓋一層載入中, 免得玩家以為壞掉
     const hint = recHint();
-    scr.insertAdjacentHTML('beforeend', `<div class="gload" role="status"><i></i><b>遊戲載入中…</b>${hint ? `<p class="rec">${hint}</p>` : ''}</div>`);
+    scr.insertAdjacentHTML('beforeend', `<div class="gload" role="status" data-p="0" style="--p:0%"><i></i><b>遊戲載入中 0%</b>${hint ? `<p class="rec">${hint}</p>` : ''}</div>`);
     reporting = false;
-    // 遊戲框載完就收起; 會回報進度的遊戲框載完時檔案可能還在載, 改等遊戲說載完(稍等一下, 讓進度訊息先到)
+    // 遊戲框載完就跳 100% 收起; 會回報進度的遊戲框載完時檔案可能還在載, 改等遊戲說載完(稍等一下, 讓進度訊息先到)
     frame.addEventListener('load', () => {
       if (!frame) return;
       blockZoom(frame.contentWindow); frame.focus();
-      setTimeout(() => { if (!reporting) hideLoad(); }, 300);
+      setTimeout(() => { if (!reporting) { setLoad(100); setTimeout(hideLoad, 200); } }, 300);
     });
   }
   const shouldPause = portraitQ.matches || document.hidden;
@@ -99,9 +105,7 @@ export function initGamePage(opts = {}) {
     const type = e.data?.type;
     if (type === 'pvd:progress') {
       reporting = true;
-      const el = scr.querySelector('.gload'), pct = Math.floor(Math.min(1, Math.max(0, +e.data.progress || 0)) * 100);
-      if (el) { el.classList.add('pct'); el.style.setProperty('--p', pct + '%'); el.querySelector('b').textContent = `遊戲載入中 ${pct}%`; }
-      return;
+      return setLoad(Math.floor(Math.min(1, Math.max(0, +e.data.progress || 0)) * 100));
     }
     if (type === 'pvd:loaded') { reporting = true; return hideLoad(); }
     if (type !== 'pvd:finish') return;
