@@ -1952,17 +1952,20 @@ function objView(k, text, keysArr, obj, o) {
 function placeView(k, text, tipX, tipY, bodyX, bodyY) { // 指著「放這裡」標示的固定版位(第 8 輪)
   return { stage: k, text, sub: '', large: false, keys: ['z'], pressedKeys: [], checklist: [], tipX, tipY, side: 'up', bodyX, bodyY, late: false };
 }
+// 觸控模式: 美術把單位彈窗放大 1.5 倍、商店放大 1.4 倍(以彈窗中心為準), 指向彈窗的教學泡泡與彈窗版位照同一倍數算
+function popK() { return touchOn() ? 1.5 : 1; }
+function shopK() { return touchOn() ? 1.4 : 1; }
 function shopCellView(k, text, keysArr, kit) {
   const items = shopItems(), i = items.findIndex(s => s[0] === kit);
   if (i < 0) return null;
-  const cx = 512 + (i - (items.length - 1) / 2) * 88;
-  return { stage: k, text, sub: '', large: false, keys: keysArr.slice(), pressedKeys: [], checklist: [], tipX: cx, tipY: 241, side: 'up', bodyX: cx, bodyY: 185, late: true };
+  const sk = shopK(), cx = 512 + (i - (items.length - 1) / 2) * 88 * sk, tipY = 320 - 79 * sk;
+  return { stage: k, text, sub: '', large: false, keys: keysArr.slice(), pressedKeys: [], checklist: [], tipX: cx, tipY, side: 'up', bodyX: cx, bodyY: tipY - 56, late: true };
 }
 function popupView(k, text, keysArr) {
-  const p = G.popup, cx = p.x, cy = p.y;
+  const p = G.popup, cx = p.x, cy = p.y, hw = 160 * popK();
   let side, tipX, bodyX;
-  if (cx >= 512) { side = 'left'; tipX = cx - 160 - 4; bodyX = tipX - 170; }
-  else { side = 'right'; tipX = cx + 160 + 4; bodyX = tipX + 170; }
+  if (cx >= 512) { side = 'left'; tipX = cx - hw - 4; bodyX = tipX - 170; }
+  else { side = 'right'; tipX = cx + hw + 4; bodyX = tipX + 170; }
   bodyX = avoidPanel(bodyX, cy, 36, 150);
   return { stage: k, text, sub: '', large: false, keys: keysArr.slice(), pressedKeys: [], checklist: [], tipX, tipY: cy, side, bodyX, bodyY: cy, late: true };
 }
@@ -2037,8 +2040,8 @@ function tip16(p) {
 function slotTipView(p) {
   const tp = tip16(p);
   if (tp.slot === null || tp.slot >= p.cells.length) return null;
-  const cx = p.x - 120 + 48 * tp.slot;
-  return { stage: 16, text: p.mode === 'menu' ? '拔掉這個魂件' : '換掉這個魂件', sub: '', large: false, compact: true, keys: [], pressedKeys: [], checklist: [], tipX: cx, tipY: p.y - 54, side: 'up', bodyX: clamp(avoidPanel(cx, p.y - 113, 17, 75), 76, 948), bodyY: p.y - 113, late: true };
+  const k = popK(), cx = p.x + (-120 + 48 * tp.slot) * k, tipY = p.y - 54 * k;
+  return { stage: 16, text: p.mode === 'menu' ? '拔掉這個魂件' : '換掉這個魂件', sub: '', large: false, compact: true, keys: [], pressedKeys: [], checklist: [], tipX: cx, tipY, side: 'up', bodyX: clamp(avoidPanel(cx, tipY - 59, 17, 75), 76, 948), bodyY: tipY - 59, late: true };
 }
 function view16(ign) {
   const p = ign ? null : G.popup;
@@ -2493,6 +2496,14 @@ function attachTop(t) { // 目標最上方附屬物的頂端(槽列頂)
 }
 function layoutPopup(p) {
   const t = p.target;
+  if (touchOn()) { // 觸控模式: 彈窗放大 popK 倍(半寬 160k、半高 90k); 左右再避開方向鍵(設計區 x < 100)與 A / B 鈕(x > 1004)
+    const k = popK(), hh = 90 * k, hw = 160 * k;
+    let ty = attachTop(t) - 8 - hh;
+    const top = (tutLvl1() && period(16)) ? ty - 54 * k - 76 < 61 : ty - hh < 50; // 階段 16: 上方要留得下指向格子的小泡泡
+    if (top) ty = t.y + t.half + (t.cat === 'golem' && t.team === 'neutral' ? 22 : 0) + 8 + hh;
+    p.x = clamp(t.x, 100 + hw, 1004 - hw); p.y = clamp(ty, 50 + hh, 576 - hh);
+    return;
+  }
   let y = attachTop(t) - 8 - 90;
   const thr = (tutLvl1() && period(16)) ? 101 : 50; // 第 10 輪: 階段 16 期間上方要留得下小泡泡(上緣 < 101 改到下方)
   if (y - 90 < thr) y = t.y + t.half + (t.cat === 'golem' && t.team === 'neutral' ? 22 : 0) + 8 + 90;
@@ -2648,7 +2659,7 @@ if (document.addEventListener) {
 }
 
 // ───────── 繪製 ─────────
-function slotCenterX(L, i, x) { return x - L * 10 + 10 + 20 * i; }
+function slotCenterX(L, i, x) { const h = touchOn() ? 13 : 10; return x - L * h + h + h * 2 * i; } // 觸控模式魂件格 24、間距 26(與美術一致)
 function resonantKinds(u) { const k = u.slots[0]; return (k && RESONANT[k]) ? [k] : []; }
 function titleState() {
   const adv = G.tt.adv;

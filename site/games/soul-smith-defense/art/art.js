@@ -96,9 +96,17 @@
     ctx.lineTo(x, y + r); ctx.arcTo(x, y, x + r, y, r);
     ctx.closePath();
   }
+  // 觸控模式(PVD計畫網站手機版, window.PVDX.on): 手機橫拿時設計區 576 高只剩約 390 CSS px,
+  // 字級夾到至少 17(約 11 CSS px)、需要辨識的小圖示至少 24(約 16 CSS px); 電腦版完全不變
+  // FZK = 目前整塊放大的倍數(觸控模式彈窗整體放大時設定), 下限照放大後的實際大小算
+  var MIN_FS = 17, MIN_ICON = 24, FZK = 1;
+  function touchOn() { return !!(window.PVDX && window.PVDX.on); }
+  function fz(n) { return touchOn() && n * FZK < MIN_FS ? MIN_FS / FZK : n; }
+  // 觸控模式才用 b, 否則 a(版面在觸控模式另給座標 / 尺寸時用)
+  function tv(a, b) { return touchOn() ? b : a; }
   function txt(ctx, s, x, y, o) {
     o = o || {};
-    ctx.font = (o.weight || 'bold') + ' ' + (o.size || 14) + 'px ' + FONT;
+    ctx.font = (o.weight || 'bold') + ' ' + (o.raw ? (o.size || 14) : fz(o.size || 14)) + 'px ' + FONT;
     ctx.textAlign = o.align || 'center';
     ctx.textBaseline = o.base || 'middle';
     if (o.stroke) {
@@ -110,7 +118,7 @@
     if (o.maxW) ctx.fillText(s, x, y, o.maxW); else ctx.fillText(s, x, y);
   }
   function textW(ctx, s, size, weight) {
-    ctx.font = (weight || 'bold') + ' ' + size + 'px ' + FONT;
+    ctx.font = (weight || 'bold') + ' ' + fz(size) + 'px ' + FONT;
     return ctx.measureText(s).width;
   }
   // 互動目標外框: 內緣貼齊 size 外邊, 寬 3
@@ -231,11 +239,12 @@
       ctx.beginPath(); ctx.moveTo(k, 0); ctx.lineTo(k * 0.1, -k * 0.75); ctx.lineTo(k * 0.1, k * 0.75); ctx.closePath(); ctx.fill();
       ctx.restore();
     } else if (key === 'z' || key === 'x' || key === 'm' || key === 'c') {
-      txt(ctx, key.toUpperCase(), cx, gy + 0.5, { size: Math.round(h * 0.6), color: C.keyInk });
+      txt(ctx, key.toUpperCase(), cx, gy + 0.5, { size: Math.round(h * tv(0.6, 0.7)), color: C.keyInk });
     } else if (key === 'esc') {
       txt(ctx, 'Esc', cx, gy + 0.5, { size: Math.round(h * 0.5), color: C.keyInk, maxW: w - 5 });
     } else if (key === 'space') {
-      txt(ctx, '空白', cx, gy + 0.5, { size: Math.round(h * 0.46), color: C.keyInk, maxW: w - 6 });
+      // raw: 觸控模式這兩字會被觸控層換成購買圖示(字級 × 1.5), 不套字級下限
+      txt(ctx, '空白', cx, gy + 0.5, { size: Math.round(h * 0.46), color: C.keyInk, maxW: w - 6, raw: true });
     }
     if (pressed) {
       // 右下角小勾(框內)
@@ -263,6 +272,7 @@
   function richLine(ctx, s, cx, cy, o) {
     o = o || {};
     var fs = o.size || 16, kh = o.kh || 22, weight = o.weight || 'bold';
+    if (touchOn()) kh = Math.max(kh, MIN_ICON / FZK);
     var parts = richParts(str(s)), w = 0, i, ws = [];
     for (i = 0; i < parts.length; i++) {
       var pw = parts[i].k ? keyW(parts[i].k, kh) : textW(ctx, parts[i].t, fs, weight);
@@ -290,6 +300,7 @@
   function hintRow(ctx, groups, x, y, o) {
     o = o || {};
     var kh = o.kh || 22, fs = o.size || 13, gap = o.gap || 14, align = o.align || 'center';
+    if (touchOn()) kh = Math.max(kh, MIN_ICON / FZK);
     var widths = [], total = 0, i, j;
     for (i = 0; i < groups.length; i++) {
       var g = groups[i], w = 0;
@@ -1015,11 +1026,13 @@
     s = s || {};
     var x = num(s.x, CASTLE_X), y = num(s.y, 410);
     ctx.save();
-    ctx.fillStyle = 'rgba(40,24,6,0.78)'; rr(ctx, x - 44, y - 12, 88, 24, 7); ctx.fill();
-    ctx.strokeStyle = rgba(C.shopZone, 0.85); ctx.lineWidth = 1.5; rr(ctx, x - 43.25, y - 11.25, 86.5, 22.5, 6.5); ctx.stroke();
-    var tw = textW(ctx, '商店', 13), tot = 44 + 4 + tw, x0 = x - tot / 2;
-    keyIcon(ctx, 'space', x0 + 22, y, 44, 22, false);
-    txt(ctx, '商店', x0 + 48, y + 0.5, { size: 13, align: 'left', color: C.shopZone });
+    // 觸控模式: 底板 104×28、鍵帽 48×24(字級下限 17)
+    var bw = tv(88, 104), bh = tv(24, 28), kh = tv(22, 24), kw = kh * 2;
+    ctx.fillStyle = 'rgba(40,24,6,0.78)'; rr(ctx, x - bw / 2, y - bh / 2, bw, bh, 7); ctx.fill();
+    ctx.strokeStyle = rgba(C.shopZone, 0.85); ctx.lineWidth = 1.5; rr(ctx, x - bw / 2 + 0.75, y - bh / 2 + 0.75, bw - 1.5, bh - 1.5, 6.5); ctx.stroke();
+    var tw = textW(ctx, '商店', 13), tot = kw + 4 + tw, x0 = x - tot / 2;
+    keyIcon(ctx, 'space', x0 + kw / 2, y, kw, kh, false);
+    txt(ctx, '商店', x0 + kw + 4, y + 0.5, { size: 13, align: 'left', color: C.shopZone });
     ctx.restore();
   }
   // 聖光軌跡: 全寬 40 的光帶(外緣 = 判定邊界), 每段亮度依兩端 life / maxLife; 亮度分 6 階, 同階相連的段一筆畫完(不在接點疊色)
@@ -1331,7 +1344,7 @@
       ctx.fillStyle = life < 3 && !frozen ? '#ff6a5a' : '#d8d0d8'; ctx.fillRect(x - 11, y + 12, 22 * r, 2);
     }
     var bob = p >= 0 ? 0 : Math.sin(now() * (perm ? 1.8 : 3)) * 1;
-    itemIcon(ctx, s.item, x + ox, y + oy - 1 + bob, 20);
+    itemIcon(ctx, s.item, x + ox, y + oy - 1 + bob, tv(20, MIN_ICON)); // 觸控模式地上魂件圖示 20 → 24
     ctx.restore();
     if (bool(s.targeted)) targetFrame(ctx, x, y, 28, 28);
   }
@@ -1366,9 +1379,10 @@
     ctx.beginPath(); ctx.moveTo(-8, -40); ctx.lineTo(8, -40); ctx.lineTo(0, -28); ctx.closePath(); ctx.fill();
     ctx.fillStyle = PH_HI;
     ctx.beginPath(); ctx.moveTo(-5, -41); ctx.lineTo(5, -41); ctx.lineTo(0, -31.5); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = C.tutorInk; rr(ctx, -36, -64, 72, 24, 6); ctx.fill();
-    ctx.fillStyle = PH_HI; rr(ctx, -34, -62, 68, 20, 4.5); ctx.fill();
-    txt(ctx, '放這裡', 0, -51.5, { size: 15, color: C.tutorInk, maxW: 62 });
+    var pw = tv(72, 88); // 觸控模式牌子加寬(字級下限 17)
+    ctx.fillStyle = C.tutorInk; rr(ctx, -pw / 2, -64, pw, 24, 6); ctx.fill();
+    ctx.fillStyle = PH_HI; rr(ctx, -pw / 2 + 2, -62, pw - 4, 20, 4.5); ctx.fill();
+    txt(ctx, '放這裡', 0, -51.5, { size: 15, color: C.tutorInk, maxW: pw - 10 });
     ctx.restore();
   }
   function drawPlacePreview(ctx, s) {
@@ -1456,18 +1470,20 @@
     var low = hp <= 5;
     var lb = low ? 0.5 + 0.5 * Math.sin(now() * TAU) : 0; // 低血量: 約 1 秒一次的顏色閃爍
     ctx.fillStyle = low ? 'rgba(' + Math.round(90 + 60 * lb) + ',14,18,0.88)' : 'rgba(12,16,26,0.8)';
-    rr(ctx, -50, 28, 100, 20, 6); ctx.fill();
+    // 觸控模式: 牌子加寬到 128(x −64~64), 數字字級下限 17; 愛心左移、生命條縮短讓出數字位置
+    var T = touchOn(), pl = T ? -64 : -50, pw = T ? 128 : 100, hx = T ? -52 : -38, bx = T ? -42 : -28, bw = T ? 44 : 48;
+    rr(ctx, pl, 28, pw, 20, 6); ctx.fill();
     ctx.strokeStyle = low ? 'rgba(255,' + Math.round(90 + 60 * lb) + ',' + Math.round(90 + 60 * lb) + ',0.95)' : 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1;
-    rr(ctx, -49.5, 28.5, 99, 19, 5.5); ctx.stroke();
+    rr(ctx, pl + 0.5, 28.5, pw - 1, 19, 5.5); ctx.stroke();
     // 小愛心 14×14 中心 (−38, 38)
     ctx.fillStyle = '#ff5a6a';
-    ctx.beginPath(); ctx.moveTo(-38, 44); ctx.bezierCurveTo(-45.5, 39, -45, 31.5, -38, 34.5); ctx.bezierCurveTo(-31, 31.5, -30.5, 39, -38, 44); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(hx, 44); ctx.bezierCurveTo(hx - 7.5, 39, hx - 7, 31.5, hx, 34.5); ctx.bezierCurveTo(hx + 7, 31.5, hx + 7.5, 39, hx, 44); ctx.fill();
     // 生命條 x −28~20(畫面 872~920), 高 8
-    ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(-28, 34, 48, 8);
+    ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(bx, 34, bw, 8);
     var hr = hp / mhp;
     ctx.fillStyle = low ? (lb > 0.5 ? '#ff6a5a' : '#d83a3a') : hr > 0.5 ? C.hp : '#f0c040';
-    ctx.fillRect(-28, 34, 48 * hr, 8);
-    txt(ctx, hp + '/' + mhp, 48, 38.5, { size: 12, align: 'right', color: low ? '#ffd0c8' : '#ffffff', maxW: 25 });
+    ctx.fillRect(bx, 34, bw * hr, 8);
+    txt(ctx, hp + '/' + mhp, T ? 60 : 48, 38.5, { size: 12, align: 'right', color: low ? '#ffd0c8' : '#ffffff', maxW: T ? 52 : 25 });
     if (ph >= 0) {
       ctx.globalAlpha = 0.55 * (1 - ph); ctx.fillStyle = '#ff3a3a';
       ctx.fillRect(-56, -56, 107, 108);
@@ -1613,9 +1629,10 @@
       ctx.save();
       ctx.strokeStyle = '#8d8b84'; ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(x - 10, y + 24); ctx.lineTo(x - 10, y + 31); ctx.moveTo(x + 10, y + 24); ctx.lineTo(x + 10, y + 31); ctx.stroke();
-      ctx.fillStyle = C.neutralTag; rr(ctx, x - 20, y + 31, 40, 18, 4); ctx.fill();
-      ctx.strokeStyle = '#9a978d'; ctx.lineWidth = 1; rr(ctx, x - 19.5, y + 31.5, 39, 17, 3.5); ctx.stroke();
-      txt(ctx, '中立', x, y + 40.5, { size: 12, color: C.neutralInk, maxW: 34 });
+      var tw2 = tv(20, 24), th = tv(18, 22); // 觸控模式小牌 48×22(字級下限 17)
+      ctx.fillStyle = C.neutralTag; rr(ctx, x - tw2, y + 31, tw2 * 2, th, 4); ctx.fill();
+      ctx.strokeStyle = '#9a978d'; ctx.lineWidth = 1; rr(ctx, x - tw2 + 0.5, y + 31.5, tw2 * 2 - 1, th - 1, 3.5); ctx.stroke();
+      txt(ctx, '中立', x, y + 31 + th / 2 + 0.5, { size: 12, color: C.neutralInk, maxW: tw2 * 2 - 6 });
       ctx.restore();
     }
   }
@@ -1777,11 +1794,13 @@
       // 手上物品: 捧在右側, 圖示中心 (x+28, y), 22×22
       var hi = s.handItem;
       if (typeof hi === 'string' && hi) {
-        ctx.fillStyle = 'rgba(255,241,201,0.25)'; rr(ctx, 17, -11, 22, 22, 6); ctx.fill();
-        itemIcon(ctx, hi, 28, -1, 18);
+        // 觸控模式: 手上魂件圖示 18 → 24, 底框 22 → 28, 兩隻手跟著外移
+        var T = touchOn(), hb = T ? 14 : 11, hd = T ? 10 : 7;
+        ctx.fillStyle = 'rgba(255,241,201,0.25)'; rr(ctx, 28 - hb, -hb, hb * 2, hb * 2, 6); ctx.fill();
+        itemIcon(ctx, hi, 28, -1, T ? MIN_ICON : 18);
         ctx.fillStyle = C.player; ctx.strokeStyle = C.playerRim; ctx.lineWidth = 1.2;
-        ctx.beginPath(); ctx.arc(21, 8, 2.8, 0, TAU); ctx.fill(); ctx.stroke();
-        ctx.beginPath(); ctx.arc(35, 8, 2.8, 0, TAU); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.arc(28 - hd, hb - 3, 2.8, 0, TAU); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.arc(28 + hd, hb - 3, 2.8, 0, TAU); ctx.fill(); ctx.stroke();
       }
     }
     ctx.restore();
@@ -1821,25 +1840,39 @@
     var x = num(s.x, 0), y = num(s.y, 0);
     var slots = arr(s.slots).slice(0, 4), L = slots.length;
     var virt = arr(s.virtual);
+    // 觸控模式: 魂件格 18 → 24(間距 20 → 26), 虛魂件格 14 → 24(整格放大 24/14, 間距 16 → 26); 格心 x 與 game.js 的 slotCenterX 一致
+    var T = touchOn(), hs = T ? 13 : 10, cs = T ? 24 : 18, vk = T ? 24 / 14 : 1, vs = T ? 26 : 16, vh = 7 * vk;
     ctx.save();
     if (L > 0) {
-      ctx.fillStyle = 'rgba(0,0,0,0.35)'; rr(ctx, x - L * 10, y - 10, L * 20, 20, 4); ctx.fill();
-      for (var i = 0; i < L; i++) slotCell(ctx, x - L * 10 + 10 + 20 * i, y, 18, slots[i]);
+      ctx.fillStyle = 'rgba(0,0,0,0.35)'; rr(ctx, x - L * hs, y - hs, L * hs * 2, hs * 2, 4); ctx.fill();
+      for (var i = 0; i < L; i++) slotCell(ctx, x - L * hs + hs + hs * 2 * i, y, cs, slots[i]);
     }
     if (virt.length) {
-      var sx = x + L * 10 + 6;
+      var sx = x + L * hs + 6;
       var show = virt.length <= 3 ? virt.length : 2;
       for (var j = 0; j < show; j++) {
         var v = virt[j] || {};
-        virtCell(ctx, sx + 7 + 16 * j, y, isResonant(v.kind) ? v.kind : null, bool(v.used));
+        if (!T) { virtCell(ctx, sx + 7 + 16 * j, y, isResonant(v.kind) ? v.kind : null, bool(v.used)); continue; }
+        ctx.save(); ctx.translate(sx + vh + vs * j, y); ctx.scale(vk, vk);
+        virtCell(ctx, 0, 0, isResonant(v.kind) ? v.kind : null, bool(v.used));
+        ctx.restore();
       }
-      if (virt.length > 3) {
+      if (virt.length > 3 && !T) {
         var cx3 = sx + 7 + 32;
         ctx.globalAlpha = 0.85;
         ctx.fillStyle = 'rgba(16,20,30,0.7)'; rr(ctx, cx3 - 7, y - 7, 14, 14, 3); ctx.fill();
         ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 1; ctx.setLineDash([2, 1.5]);
         rr(ctx, cx3 - 6.5, y - 6.5, 13, 13, 3); ctx.stroke(); ctx.setLineDash([]);
         txt(ctx, '+' + (virt.length - 2), cx3, y + 0.5, { size: 9, color: '#ffffff', maxW: 13 });
+      } else if (virt.length > 3) {
+        var tx3 = sx + vh + vs * 2;
+        ctx.save(); ctx.translate(tx3, y); ctx.scale(vk, vk); FZK = vk;
+        ctx.globalAlpha = 0.85;
+        ctx.fillStyle = 'rgba(16,20,30,0.7)'; rr(ctx, -7, -7, 14, 14, 3); ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 1; ctx.setLineDash([2, 1.5]);
+        rr(ctx, -6.5, -6.5, 13, 13, 3); ctx.stroke(); ctx.setLineDash([]);
+        txt(ctx, '+' + (virt.length - 2), 0, 0.5, { size: 9, color: '#ffffff', maxW: 13 });
+        FZK = 1; ctx.restore();
       }
       ctx.globalAlpha = 1;
     }
@@ -2256,11 +2289,11 @@
     var sc = p < 0.08 ? 1 + 0.2 * (p / 0.08) : p < 0.16 ? 1.2 - 0.2 * ((p - 0.08) / 0.08) : 1;
     var dy = 4 - 11 * p;
     var alpha = p > 0.6 ? 1 - (p - 0.6) / 0.4 : 1;
-    var ph = isNew ? 31 : 20, fs = isNew ? 18 : 14;
+    var ph = isNew ? 31 : tv(20, 24), fs = isNew ? 18 : 14;
     ctx.save();
     ctx.translate(x, y + dy); ctx.scale(sc, sc);
     ctx.globalAlpha = alpha;
-    ctx.font = 'bold ' + fs + 'px ' + FONT;
+    ctx.font = 'bold ' + fz(fs) + 'px ' + FONT;
     var maxPw = W / 1.2 - 4;
     var pw = Math.min(maxPw, ctx.measureText(label).width + (isNew ? 28 : 20));
     ctx.fillStyle = isNew ? '#3a2a05' : 'rgba(20,18,36,0.88)';
@@ -2296,8 +2329,10 @@
 
   // ---------- HUD / UI ----------
   function goldChip(ctx, x, y, gold) {
-    coinGlyph(ctx, x + 9, y, 8);
-    txt(ctx, String(gold), x + 22, y + 1, { size: 20, align: 'left', color: C.gold, maxW: 90 });
+    // 觸控模式: 金幣圖示 16 → 24
+    var T = touchOn();
+    coinGlyph(ctx, x + (T ? 12 : 9), y, T ? 12 : 8);
+    txt(ctx, String(gold), x + (T ? 28 : 22), y + 1, { size: 20, align: 'left', color: C.gold, maxW: 90 });
   }
   function heartGlyph(ctx, cx, cy) {
     ctx.fillStyle = '#ff5a6a';
@@ -2312,7 +2347,7 @@
     // 關卡(x = 16, 到約 316)
     var lv = clamp(Math.floor(num(s.level, 1)), 1, 4);
     txt(ctx, '第 ' + lv + ' 關', 16, 24, { size: 13, align: 'left', color: C.textDim, weight: 'normal' });
-    txt(ctx, str(s.levelName), 70, 24, { size: 17, align: 'left', color: C.text, maxW: 246 });
+    txt(ctx, str(s.levelName), tv(70, 78), 24, { size: 17, align: 'left', color: C.text, maxW: tv(246, 238) });
     // 金幣(左緣 x = 330, 到約 450)
     goldChip(ctx, 330, 24, Math.max(0, Math.floor(num(s.gold, 0))));
     // 主堡生命 → drawCastle 血量牌; 波次 / 倒數 → drawWavePanel; 中間 x 470~710 留給 drawBossBar
@@ -2339,16 +2374,18 @@
     var label = str(s.label); if (!label) return;
     var x = num(s.x, 0), y = num(s.y, 0), bad = BAD_HINT[label] === 1;
     ctx.save();
+    // 觸控模式: 鍵帽 16 → 24、底板高 22 → 30、字級下限 17, 寬度上限放寬到 176(長字不擠)
+    var T = touchOn(), kh = T ? 24 : 16;
     var tw = textW(ctx, label, 13);
-    var W = Math.min(96, Math.max(48, 4 + 16 + 4 + tw + 8)), H = 22;
+    var W = Math.min(T ? 176 : 96, Math.max(48, 4 + kh + 4 + tw + 8)), H = T ? 30 : 22;
     var x0 = x - W / 2;
     ctx.fillStyle = bad ? 'rgba(60,12,12,0.66)' : 'rgba(12,16,26,0.6)'; rr(ctx, x0, y - H / 2, W, H, 6); ctx.fill();
     ctx.strokeStyle = bad ? 'rgba(255,110,100,0.8)' : 'rgba(255,255,255,0.22)'; ctx.lineWidth = 1;
     rr(ctx, x0 + 0.5, y - H / 2 + 0.5, W - 1, H - 1, 6); ctx.stroke();
     ctx.globalAlpha = bad ? 0.55 : 1;
-    keyIcon(ctx, 'z', x0 + 4 + 8, y, 16, 16, false);
+    keyIcon(ctx, 'z', x0 + 4 + kh / 2, y, kh, kh, false);
     ctx.globalAlpha = 1;
-    txt(ctx, label, x0 + 24, y + 0.5, { size: 13, align: 'left', color: bad ? '#ff9a8a' : '#ffffff', maxW: W - 28 });
+    txt(ctx, label, x0 + kh + 8, y + 0.5, { size: 13, align: 'left', color: bad ? '#ff9a8a' : '#ffffff', maxW: W - kh - 12 });
     ctx.restore();
   }
   // ---------- 新手教學搬運箭頭(階段 16) ----------
@@ -2411,9 +2448,10 @@
       var it = s.item === 'pierce' || s.item === 'melee' || s.item === 'seek' ? s.item : null;
       if (it) {
         var m = bezPt(P0, P1, P2, 0.5);
-        ctx.fillStyle = C.tutorInk; rr(ctx, m[0] - 9, m[1] - 9, 18, 18, 4); ctx.fill();
-        ctx.fillStyle = C.tutorPaper; rr(ctx, m[0] - 8, m[1] - 8, 16, 16, 3.5); ctx.fill();
-        itemIcon(ctx, it, m[0], m[1], 14);
+        var mh = tv(9, 15), ms = tv(14, MIN_ICON); // 觸控模式小圖示 14 → 24(底框跟著放大)
+        ctx.fillStyle = C.tutorInk; rr(ctx, m[0] - mh, m[1] - mh, mh * 2, mh * 2, 4); ctx.fill();
+        ctx.fillStyle = C.tutorPaper; rr(ctx, m[0] - mh + 1, m[1] - mh + 1, mh * 2 - 2, mh * 2 - 2, 3.5); ctx.fill();
+        itemIcon(ctx, it, m[0], m[1], ms);
       }
     }
     // 起點提示環: 外緣 fromR, 環寬 3(往內), 只改亮度脈動; 出現時 0.6 → 1.0 彈
@@ -2445,6 +2483,12 @@
     // 兩行大泡泡(階段 17 帶 2 項清單、階段 31 帶 [Z] 鍵帽, 都在 (0, +26) 那一列): 本體 400×100, 標籤中心 (−160, −50)
     var large = bool(s.large);
     var hw = large ? 200 : compact ? 75 : 150, hh = large ? 50 : compact ? 17 : 36;
+    // 觸控模式: 清單項目整個放大 1.2 倍(魂件 / 單位小圖 20~22 → 24~26), 間距跟著拉開; 一般泡泡帶 3 項清單時本體加寬到 340
+    if (touchOn() && !large && !compact && arr(s.checklist).length >= 3) hw = 170;
+    var ckItem = function (fn, x, y) {
+      if (!touchOn()) { fn(x, y); return; }
+      ctx.save(); ctx.translate(x, y); ctx.scale(1.2, 1.2); FZK = 1.2; fn(0, 0); FZK = 1; ctx.restore();
+    };
     var abw = compact ? 8 : 10; // 箭頭底邊半寬(compact 細長: 16 寬)
     // checklist: 階段 16 = 3 項 {item, to, done}; 階段 17 = 2 項 {item: kit, to: null, done}; 有值時取代按鍵列
     var checklist = arr(s.checklist).filter(function (c) { return c && typeof c === 'object'; }).slice(0, 3);
@@ -2511,14 +2555,15 @@
         txt(ctx, lines[0], 0, -30, { size: 18, color: C.tutorInk, maxW: 352 });
         txt(ctx, lines.slice(1).join(''), 0, -6, { size: 18, color: C.tutorInk, maxW: 352 });
       }
-      for (ci = 0; ci < Math.min(2, checklist.length); ci++) checkItemKit(ctx, (ci - 0.5) * 120, 26, checklist[ci]);
+      for (ci = 0; ci < Math.min(2, checklist.length); ci++) ckItem(function (x, y) { checkItemKit(ctx, x, y, checklist[ci]); }, (ci - 0.5) * tv(120, 136), 26);
     } else {
       var ty0 = keys.length || checklist.length ? -14 : 0;
       var one = text.replace(/\n/g, '');
       txt(ctx, one, 0, ty0, { size: one.length >= 15 ? 16 : 17, color: C.tutorInk, maxW: 280 });
       for (ci = 0; ci < checklist.length; ci++) {
-        if (checklist[ci].item === 'crossbowKit' || checklist[ci].item === 'soldierKit') checkItemKit(ctx, (ci - (checklist.length - 1) / 2) * 96, 16, checklist[ci], 88);
-        else checkItem(ctx, (ci - (checklist.length - 1) / 2) * 96, 16, checklist[ci]);
+        var cix = (ci - (checklist.length - 1) / 2) * tv(96, 110);
+        if (checklist[ci].item === 'crossbowKit' || checklist[ci].item === 'soldierKit') ckItem(function (x, y) { checkItemKit(ctx, x, y, checklist[ci], 88); }, cix, 16);
+        else ckItem(function (x, y) { checkItem(ctx, x, y, checklist[ci]); }, cix, 16);
       }
     }
     if (keys.length) {
@@ -2547,9 +2592,11 @@
     ctx.globalAlpha = clamp(alpha, 0, 1);
     // 大泡泡時標籤中心 (−160, −50); 一行小泡泡時 (−35, −17)(本體左緣內縮 4)
     var tgx = large ? -160 : compact ? -35 : -110, tgy = -hh;
-    ctx.fillStyle = C.tutorAccent; rr(ctx, tgx - 36, tgy - 9, 72, 18, 5); ctx.fill();
-    ctx.strokeStyle = C.tutorInk; ctx.lineWidth = 1.5; rr(ctx, tgx - 35.25, tgy - 8.25, 70.5, 16.5, 4.5); ctx.stroke();
-    txt(ctx, '新手任務', tgx, tgy + 0.5, { size: 12, color: C.tutorInk, maxW: 64 });
+    var gw = tv(36, 42), gh = tv(9, 11); // 觸控模式標籤 84×22(字級下限 17)
+    if (compact && touchOn()) tgx = -hw + 4 + gw;
+    ctx.fillStyle = C.tutorAccent; rr(ctx, tgx - gw, tgy - gh, gw * 2, gh * 2, 5); ctx.fill();
+    ctx.strokeStyle = C.tutorInk; ctx.lineWidth = 1.5; rr(ctx, tgx - gw + 0.75, tgy - gh + 0.75, gw * 2 - 1.5, gh * 2 - 1.5, 4.5); ctx.stroke();
+    txt(ctx, '新手任務', tgx, tgy + 0.5, { size: 12, color: C.tutorInk, maxW: gw * 2 - 8 });
     ctx.restore();
   }
   // 單位清單一項(階段 17): 中心 (cx, cy), w×26(預設 104): [單位小圖 22×22(和商店品項同一套)] + 打勾位 14×14; 不寫字
@@ -2713,6 +2760,8 @@
     var x = num(s.x, CX) + shakeOff(s.shakeAge, num(s.shakeDuration, 0.25)), y = num(s.y, CY);
     var idx = Math.floor(num(s.index, 0));
     ctx.save(); ctx.translate(x, y);
+    // 觸控模式: 整個彈窗以 (x, y) 為中心放大 1.5 倍(字、魂件圖示、鍵帽一起放大到下限以上); game.js 的版位照同一倍數算
+    var K = tv(1, 1.5); ctx.scale(K, K); FZK = K;
     // 面板 320×180: menu = 深藍底藍灰細邊; replace = 暗褐底橘粗邊
     ctx.fillStyle = replace ? '#2a2220' : C.panel; rr(ctx, -160, -90, 320, 180, 10); ctx.fill();
     var bw = replace ? 3 : 2;
@@ -2765,6 +2814,7 @@
     var grey = al === '教學期間不可操作' || al === '教學中不能動' || curLocked;
     if (al) txt(ctx, al, -148, 78, { size: 14, align: 'left', color: grey ? '#8a909e' : C.cursor, maxW: 120 });
     hintRow(ctx, [{ keys: ['z'], label: '確定' }, { keys: ['x'], label: '關閉' }], 148, 78, { align: 'right', size: 12, gap: 12 });
+    FZK = 1;
     ctx.restore();
   }
   // 鎖頭: 外接框約 s × s(鎖環頂 cy − 0.45s、鎖身底 cy + 0.5s)
@@ -2813,6 +2863,8 @@
     var items = arr(s.items).slice(0, 4), cur = Math.floor(num(s.cursorIndex, 0));
     var x = CX + shakeOff(s.shakeAge, num(s.shakeDuration, 0.25)), y = 320; // 第 13 輪: 中心 (512,320)
     ctx.save(); ctx.translate(x, y);
+    // 觸控模式: 整個商店以中心放大 1.4 倍(品名、價格、魂柱數量、鍵帽一起放大到下限以上); game.js 的教學泡泡版位照同一倍數算
+    var K = tv(1, 1.4); ctx.scale(K, K); FZK = K;
     ctx.fillStyle = C.panel; rr(ctx, -240, -75, 480, 150, 12); ctx.fill();
     ctx.strokeStyle = '#6a5a3a'; ctx.lineWidth = 2; rr(ctx, -239, -74, 478, 148, 11); ctx.stroke();
     txt(ctx, '商店', 0, -58, { size: 15, color: '#ffd28a' });
@@ -2822,6 +2874,7 @@
     var msg = str(s.message);
     if (msg) txt(ctx, msg, -228, 58, { size: 13, align: 'left', color: msg === '教學期間不能買' ? '#ffb060' : '#ff7a6a', maxW: 160 });
     hintRow(ctx, [{ keys: ['left', 'right'], label: '選' }, { keys: ['z'], label: '購買' }, { keys: ['x'], label: '關閉' }], 228, 58, { align: 'right', size: 12, gap: 12 });
+    FZK = 1;
     ctx.restore();
   }
   // ---------- 結算畫面 ----------
@@ -3583,11 +3636,13 @@
     ctx.fillStyle = 'rgba(32,8,14,0.9)'; rr(ctx, -120, -20, 240, 40, 8); ctx.fill();
     ctx.strokeStyle = BOSS_RED; ctx.lineWidth = 1.5; rr(ctx, -119.25, -19.25, 237.5, 37.5, 7.5); ctx.stroke();
     // 第 13 輪: 240×40。「BOSS」小標 40×16 中心 (−98, −9)
-    ctx.fillStyle = '#c8283a'; rr(ctx, -118, -17, 40, 16, 4); ctx.fill();
-    txt(ctx, 'BOSS', -98, -8.5, { size: 11, color: '#ffffff' });
+    // 觸控模式: 「BOSS」小標加大到 54×20(字級下限 17), 名字往右讓位
+    var T = touchOn(), bgw = T ? 54 : 40, nx = T ? -58 : -72;
+    ctx.fillStyle = '#c8283a'; rr(ctx, -118, T ? -19 : -17, bgw, T ? 20 : 16, 4); ctx.fill();
+    txt(ctx, 'BOSS', -118 + bgw / 2, -8.5, { size: 11, color: '#ffffff' });
     var hs = Math.ceil(hp) + ' / ' + Math.round(mh), hw = textW(ctx, hs, 12);
     txt(ctx, hs, 112, -8.5, { size: 12, align: 'right', color: '#ffd0d4' });
-    txt(ctx, str(s.name), -72, -8.5, { size: 15, align: 'left', color: '#ffffff', maxW: Math.max(40, 184 - hw - 8) });
+    txt(ctx, str(s.name), nx, -8.5, { size: 15, align: 'left', color: '#ffffff', maxW: Math.max(40, 112 - nx - hw - 8) });
     // 生命條 228×10, 中心 (0, 10)
     ctx.fillStyle = 'rgba(0,0,0,0.65)'; rr(ctx, -114, 5, 228, 10, 3); ctx.fill();
     if (r > 0) {
