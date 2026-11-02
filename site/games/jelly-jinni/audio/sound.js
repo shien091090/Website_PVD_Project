@@ -1,4 +1,5 @@
 /* 幽影接力 音效 / 音樂 — window.Sound
+ * polish-10(音效): spec 打磨第 10 輪聲音不變(30 個事件、4 首曲子), 素材 / 音量 / 事件全部沿用 polish-9
  * polish-9(音效): 刪 whistle、buttonPress、crusherRise、crusherWarn、crusherSlam、crush 六個事件與音檔(起跑哨與壓板關卡移除); 其餘 30 個事件、4 首曲子不變
  * polish-8(音效): spec 本輪音效、音樂不變, 素材 / 音量 / 事件全部沿用 polish-7
  * polish-7(音效): 新增 pauseOpen、pauseClose、menuMove(同一套 8-bit 音效包); 暫停選單開著時音樂降到 30% 並悶化、蓄力聲暫停,

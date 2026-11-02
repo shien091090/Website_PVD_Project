@@ -1,4 +1,4 @@
-/* 接力吉尼(Jelly Jinni) 打磨版第 9 輪 — 16:9 橫式 1280×720, 五關; 邏輯 + 嵌入式新手教學 + 暫停選單 + 呼叫 Art / Sound */
+/* 接力吉尼(Jelly Jinni) 打磨版第 10 輪 — 16:9 橫式 1280×720, 五關; 邏輯 + 嵌入式新手教學 + 暫停選單 + 呼叫 Art / Sound; 觸控模式放大 1.4 倍跟隨鏡頭 */
 (function () {
   'use strict';
 
@@ -25,6 +25,14 @@
 
   var BANNER_T = 1.5, TUT_FX_T = 0.8, TUT_GAP = 0.4, TUT_POP_T = 0.25;
   // (本輪沒有需要的佔位圖形)
+
+  // ===== 觸控模式(window.PVDX && PVDX.on): 放大 1.4 倍、跟隨鏡頭 =====
+  var TK = 1.4, ZT = 2.1, WORLD_W = 853.3333, HUD_T = 67.2;
+  var CAM_FX = 0.15, CAM_FY = 0.08, CAM_TY = 205.71;
+  // 右上選單鍵(touch.js LAYOUT.d: 圓心 (OX + 1240, 92)、點擊半徑 44)的避讓框 = 圓心 ± 50; touch.js 若搬動選單鍵, 要同步這個常數
+  var TOUCH_MENU = { x: OX + 1190, y: 42, w: 100, h: 100 };
+  var PAUSE_HIT = { resume: [530, 304, 220, 56], restart: [530, 368, 220, 56] };
+  function isTouch() { return !!(window.PVDX && window.PVDX.on); }
 
   // ===== 關卡資料 =====
   function P_(x, y, w, solid) { return { x: x, y: y, w: w, h: PLT_H, solid: !!solid }; }
@@ -78,9 +86,10 @@
     phase: 'play',       // play | dying | win | lose
     gen: 1, recs: [], rec: null, ghost: null, gf: 0,
     W: null, P: null, aiming: false, charge: 0, aimFullDone: false,
-    hookLeft: HOOK_MAX,
+    hookLeft: HOOK_MAX, hooksUsed: 0, minFeetY: 0,
     tickCeil: 99, timeWarned: false,
     dyingT: 0, replay: null,
+    camX: 0, camY: 0, arrowStart: null,
     // 暫停選單
     paused: false, pauseSel: 0, quietF: 0, spawnSilent: false
   };
@@ -91,6 +100,7 @@
   var curMusic = null;
 
   function clearJump() { jumpDown.ArrowUp = false; keys.jump = false; cmd.jump = false; }
+  function nowMs() { return (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now(); }
 
   // ===== 聲音(Sound 不存在也能玩) =====
   function snd(name, arg) {
@@ -101,6 +111,7 @@
     curMusic = name;
     try { if (window.Sound && Sound.playMusic) Sound.playMusic(name); } catch (e) { console.error(e); }
   }
+
 
   // ===== 工具 =====
   function ov(a0, a1, b0, b1) { return a0 < b1 - 0.001 && a1 > b0 + 0.001; }
@@ -223,7 +234,7 @@
     S.P = { x: SPAWN.x, y: SPAWN.y, vx: 0, vy: 0, facing: 1, state: 'idle', grounded: true, src: 'ground',
             launchT: 0, ropeT: 0, rope: null, dead: false };
     S.aiming = false; S.charge = 0; S.aimFullDone = false;
-    S.hookLeft = HOOK_MAX;
+    S.hookLeft = HOOK_MAX; S.hooksUsed = 0; S.minFeetY = SPAWN.y + PH;
     S.rec = []; S.recs[g - 1] = S.rec;
     S.ghost = g >= 2 ? S.recs[g - 2] : null;
     S.gf = 0;
@@ -232,6 +243,7 @@
     clearJump();
     evalPlates(true);
     pushRec();
+    camSnap();   // 每代出生直接對準
     if (S.spawnSilent) S.spawnSilent = false; else snd('spawn');
   }
   function ghostRec() { return S.ghost ? S.ghost[S.gf] : null; }
@@ -239,6 +251,7 @@
     var P = S.P;
     S.rec.push({ x: P.x, y: P.y, f: P.facing, s: P.state === 'aim' ? 'idle' : P.state, g: P.grounded,
       h: P.ropeT > 0 && P.rope ? P.rope : null, gf: S.ghost ? S.gf : -1 });
+    if (P.y + PH < S.minFeetY) S.minFeetY = P.y + PH;
   }
   function gen_end(cause) {
     tHideCond(cause === 'win' ? 'levelEnd' : 'genEnd');
@@ -250,7 +263,9 @@
     tOnDeath(cause);
     snd('death');
     S.phase = 'dying'; S.dyingT = DEATH_T;
-    if (S.gen >= MAX_GEN && window.PVDX) PVDX.finish();   // 三代都沒過: 這一局結束
+    if (S.gen >= MAX_GEN) {
+      if (window.PVDX) PVDX.finish();
+    }
   }
   // 暫停選單「重來」(整關重來的唯一入口); 呼叫時選單已關閉
   function doRestart() {
@@ -268,7 +283,7 @@
     snd('pauseOpen');
     if (S.aiming) snd('aimCharge', { stop: true });
   }
-  function closePause(choice) {
+  function closePause(choice, via) {
     if (!S.paused) return;
     S.paused = false;
     cmd.z = cmd.x = false; cmd.jump = false;
@@ -282,7 +297,7 @@
     gen_end('win');
     S.phase = 'win';
     snd('levelClear');
-    // 過關: gen_end → 教學收尾 → 通知網站這一局結束
+    // 批次尾端: gen_end → 教學收尾 → 通知網站玩完一局
     tOnWin();
     if (window.PVDX) PVDX.finish();
     S.banner = -1;
@@ -290,6 +305,33 @@
     S.replay = { recs: recs, G: S.gen, f: 0, prev: [], W: newWorld(S.level), L: recs[S.gen - 1].length };
     music('replay');
     S.aiming = false;
+    camSnap();
+  }
+
+  // ===== 觸控鏡頭(狀態每步更新; 電腦版不使用) =====
+  // 鏡頭左右可以超出關卡邊界, 讓角色走到關卡兩端時不會躲在左下 ◀ ▶ / 右下跳躍鍵後面(超出的部分畫成邊界磚牆, 見繪製段)
+  // 左: touch.js 左右兩鍵右緣約 338 + 留白 → 角色至少在畫面 x 300 外; 右: 跳躍鍵左緣約 CW − 202 → 約 230
+  var CAM_PAD_L = 300 / ZT, CAM_PAD_R = 230 / ZT;
+  function camMax() { return { x: Math.max(0, WORLD_W - CW / ZT), y: Math.max(0, WH - CH / ZT) }; }
+  function camFocus() {
+    if (S.screen !== 'play') return null;
+    if (S.phase === 'win' && S.replay) {
+      var R = S.replay, rec = R.recs[R.G - 1], r = rec[Math.min(R.f, rec.length - 1)];
+      return { x: r.x + PW / 2, y: r.y + PH / 2 };
+    }
+    if ((S.phase === 'play' || S.phase === 'dying') && S.P) return { x: S.P.x + PW / 2, y: S.P.y + PH / 2 };
+    return null;
+  }
+  function camTarget() {
+    var f = camFocus(); if (!f) return null;
+    var m = camMax();
+    return { x: Math.max(-CAM_PAD_L, Math.min(m.x + CAM_PAD_R, f.x - CW / ZT / 2)), y: Math.max(0, Math.min(m.y, f.y - CAM_TY)) };
+  }
+  function camSnap() { var t = camTarget(); if (t) { S.camX = t.x; S.camY = t.y; } }
+  function camFollow() {
+    var t = camTarget(); if (!t) return;
+    S.camX = Math.abs(t.x - S.camX) < 0.05 ? t.x : S.camX + (t.x - S.camX) * CAM_FX;
+    S.camY = Math.abs(t.y - S.camY) < 0.05 ? t.y : S.camY + (t.y - S.camY) * CAM_FY;
   }
 
   // ===== 每幀更新 =====
@@ -324,7 +366,7 @@
     else S.quietF++;
     tTick();
     stepInner();
-    if (S.screen === 'play') tUpdate();
+    if (S.screen === 'play') { tUpdate(); if (!S.aiming) camFollow(); }   // 瞄準時間停住, 鏡頭也停
   }
   function stepInner() {
     var W = S.W, P = S.P, L = W.L;
@@ -558,7 +600,7 @@
              ax: px + dx * v * 0.3, ay: py + dy * v * 0.3 };
   }
   function cancelAim() {
-    var P = S.P;
+    var ai = aimInfo(), P = S.P;
     S.aiming = false; snd('hookCancel');
     P.state = P.grounded ? 'idle' : 'air';
   }
@@ -566,7 +608,7 @@
     var ai = aimInfo(), P = S.P;
     S.aiming = false; snd('hookLaunch');
     tEvent('hookFire');
-    S.hookLeft--;
+    S.hookLeft--; S.hooksUsed++;
     P.vx = ai.dx * ai.v; P.vy = ai.dy * ai.v;
     P.grounded = false; P.src = null;
     P.launchT = LAUNCH_T; P.ropeT = ROPE_T;
@@ -587,7 +629,7 @@
   function stepReplay() {
     var R = S.replay, W = R.W, L = W.L;
     R.f++;
-    if (R.f >= R.L) { R.f = 0; resetWorldForGen(W); R.prev = []; }
+    if (R.f >= R.L) { R.f = 0; resetWorldForGen(W); R.prev = []; camSnap(); }
     var idx = replayIdx(R, R.f), ents = [];
     for (var g = 1; g <= R.G; g++) {
       var rec = R.recs[g - 1], i = Math.min(idx[g], rec.length - 1), r = rec[i];
@@ -644,20 +686,78 @@
     }
     return segs;
   }
+  // 世界層: 電腦版放大 1.5 倍; 觸控模式放大 2.1 倍並依鏡頭平移。座標都是世界座標
+  function worldBegin(ctx) {
+    ctx.save();
+    if (isTouch()) { ctx.scale(ZT, ZT); ctx.translate(-S.camX, -S.camY); }
+    else ctx.scale(ZOOM, ZOOM);
+  }
+  // HUD: 觸控模式在 scale(1.4) 下畫, 傳 HUD 單位的可見寬高
+  function drawHudFor(ctx, hs) {
+    if (isTouch()) {
+      ctx.save(); ctx.scale(TK, TK);
+      try { hs.w = CW / TK; hs.h = CH / TK; Art.drawHud(ctx, hs); } finally { ctx.restore(); }
+    } else { hs.w = 1280; hs.h = 720; Art.drawHud(ctx, hs); }
+  }
+  // 終點旗方向箭頭(只在觸控模式、phase play / dying, 旗子完全在遊玩區外)
+  function drawGoalArrowFor(ctx) {
+    var show = false;
+    if (isTouch() && S.W && (S.phase === 'play' || S.phase === 'dying')) {
+      var g = S.W.L.goal, fx = (g.x - S.camX) * ZT, fy = (g.y - S.camY) * ZT, fw = GOAL_W * ZT, fh = GOAL_H * ZT;
+      if (fx + fw <= 0 || fx >= CW || fy + fh <= HUD_T || fy >= CH) {
+        show = true;
+        var cx = CW / 2, cy = (HUD_T + CH) / 2, dx = fx + fw / 2 - cx, dy = fy + fh / 2 - cy;
+        var tx = dx > 0 ? (CW - 40 - cx) / dx : (dx < 0 ? (40 - cx) / dx : Infinity);
+        var ty = dy > 0 ? (680 - cy) / dy : (dy < 0 ? (107.2 - cy) / dy : Infinity);
+        var tt = Math.min(tx, ty), ax = cx + dx * tt, ay = cy + dy * tt;
+        var M = TOUCH_MENU;
+        if (ax >= M.x && ax <= M.x + M.w && ay >= M.y && ay <= M.y + M.h) ay = M.y + M.h + 24;
+        if (S.arrowStart === null) S.arrowStart = nowMs();
+        Art.drawGoalArrow(ctx, { x: ax, y: ay, angle: Math.atan2(dy, dx), t: (nowMs() - S.arrowStart) / 1000 });
+      }
+    }
+    if (!show) S.arrowStart = null;
+  }
+  function drawPauseFor(ctx) {
+    if (isTouch()) {
+      ctx.save(); ctx.translate(CW / 2, 360); ctx.scale(TK, TK); ctx.translate(-640, -360);
+      try { Art.drawPauseMenu(ctx, { sel: S.pauseSel, touch: true, vx: 640 - CW / (2 * TK), vy: 360 - 360 / TK, vw: CW / TK, vh: CH / TK }); }
+      finally { ctx.restore(); }
+    } else Art.drawPauseMenu(ctx, { sel: S.pauseSel, touch: false, vx: 0, vy: 0, vw: 1280, vh: 720 });
+  }
+  function drawBannerFor(ctx) {
+    var BL = LEVELS[S.level];
+    var bs = { x: BL.banner[0], y: BL.banner[1], level: S.level, levelCount: LEVEL_COUNT, title: BL.title, newThing: BL.newThing, t: Math.min(1, S.banner / BANNER_T) };
+    if (isTouch()) {
+      ctx.save(); ctx.translate(24, 80); ctx.scale(TK, TK);
+      try { bs.x = 0; bs.y = 0; Art.drawLevelBanner(ctx, bs); } finally { ctx.restore(); }
+    } else Art.drawLevelBanner(ctx, bs);
+  }
+  // 觸控模式鏡頭超出關卡的兩側(角色走到關卡兩端時讓出按鈕位置): 畫成整排磚牆, 看起來是關卡的邊界牆, 不是黑塊
+  function drawEdgeWalls(ctx) {
+    edgeWall(ctx, -CAM_PAD_L - 8, CAM_PAD_L + 8);
+    edgeWall(ctx, WORLD_W, CAM_PAD_R + 8);
+  }
+  // 一整面磚牆: 用美術的牆面畫底與上下緣, 再補整面交錯的磚縫(美術的牆只畫兩條縱縫, 寬牆會變成大方塊)
+  function edgeWall(ctx, x, w) {
+    Art.drawWall(ctx, { x: x, y: 0, w: w, h: WH });
+    ctx.save(); ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 1; ctx.beginPath();
+    for (var by = 11, row = 0; by < WH - 2; by += 11, row++) {
+      for (var jx = x + (row % 2 ? 12 : 24); jx < x + w - 2; jx += 24) { ctx.moveTo(jx, by - 11); ctx.lineTo(jx, by); }
+    }
+    ctx.stroke(); ctx.restore();
+  }
   function drawPlay(ctx) {
     var W = S.W, P = S.P;
-    // 世界層: 放大 1.5 倍, 座標都是世界座標
-    ctx.save(); ctx.scale(ZOOM, ZOOM);
-    try { drawPlayWorld(ctx, W, P); } finally { ctx.restore(); }
+    worldBegin(ctx);
+    try { drawPlayWorld(ctx, W, P); if (isTouch()) drawEdgeWalls(ctx); } finally { ctx.restore(); }
     // 畫面層
     var ts = S.paused ? null : tDrawState();   // 暫停選單打開時教學泡泡暫藏
     if (ts) Art.drawTutorial(ctx, ts);
-    Art.drawHud(ctx, hudState(S.phase));
-    if (S.banner >= 0 && S.phase !== 'win' && S.phase !== 'lose') {
-      var BL = LEVELS[S.level];
-      Art.drawLevelBanner(ctx, { x: BL.banner[0], y: BL.banner[1], level: S.level, levelCount: LEVEL_COUNT, title: BL.title, newThing: BL.newThing, t: Math.min(1, S.banner / BANNER_T) });
-    }
-    if (S.paused) Art.drawPauseMenu(ctx, { sel: S.pauseSel });
+    drawGoalArrowFor(ctx);
+    drawHudFor(ctx, hudState(S.phase));
+    if (S.banner >= 0 && S.phase !== 'win' && S.phase !== 'lose') drawBannerFor(ctx);
+    if (S.paused) drawPauseFor(ctx);
   }
   function drawPlayWorld(ctx, W, P) {
     drawWorld(ctx, W);
@@ -674,7 +774,7 @@
     Art.drawPlayer(ctx, { x: P.x, y: P.y, facing: P.facing, state: P.state, gen: S.gen });
     if (S.aiming) {
       var ai = aimInfo();
-      Art.drawAim(ctx, { px: ai.px, py: ai.py, gx: ai.gx, gy: ai.gy, ax: ai.ax, ay: ai.ay, charge: S.charge });
+      Art.drawAim(ctx, { px: ai.px, py: ai.py, gx: ai.gx, gy: ai.gy, ax: ai.ax, ay: ai.ay, charge: S.charge, topY: isTouch() ? S.camY + 37 : 37 });
     }
   }
   function drawSoundIconFor(ctx) {
@@ -684,10 +784,10 @@
   }
   function drawReplay(ctx) {
     var R = S.replay, W = R.W;
-    ctx.save(); ctx.scale(ZOOM, ZOOM);
+    worldBegin(ctx);
     try { drawReplayWorld(ctx, R, W); } finally { ctx.restore(); }
     var hs = hudState('win'); hs.aiming = false; hs.gen = R.G;
-    Art.drawHud(ctx, hs);
+    drawHudFor(ctx, hs);
   }
   function drawReplayWorld(ctx, R, W) {
     drawWorld(ctx, W);
@@ -712,15 +812,16 @@
   var T_COND = ['stuck'];
   var T_LEVEL = { move: 1, die: 1, head: 1, gate: 3, lift: 4, seesaw: 5 };
   var T_PRE = { die: 'move', head: 'die', hookFire: 'hookAim' };
-  // 避開聲音開關圖示(含觸控模式的選單鍵位置): 圖示 (1228, 56, 40, 40) 外擴 6
+  // 避開聲音開關圖示: 圖示 (1228, 56, 40, 40) 外擴 6; 觸控模式改避開右上選單鍵(TOUCH_MENU, 畫布座標)
   var TUT_AVOID = { x: 1222, y: 50, w: 52, h: 52 };
-  // 觸控模式: 選單鍵(touch.js 的功能鍵, 圓心 (1240, 92)、半徑 30)外擴
-  // 觸控模式的方向鍵外接框(設計座標), 教學泡泡要避開; 數字照 touch.js 的 LAYOUT.dpad(外圈半徑 124、離底 80、離外緣 max(黑塊寬/2, 140))
+  // 觸控模式左下 ◀ ▶ 兩鍵的外接框(畫布座標), 教學泡泡要避開; 數字照 touch.js 的 LAYOUT.left / right(圓心 (110, CH − 112)、(270, CH − 112), 半徑 68)
   function touchDpadBox() {
-    var sw = (CW - 1280) / 2, ro = 124, cx = Math.max(sw / 2, ro + 16) - sw, cy = CH - ro - 80;
-    return { x: cx - ro, y: cy - ro, w: ro * 2, h: ro * 2 };
+    var r = 68, cy = CH - 112;
+    return { x: 110 - r, y: cy - r, w: 270 - 110 + r * 2, h: r * 2 };
   }
-  var TUT_AVOID_TOUCH = { x: 1204, y: 50, w: 76, h: 80 };
+  // 世界座標 → 傳給美術的座標(電腦版 × 1.5; 觸控模式 (世界 − 鏡頭) × 2.1, 畫布座標)
+  function w2sx(x) { return isTouch() ? (x - S.camX) * ZT : x * ZOOM; }
+  function w2sy(y) { return isTouch() ? (y - S.camY) * ZT : y * ZOOM; }
   T_MAIN.concat(T_COND).forEach(function (id) { T.st[id] = { done: false, skipped: false, live: false, count: 0 }; });
 
   // 錨點(世界座標): { x, y, tail(畫面 px), place(可省略), alt(上方放不下時改下方用的錨點) }
@@ -735,15 +836,18 @@
   function aHookFireSide() {
     var P = S.P, gr = S.ghost ? ghostRec() : null; if (!P) return null;
     var ghostRight = gr ? (gr.x + PW / 2 >= P.x + PW / 2) : false;
-    var place = ghostRight ? 'left' : 'right', EST = 220;
-    if (place === 'left' && P.x * ZOOM - 16 - EST < 12) place = 'right';
-    else if (place === 'right' && (P.x + PW) * ZOOM + 16 + EST > CW - 12) place = 'left';
+    var sc = isTouch() ? TK : 1, maxX = isTouch() ? CW - 12 : 1268;
+    var place = ghostRight ? 'left' : 'right', EST = 220 * sc;
+    if (place === 'left' && w2sx(P.x) - 16 * sc - EST < 12) place = 'right';
+    else if (place === 'right' && w2sx(P.x + PW) + 16 * sc + EST > maxX) place = 'left';
     return place === 'left' ? { x: P.x, y: P.y + 14, tail: 16, place: 'left' } : { x: P.x + PW, y: P.y + 14, tail: 16, place: 'right' };
   }
   // 標示框: 世界框 × 1.5 後四邊各外擴 6(畫面座標), 上緣不高於 48(HUD 下緣)
+  // 觸控模式: (世界框 − 鏡頭) × 2.1 後外擴 8.4, 上緣不高於 67.2
   function markBox(wx, wy, ww, wh) {
-    var x = wx * ZOOM - 6, y = wy * ZOOM - 6, w = ww * ZOOM + 12, h = wh * ZOOM + 12;
-    if (y < 48) { h -= 48 - y; y = 48; }
+    var z = isTouch() ? ZT : ZOOM, e = isTouch() ? 8.4 : 6, top = isTouch() ? HUD_T : 48;
+    var x = w2sx(wx) - e, y = w2sy(wy) - e, w = ww * z + 2 * e, h = wh * z + 2 * e;
+    if (y < top) { h = Math.max(0, h - (top - y)); y = top; }
     return { x: x, y: y, w: w, h: h };
   }
   var TD = {
@@ -818,6 +922,7 @@
   function tComplete(id, silent, auto) {
     var st = T.st[id]; if (st.done) return;
     st.done = true;
+    var P = S.P;
     if (T.cur === id) T.cur = null;
     if (!silent) {
       var d = TD[id];
@@ -895,32 +1000,38 @@
     var mark = null;
     if (d.mark) { try { mark = d.mark(); } catch (e) { console.error(e); mark = null; } }
     // 世界錨點 → 畫面座標; above 放不下(泡泡頂緣 < 56, 壓到 HUD)就改 below, 錨點改腳底中點
-    var place = a.place || 'above', ax = a.x * ZOOM, ay = a.y * ZOOM;
-    if (place === 'above' && ay - a.tail - 52 < TUT_TOP) {
+    // 觸控模式: 全部是畫布座標, 錨點 = (世界 − 鏡頭) × 2.1, tail × 1.4, 泡泡 scale 1.4
+    var touch = isTouch(), sc = touch ? TK : 1;
+    var bounds = touch ? { x: 12, y: 75.2, w: CW - 24, h: 632.8 } : { x: 12, y: 56, w: 1256, h: 652 };
+    var tail = a.tail * sc;
+    var place = a.place || 'above', ax = w2sx(a.x), ay = w2sy(a.y);
+    if (place === 'above' && ay - tail - 52 * sc < bounds.y) {
       place = 'below';
-      if (a.alt) { ax = a.alt.x * ZOOM; ay = a.alt.y * ZOOM; }
+      if (a.alt) { ax = w2sx(a.alt.x); ay = w2sy(a.alt.y); }
     }
-    // 觸控模式: 提到按鍵的字換成按鈕名; 手機沒有 Esc, 「卡住了」改指向右上角的選單鍵(位置同聲音圖示, 避讓框加大涵蓋它)
+    // 觸控模式: 提到按鍵的字換成按鈕名; 手機沒有 Esc, 「卡住了」改指向選單鍵
     var tx = d.text, tk = d.keys.slice(), av = TUT_AVOID, av2 = null;
-    if (window.PVDX && PVDX.on) {
+    if (touch) {
       tx = tx.replace('按 Z', '按 A');
       if (id === 'stuck') { tx = '卡住了? 點選單重來'; tk = []; }
-      av = TUT_AVOID_TOUCH;
+      av = TOUCH_MENU;
       av2 = touchDpadBox();
     }
-    return { stage: id, text: tx, keys: tk, pressed: pressed.slice(0, tk.length), ax: ax, ay: ay, place: place, tail: a.tail,
+    return { stage: id, text: tx, keys: tk, pressed: pressed.slice(0, tk.length), ax: ax, ay: ay, place: place, tail: tail,
       pop: pop, finishing: !!fx, done: fx ? done : 0, mark: mark,
-      avoid: { x: av.x, y: av.y, w: av.w, h: av.h }, avoid2: av2 };
+      avoid: { x: av.x, y: av.y, w: av.w, h: av.h }, avoid2: av2, scale: sc, bounds: bounds };
   }
 
   function render(ctx) {
     ctx.clearRect(0, 0, CW, CH);
     ctx.save();
-    ctx.translate(OX, 0);   // 設計區置中, 其餘座標維持 1280 設計值
+    // 設計區置中, 座標維持 1280 設計值; 觸控模式的遊玩畫面用滿整張畫布, 不平移
+    if (!(isTouch() && S.screen === 'play')) ctx.translate(OX, 0);
+    var vr = { vx: -OX, vy: 0, vw: CW, vh: 720 };   // 可見範圍(電腦版 OX = 0 → 0, 0, 1280, 720)
     try {
-      if (S.screen === 'title') Art.drawTitle(ctx, { t: S.titleT });
-      else if (S.screen === 'unlock') Art.drawUnlockPage(ctx, { ability: S.unlockAbility });
-      else if (S.screen === 'ending') Art.drawEnding(ctx, {});
+      if (S.screen === 'title') Art.drawTitle(ctx, { t: S.titleT, vx: vr.vx, vy: vr.vy, vw: vr.vw, vh: vr.vh });
+      else if (S.screen === 'unlock') Art.drawUnlockPage(ctx, { ability: S.unlockAbility, vx: vr.vx, vy: vr.vy, vw: vr.vw, vh: vr.vh });
+      else if (S.screen === 'ending') Art.drawEnding(ctx, { vx: vr.vx, vy: vr.vy, vw: vr.vw, vh: vr.vh });
       else if (S.screen === 'play') {
         if (S.phase === 'win' && S.replay) drawReplay(ctx); else drawPlay(ctx);
       }
@@ -981,10 +1092,10 @@
     if (k === 'm') { toggleMute(); return; }
     // --- 暫停選單: 只有 Esc / ↑ ↓ / 空白 / M 有作用 ---
     if (S.paused) {
-      if (k === 'esc') closePause('resume');
+      if (k === 'esc') closePause('resume', 'key');
       else if (k === 'up') { if (S.pauseSel > 0) { S.pauseSel = 0; snd('menuMove'); } }
       else if (k === 'down') { if (S.pauseSel < 1) { S.pauseSel = 1; snd('menuMove'); } }
-      else if (k === 'space') closePause(S.pauseSel === 0 ? 'resume' : 'restart');
+      else if (k === 'space') closePause(S.pauseSel === 0 ? 'resume' : 'restart', 'key');
       return;
     }
     if (k === 'esc') { openPause(); return; }   // 只有遊玩中(含瞄準)有效
@@ -1014,7 +1125,25 @@
   function inputReset() { keys.left = keys.right = false; jumpDown.ArrowUp = false; keys.jump = false; }
   window.inputDown = inputDown; window.inputUp = inputUp; window.inputReset = inputReset;
   // 觸控層(touch.js)依目前畫面決定要顯示哪些按鈕、暫停時還原靜音用
-  window.jjState = function () { return { screen: S.screen, phase: S.phase, paused: S.paused, aiming: S.aiming, level: S.level, muted: S.muted }; };
+  // hookable: 此刻按 Z(觸控的 A 鈕)會進入瞄準
+  window.jjState = function () {
+    var hk = false;
+    try { hk = S.screen === 'play' && S.phase === 'play' && !S.paused && !S.aiming && hookUnlocked(S.level) && !!S.P && !!S.ghost && hookableNow(); } catch (e) { hk = false; }
+    return { screen: S.screen, phase: S.phase, paused: S.paused, aiming: S.aiming, level: S.level, muted: S.muted, hookable: !!hk };
+  };
+  // 觸控模式、暫停選單開著時, 直接點選項(規則 43f); 電腦版不收 pointer
+  function onPointerDown(e) {
+    if (!isTouch() || !S.paused || (window.PVDX && PVDX.paused)) return;
+    var r = canvas.getBoundingClientRect();
+    if (!(r.width > 0) || !(r.height > 0)) return;
+    if (e.cancelable) e.preventDefault();
+    var cx = (e.clientX - r.left) * CW / r.width, cy = (e.clientY - r.top) * CH / r.height;
+    var mx = (cx - CW / 2) / TK + 640, my = (cy - 360) / TK + 360;
+    function inR(a) { return mx >= a[0] && mx <= a[0] + a[2] && my >= a[1] && my <= a[1] + a[3]; }
+    if (!firstInput) { firstInput = true; try { if (window.Sound && Sound.init) Sound.init(); } catch (er) { console.error(er); } }
+    if (inR(PAUSE_HIT.resume)) { S.pauseSel = 0; closePause('resume', 'tap'); }
+    else if (inR(PAUSE_HIT.restart)) { S.pauseSel = 1; closePause('restart', 'tap'); }
+  }
   function onKeyDown(e) {
     var n = CODE2NAME[e.code];
     if (!n) return;
@@ -1043,10 +1172,15 @@
     canvas.height = Math.round(CH * s * dpr);
     ctx.setTransform(canvas.width / CW, 0, 0, canvas.height / CH, 0, 0);
   }
-  var last = 0, acc = 0;
+  var last = 0, acc = 0, booted = false;
   function frame(ts) {
     requestAnimationFrame(frame);
     try {
+      // touch.js 在 game.js 之後載入, 開網頁當下讀不到 PVDX; 觸控專用監聽延到第一個畫格
+      if (!booted) {
+        booted = true;
+        if (isTouch()) canvas.addEventListener('pointerdown', onPointerDown);
+      }
       var dt = last ? (ts - last) / 1000 : DT;
       last = ts;
       if (dt > 1 / 30) dt = 1 / 30;

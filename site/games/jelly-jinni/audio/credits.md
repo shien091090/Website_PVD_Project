@@ -1,6 +1,6 @@
 # 音訊素材署名
 
-本作 `assets/` 內共 37 個檔案(polish-7 新增 3 個暫停選單音效; polish-8 沿用; polish-9 隨起跑哨與壓板移除, 刪掉 sfx_whistle、sfx_button_press、sfx_crusher_rise、sfx_crusher_warn、sfx_crusher_slam、sfx_crush 六個檔), 每檔一列。音效全部是 CC0(不需署名, 仍列出來源); 背景音樂是 CC BY 4.0, **遊戲畫面上(例: 全破畫面或說明頁最後)必須放署名**, 署名文字見本檔最下方。
+本作 `assets/` 內共 37 個檔案(polish-7 新增 3 個暫停選單音效; polish-8 沿用; polish-9 隨起跑哨與壓板移除, 刪掉 sfx_whistle、sfx_button_press、sfx_crusher_rise、sfx_crusher_warn、sfx_crusher_slam、sfx_crush 六個檔; polish-10 全部沿用、無增刪), 每檔一列。音效全部是 CC0(不需署名, 仍列出來源); 背景音樂是 CC BY 4.0, **遊戲畫面上(例: 全破畫面或說明頁最後)必須放署名**, 署名文字見本檔最下方。
 
 `sound.js` 尾端內嵌的資料就是這些檔案(音效以 PCM、音樂以原 mp3 位元組 base64 內嵌), 不另計來源。
 

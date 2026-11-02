@@ -13,90 +13,78 @@
      鍵盤遊戲另有全域 inputDown(k) / inputUp(k) / inputReset(), inputDown 開頭 `if (window.PVDX && PVDX.paused) return;` */
 (function () {
   // ───────── 每款遊戲要改的設定 ─────────
+  // 本作版面(使用者定): 左下只有 ◀ ▶ 兩鍵; 右下最右是「共用格」(遊玩中跳躍 / 瞄準中取消 / 選單畫面確認), 上方是勾爪(瞄準中變「發射」);
+  // 右上選單鍵; 暫停選單打開時不顯示任何虛擬鍵(遊戲自己收點擊「繼續 / 重來」)。圖示下方加小字
   var CONFIG = {
-    // 鍵盤遊戲(虛擬按鈕)
     mode: 'keys',
     mouseEvents: false,
     // 遊戲自己有 Esc 暫停選單
     escPause: false,
-    // 方向鍵與 A(Z 鉤爪)/ B(X 取消瞄準)/ 第三鍵(空白 確認)/ 功能鍵 d(Esc 選單)送進 inputDown 的鍵名
-    keys: { up: 'up', down: 'down', left: 'left', right: 'right', a: 'z', b: 'x', c: 'space', d: 'esc' },
-    // B(只在瞄準時有用)與第三鍵(只在選單 / 結算 / 開始畫面有用)不會同時有用, 共用一格
-    shareBC: true,
-    // 遊戲裡畫的鍵帽字 → 觸控模式換字: Z → A, X → B, 空白 → 第三鍵圖示
-    keycaps: { 'Z': 'A', 'X': 'B', '空白': 'icon' },
-    // 每幀呼叫: 哪些按鈕要顯示(同時決定能不能按)。先判斷會疊在畫面上的暫停選單, 再判斷各場景
+    // 遊戲裡畫的鍵帽字 → 觸控模式改畫同一套圖示(教學泡泡、幽靈旁提示、開始提示和按鈕長得一樣)
+    keycaps: { '↑': 'jump', 'Z': 'hook', 'X': 'cancel', '空白': 'ok', 'Esc': 'menu' },
+    // 每幀呼叫: 各按鈕顯示與否, slot 是共用格此刻送的鍵(null = 不顯示)
     visible: function () {
-      var g = window.jjState ? window.jjState() : null, none = { dpad: false, a: false, b: false, c: false, d: false };
+      var g = window.jjState ? window.jjState() : null, none = { lr: false, hook: false, slot: null, menu: false };
       if (!g) return none;
       if (g.screen === 'play') {
-        // 暫停選單: ↑↓ 選擇、第三鍵確定、選單鍵關閉
-        if (g.paused) return { dpad: true, a: false, b: false, c: true, d: true };
-        // 遊玩中: 方向鍵(左右走、上跳)、A 鉤爪(第 2 關起才有)、瞄準中 B 取消、選單鍵
-        if (g.phase === 'play') return { dpad: true, a: g.level >= 2, b: !!g.aiming, c: false, d: true };
-        // 死亡演出(0.6 秒後自動換下一代): 只留方向鍵, 不能開選單
-        if (g.phase === 'dying') return { dpad: true, a: false, b: false, c: false, d: false };
-        // 過關回放 / 失敗: 第三鍵繼續或再試一次
-        return { dpad: false, a: false, b: false, c: true, d: false };
+        if (g.paused) return none;                                                     // 暫停選單: 直接點選項
+        if (g.phase === 'play') {
+          if (g.aiming) return { lr: false, hook: 'fire', slot: 'x', menu: true };    // 瞄準中: 發射 / 取消
+          return { lr: true, hook: g.level >= 2 ? (g.hookable ? 'on' : 'dim') : false, slot: 'up', menu: true };
+        }
+        if (g.phase === 'dying') return { lr: true, hook: false, slot: null, menu: false }; // 死亡演出 0.6 秒: 只留左右
+        return { lr: false, hook: false, slot: 'space', menu: false };                // 過關 / 失敗: 確認
       }
-      // 開始畫面、解鎖頁、全破畫面: 第三鍵繼續
-      return { dpad: false, a: false, b: false, c: true, d: false };
+      return { lr: false, hook: false, slot: 'space', menu: false };                  // 開始、全破: 確認
     },
-    // 角色走跳: 左右 + 上(跳)可以同時按
-    diagonal: function () {
-      var g = window.jjState ? window.jjState() : null;
-      return !!(g && g.screen === 'play' && !g.paused && (g.phase === 'play' || g.phase === 'dying'));
-    },
-    // 第三鍵(空白 = 確認 / 繼續 / 開始): 向右的播放三角, 按鈕尺寸(s ≥ 40)下方加「確認」
-    drawIcon: function (ctx, x, y, s, color) {
-      ctx.save(); ctx.fillStyle = color; ctx.strokeStyle = color; ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(1.6, s * 0.1);
-      var big = s >= 40, ty = big ? y - s * 0.12 : y, r = s * (big ? 0.3 : 0.36);
-      ctx.beginPath(); ctx.moveTo(x - r * 0.7, ty - r); ctx.lineTo(x + r, ty); ctx.lineTo(x - r * 0.7, ty + r); ctx.closePath(); ctx.fill(); ctx.stroke();
-      if (big) {
-        ctx.font = 'bold ' + Math.round(s * 0.3) + 'px "Microsoft JhengHei","PingFang TC","Noto Sans TC",sans-serif';
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        origFill.call(ctx, '確認', x, y + s * 0.42);
-      }
-      ctx.restore();
-    },
-    // 功能鍵 d(Esc 暫停選單, 內有「重來」): 三條橫線的選單圖示, 下方加「選單」
-    drawIconD: function (ctx, x, y, s, color) {
-      ctx.save(); ctx.strokeStyle = color; ctx.lineCap = 'round'; ctx.lineWidth = Math.max(2, s * 0.06);
-      var big = s >= 40, w = s * 0.24, y0 = big ? y - s * 0.2 : y - s * 0.2, gap = s * 0.11;
-      for (var i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(x - w, y0 + i * gap); ctx.lineTo(x + w, y0 + i * gap); ctx.stroke(); }
-      if (big) {
-        ctx.fillStyle = color;
-        ctx.font = 'bold ' + Math.round(s * 0.36) + 'px "Microsoft JhengHei","PingFang TC","Noto Sans TC",sans-serif';
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        origFill.call(ctx, '選單', x, y + s * 0.3);
-      }
-      ctx.restore();
-    },
-    // 暫停時整個聲音靜音, 繼續時還原成遊戲自己的靜音設定(讀遊戲的 jjState().muted, 不動遊戲的靜音開關)
+    // 暫停時整個聲音靜音, 繼續時還原成遊戲自己的靜音設定
     setAudioPaused: function (paused) {
       if (!window.Sound || !Sound.setMuted) return;
       var gm = window.jjState ? !!window.jjState().muted : false;
       Sound.setMuted(paused ? true : gm);
     },
-    // 第一次輸入時的聲音初始化(Sound.init 重複呼叫無害)
     initAudio: function () { if (window.Sound && Sound.init) Sound.init(); },
   };
+  var SLOT_ICON = { up: ['jump', '跳躍'], x: ['cancel', '取消'], space: ['ok', '確認'] };
 
-  // ───────── 版面: 設計區 1280×720 置中、上下貼邊不縮小(縮小後 HUD 字太小); 兩側多出來的寬度塗黑, 按鈕靠兩側擺 ─────────
-  // 黑塊夠寬時按鈕置中在黑塊裡, 不夠寬(一般手機、1280 寬平板)就貼著畫面外緣, 壓到設計區邊緣一點
+  // ───────── 圖示(中心 x, y; s = 圖示大小, 約為按鈕直徑的一半) ─────────
+  var FONT = '"Microsoft JhengHei","PingFang TC","Noto Sans TC",sans-serif';
+  function drawIcon(ctx, name, x, y, s, color) {
+    var k = s / 52;   // 圖示原稿 ±26
+    ctx.save(); ctx.translate(x, y); ctx.scale(k, k);
+    ctx.fillStyle = color; ctx.strokeStyle = color; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    function poly(pts) { ctx.beginPath(); ctx.moveTo(pts[0], pts[1]); for (var i = 2; i < pts.length; i += 2) ctx.lineTo(pts[i], pts[i + 1]); ctx.closePath(); ctx.fill(); }
+    function ln(w, a) { ctx.lineWidth = w; ctx.beginPath(); a(); ctx.stroke(); }
+    if (name === 'left') poly([14, -22, -18, 0, 14, 22]);
+    else if (name === 'right') poly([-14, -22, 18, 0, -14, 22]);
+    else if (name === 'jump') {
+      ln(9, function () { ctx.moveTo(-20, 4); ctx.lineTo(0, -20); ctx.lineTo(20, 4); });
+      ln(7, function () { ctx.moveTo(-24, 22); ctx.quadraticCurveTo(0, 10, 24, 22); });
+    } else if (name === 'hook') {
+      ln(5, function () { ctx.arc(0, -22, 6, 0, Math.PI * 2); });
+      ln(7, function () { ctx.moveTo(0, -16); ctx.lineTo(0, 14); });
+      ln(7, function () { ctx.moveTo(0, 14); ctx.quadraticCurveTo(-20, 16, -20, -4); ctx.moveTo(0, 14); ctx.quadraticCurveTo(20, 16, 20, -4); });
+      ln(6, function () { ctx.moveTo(-20, -4); ctx.lineTo(-26, 2); ctx.moveTo(20, -4); ctx.lineTo(26, 2); });
+    } else if (name === 'cancel') ln(9, function () { ctx.moveTo(-17, -17); ctx.lineTo(17, 17); ctx.moveTo(17, -17); ctx.lineTo(-17, 17); });
+    else if (name === 'ok') { ctx.lineWidth = 4; poly([-13, -20, 19, 0, -13, 20]); ctx.stroke(); }
+    else if (name === 'menu') ln(5, function () { ctx.moveTo(-16, -10); ctx.lineTo(16, -10); ctx.moveTo(-16, 0); ctx.lineTo(16, 0); ctx.moveTo(-16, 10); ctx.lineTo(16, 10); });
+    ctx.restore();
+  }
+
+  // ───────── 版面: 觸控模式遊戲畫滿整張畫布(1280~1680 寬), 按鈕疊在畫面上, 靠左右下角 ─────────
   var CW = (window.Art && Art.canvas && Art.canvas.width) || 1280, CH = (window.Art && Art.canvas && Art.canvas.height) || 720;
-  var SW = (CW - 1280) / 2, RO = 124, BR = 72;   // SW: 一側黑塊寬; RO: 方向鍵外圈半徑; BR: A 鈕半徑
-  var DX = Math.max(SW / 2, RO + 16), AX = CW - Math.max(SW / 2, BR + 20);
+  var OX = (CW - 1280) / 2;
   var LAYOUT = {
-    // 圓弧方向鍵: 中心 (x, y), 外圈半徑 Ro、內圈半徑 Ri, 四段相連不留縫(gap 0, 方便斜按時同時壓到兩段; 要留縫才調大); 可按範圍半徑 R(比外圈大, 手指偏出去也算), 中心 dead 內不算
-    dpad: { x: DX, y: CH - RO - 80, Ro: RO, Ri: RO * 0.36, gap: 0, R: RO + 24, dead: 20 },
-    a: { x: AX, y: CH - BR - 80, r: BR, hit: BR + 16 },
-    b: { x: AX, y: CH - BR * 3 - 104, r: BR * 0.8, hit: BR * 0.8 + 16 },
-    c: { x: AX, y: CH - BR * 5 - 128, r: BR * 0.8, hit: BR * 0.8 + 16 },
-    // 功能鍵: 設計區右上角(設計座標約 (1240, 92), 頂端資訊列下方)
-    d: { x: SW + 1240, y: 92, r: 30, hit: 44 },
+    left: { x: 110, y: CH - 112, r: 68 },
+    right: { x: 270, y: CH - 112, r: 68 },
+    // 共用格(最右下, 最大顆)與上方勾爪
+    slot: { x: CW - 120, y: CH - 112, r: 82, hit: 100 },
+    hook: { x: CW - 120, y: CH - 112 - 196, r: 66, hit: 84 },
+    // 選單鍵: 設計區右上角(設計座標 (1240, 92)); game.js 的 TOUCH_MENU 照這個位置避讓
+    menu: { x: OX + 1240, y: 92, r: 30, hit: 44 },
   };
-  if (CONFIG.shareBC) LAYOUT.c = LAYOUT.b;
+  // 左右兩鍵的可按範圍: 左下一整塊, 以兩鍵中線分左右(手指在兩鍵間滑動會直接換方向)
+  var LR_BOX = { x0: 0, x1: LAYOUT.right.x + LAYOUT.right.r + 40, y0: LAYOUT.left.y - LAYOUT.left.r - 40, mid: (LAYOUT.left.x + LAYOUT.right.x) / 2 };
 
   // ───────── 是不是觸控模式 ─────────
   var forced = /[?&]touch=1(&|$)/.test(location.search);
@@ -114,45 +102,32 @@
   // ───────── 虛擬按鈕的畫法 ─────────
   var Pad = {
     body: function (ctx, lit) {
-      ctx.fillStyle = lit ? 'rgba(255,210,74,0.85)' : 'rgba(26,32,48,0.5)'; ctx.fill();
-      ctx.lineWidth = 3; ctx.strokeStyle = lit ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.55)'; ctx.stroke();
+      ctx.fillStyle = lit ? 'rgba(255,210,74,0.88)' : 'rgba(26,32,48,0.55)'; ctx.fill();
+      ctx.lineWidth = 3; ctx.strokeStyle = lit ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.6)'; ctx.stroke();
     },
-    arrow: function (ctx, x, y, rot, s, lit) {
-      ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.scale(s, s);
-      ctx.beginPath(); ctx.moveTo(0, -9); ctx.lineTo(8, 1.5); ctx.lineTo(3, 1.5); ctx.lineTo(3, 9); ctx.lineTo(-3, 9); ctx.lineTo(-3, 1.5); ctx.lineTo(-8, 1.5); ctx.closePath();
-      ctx.fillStyle = lit ? '#1a2030' : 'rgba(255,255,255,0.88)'; ctx.fill();
+    button: function (ctx, b, icon, label, lit, dim, ring) {
+      ctx.save();
+      if (dim) ctx.globalAlpha = 0.4;
+      ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); this.body(ctx, lit);
+      if (ring) {
+        var t = (Date.now() % 900) / 900;
+        ctx.beginPath(); ctx.arc(b.x, b.y, b.r + 9, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (0.25 + 0.75 * t));
+        ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.strokeStyle = '#ffd24a'; ctx.stroke();
+      }
+      var fg = lit ? '#1a2030' : 'rgba(255,255,255,0.92)';
+      drawIcon(ctx, icon, b.x, b.y - (label ? b.r * 0.16 : 0), b.r * (label ? 0.85 : 1), fg);
+      if (label) {
+        ctx.font = 'bold ' + Math.round(b.r * 0.3) + 'px ' + FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = fg;
+        origFill.call(ctx, label, b.x, b.y + b.r * 0.5);
+      }
       ctx.restore();
     },
     draw: function (ctx, held, vis) {
-      var d = LAYOUT.dpad, K = CONFIG.keys, i;
-      ctx.save();
-      if (vis.dpad) {
-        // 圓弧方向鍵: 一圈切成上右下左四段, 段與段相連, 只靠各段外框分界
-        var dirs = [['up', -Math.PI / 2], ['right', 0], ['down', Math.PI / 2], ['left', Math.PI]], q = Math.PI / 4;
-        for (i = 0; i < dirs.length; i++) {
-          var c = dirs[i][1], lit = !!held[K[dirs[i][0]]], go = d.gap / 2 / d.Ro, gi = d.gap / 2 / d.Ri;
-          if (!K[dirs[i][0]]) continue;
-          ctx.beginPath(); ctx.arc(d.x, d.y, d.Ro, c - q + go, c + q - go); ctx.arc(d.x, d.y, d.Ri, c + q - gi, c - q + gi, true); ctx.closePath();
-          this.body(ctx, lit);
-          var mr = (d.Ro + d.Ri) / 2 + 4;
-          this.arrow(ctx, d.x + Math.cos(c) * mr, d.y + Math.sin(c) * mr, c + Math.PI / 2, 2.4, lit);
-        }
-        ctx.beginPath(); ctx.arc(d.x, d.y, d.Ri - d.gap, 0, Math.PI * 2); ctx.fillStyle = 'rgba(26,32,48,0.3)'; ctx.fill();
-      }
-      var btns = [['a', 'A', Math.round(LAYOUT.a.r * 0.8)], ['b', 'B', Math.round(LAYOUT.b.r * 0.8)], ['c', null, 0], ['d', null, 0]];
-      for (i = 0; i < btns.length; i++) {
-        var id = btns[i][0], b = LAYOUT[id];
-        if (!vis[id] || !K[id]) continue;
-        var on = !!held[K[id]], fg = on ? '#1a2030' : 'rgba(255,255,255,0.9)';
-        ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); this.body(ctx, on);
-        if (btns[i][1]) {
-          ctx.font = 'bold ' + btns[i][2] + 'px "Microsoft JhengHei","PingFang TC","Noto Sans TC",sans-serif';
-          ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = fg;
-          origFill.call(ctx, btns[i][1], b.x, b.y + 2);
-        } else if (id === 'd') call(function () { CONFIG.drawIconD(ctx, b.x, b.y, b.r * 1.5, fg); });
-        else call(function () { CONFIG.drawIcon(ctx, b.x, b.y, b.r * 1.15, fg); });
-      }
-      ctx.restore();
+      var L = LAYOUT;
+      if (vis.lr) { this.button(ctx, L.left, 'left', null, !!held.left); this.button(ctx, L.right, 'right', null, !!held.right); }
+      if (vis.hook) this.button(ctx, L.hook, 'hook', vis.hook === 'fire' ? '發射' : '勾爪', vis.hook === 'fire' || !!held.z, vis.hook === 'dim' && !held.z, vis.hook === 'fire');
+      if (vis.slot) { var si = SLOT_ICON[vis.slot]; this.button(ctx, L.slot, si[0], si[1], !!held[vis.slot]); }
+      if (vis.menu) this.button(ctx, L.menu, 'menu', null, !!held.esc);
     },
   };
   var proto = window.CanvasRenderingContext2D && CanvasRenderingContext2D.prototype;
@@ -262,26 +237,22 @@
     return { x: (t.clientX - r.left) * CW / (r.width || 1), y: (t.clientY - r.top) * CH / (r.height || 1) };
   }
   // 一根手指對應到哪些鍵
+  // 左右: 依手指目前位置判定(可以滑著換方向); 其他按鈕: 按下那一刻綁定按鈕與當時的鍵, 放開前只認它
+  // (共用格換了用途時, 按住的手指不會接著觸發新的鍵, 例: 按住跳躍時進入瞄準, 不會變成「取消」)
   function keysAt(p, out, vis) {
-    var d = LAYOUT.dpad, K = CONFIG.keys, dx = p.x - d.x, dy = p.y - d.y, dd = Math.hypot(dx, dy);
-    if (!p.btn && vis.dpad && dd <= d.R && dd >= d.dead) {
-      var ax = Math.abs(dx), ay = Math.abs(dy), ratio = ax > 0 ? ay / ax : 99, h = K[dx < 0 ? 'left' : 'right'], v = K[dy < 0 ? 'up' : 'down'];
-      if (CONFIG.diagonal() && ratio > 0.58 && ratio < 1.73) { if (h) out[h] = true; if (v) out[v] = true; }
-      else if (ax >= ay) { if (h) out[h] = true; }
-      else if (v) out[v] = true;
-      return;
+    if (!p.btn) {
+      if (vis.lr && p.x <= LR_BOX.x1 && p.y >= LR_BOX.y0 && p.x >= LR_BOX.x0) { out[p.x < LR_BOX.mid ? 'left' : 'right'] = true; return; }
+      var cand = [['hook', vis.hook ? 'z' : null], ['slot', vis.slot], ['menu', vis.menu ? 'esc' : null]], bd = 1e9;
+      cand.forEach(function (c) {
+        if (!c[1]) return;
+        var b = LAYOUT[c[0]], d = Math.hypot(p.x - b.x, p.y - b.y);
+        if (d <= b.hit && d < bd) { bd = d; p.btn = c[0]; p.key = c[1]; }
+      });
+      if (!p.btn) return;   // 按在空白處: 先不綁定(手指之後滑進左右區仍可走)
     }
-    // 手指碰到哪顆按鈕就綁定那顆, 放開前只認它: 共用位置的按鈕(shareBC)按下後換了用途, 按住的手指不會接著觸發新的那顆
-    var best = p.btn || null, bd = 1e9;
-    if (!best) ['a', 'b', 'c', 'd'].forEach(function (id) {
-      if (!vis[id] || !K[id]) return;
-      var b = LAYOUT[id], dist = Math.hypot(p.x - b.x, p.y - b.y);
-      if (dist <= b.hit && dist < bd) { bd = dist; best = id; }
-    });
-    if (!best) return;
-    p.btn = best;
-    var bb = LAYOUT[best];
-    if (vis[best] && K[best] && Math.hypot(p.x - bb.x, p.y - bb.y) <= bb.hit) out[K[best]] = true;
+    var now = p.btn === 'hook' ? (vis.hook ? 'z' : null) : p.btn === 'slot' ? vis.slot : (vis.menu ? 'esc' : null);
+    var bb = LAYOUT[p.btn];
+    if (now === p.key && Math.hypot(p.x - bb.x, p.y - bb.y) <= bb.hit + 30) out[p.key] = true;
   }
   function recompute() {
     var want = {}, id, k, vis = CONFIG.visible();
@@ -327,16 +298,16 @@
   window.addEventListener('orientationchange', function () { setTimeout(checkOrient, 100); });
   checkOrient();
 
-  // 鍵帽換成手機版: 遊戲裡用 fillText 畫的鍵帽字照 CONFIG.keycaps 換字或改畫第三鍵圖示
+  // 鍵帽換成手機版: 遊戲裡用 fillText 畫的鍵帽字照 CONFIG.keycaps 改畫成按鈕上的同一套圖示
   if (KEYS && proto && origFill) {
     proto.fillText = function (str, x, y, mw) {
       var to = Object.prototype.hasOwnProperty.call(CONFIG.keycaps, str) ? CONFIG.keycaps[str] : null;
-      if (to === 'icon') {
-        var m = /([0-9.]+)px/.exec(this.font), size = m ? parseFloat(m[1]) : 16, ctx = this;
-        call(function () { CONFIG.drawIcon(ctx, x, y, size * 1.5, ctx.fillStyle); });
+      if (to) {
+        var m = /([0-9.]+)px/.exec(this.font), size = m ? parseFloat(m[1]) : 16, ctx = this, dy = 0;
+        if (this.textBaseline === 'alphabetic') dy = -size * 0.36;
+        call(function () { drawIcon(ctx, to, x, y + dy, size * 1.15, ctx.fillStyle); });
         return;
       }
-      if (to !== null) str = to;
       return mw === undefined ? origFill.call(this, str, x, y) : origFill.call(this, str, x, y, mw);
     };
   }
@@ -344,8 +315,7 @@
   // 每幀畫在遊戲畫面上層
   PVDX.draw = function (ctx) {
     checkOrient();
-    // 兩側黑塊: 遊戲畫到設計區外的背景、壓暗、HUD 延伸一律蓋掉, 手機兩側只有黑底與按鈕
-    if (SW > 0) { ctx.save(); ctx.fillStyle = '#000'; ctx.fillRect(0, 0, SW, CH); ctx.fillRect(CW - SW, 0, SW, CH); ctx.restore(); }
+    // 本作觸控模式遊戲畫滿整張畫布(跟隨鏡頭), 兩側不塗黑
     if (!KEYS) return;
     for (var id in touches) { recompute(); break; }   // 場景換了(按鈕顯示變了)而手指還按著: 重新判定
     Pad.draw(ctx, held, CONFIG.visible());
