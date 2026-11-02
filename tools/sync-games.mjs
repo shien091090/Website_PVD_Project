@@ -1,5 +1,5 @@
 // 把遊戲複製到 site/games/<代號>/。用法: npm run sync-games [-- <代號>]
-// 有發布版的遊戲讀 release/(格式見 docs/遊戲發布格式.md), 會一併換圖示與 games.js 的遊戲資料;
+// 有發布版的遊戲讀 release/(格式見 docs/遊戲發布格式.md), 會一併換圖示、橫幅、主題色圖樣與 games.js 的遊戲資料;
 // 還沒有發布版的照舊直接複製遊戲資料夾
 import { cpSync, rmSync, statSync, readdirSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -49,7 +49,8 @@ for (const code of codes) {
     mkdirSync('site/media/games', { recursive: true });
     cpSync(join(RELEASE[code], 'assets', 'icon.png'), `site/media/games/${code}.png`);
     cpSync(join(RELEASE[code], 'assets', 'banner.png'), `site/media/games/${code}-banner.png`);
-    games = applyInfo(games, infos[code], `media/games/${code}.png`, `media/games/${code}-banner.png`);
+    cpSync(join(RELEASE[code], 'assets', 'pattern.png'), `site/media/games/${code}-pattern.png`);
+    games = applyInfo(games, infos[code], `media/games/${code}.png`, `media/games/${code}-banner.png`, `media/games/${code}-pattern.png`);
   }
   console.log(`${code} ← ${src}`);
 }

@@ -30,20 +30,19 @@ export function setBoard(b) { board = b; }
 export let myAv = store.get('av', -1); // 預設隨機, 選過就記住
 if (!(myAv >= 0 && myAv < AV.length)) myAv = Math.floor(Math.random() * AV.length);
 
+// 介紹頂端的色帶: 有圖樣鋪圖樣, 沒有用純主色; 名稱和時長放在色帶下方的白底, 圖示壓在色帶下緣
+const band = (g, extra = '') => `<div class="band"${g.pattern ? ` style="background-image:url('${esc(g.pattern)}')"` : ''}>${extra}</div>`;
+const head = (g, meta) => `<div class="hd">${ico(g)}<div class="ht"><b>${esc(g.name)}</b>${meta}</div></div>`;
+
 export function renderPlay() {
   const mob = mobileQ.matches;
-  // 手機: 按鈕直接用橫幅(名稱藏起來給讀屏), 時長裝置縮成左下角小標籤; 還沒有橫幅的用主色斜紋加圖示名稱暫代
-  glist.innerHTML = GAMES.map((g, i) => mob ? `
-    <div class="gi" style="--c:${g.bg};--fc:${g.fg}">
-      <button class="gh bn" data-i="${i}" aria-haspopup="dialog">${g.banner
+  // 清單按鈕直接用橫幅(名稱藏起來給讀屏), 時長縮成左下角小標籤; 還沒有橫幅的用主色斜紋加圖示名稱暫代
+  glist.innerHTML = GAMES.map((g, i) => `
+    <div class="gi${!mob && i === sel ? ' sel' : ''}" style="--c:${g.bg};--fc:${g.fg}">
+      <button class="gh bn" data-i="${i}" ${mob ? 'aria-haspopup="dialog"' : `aria-pressed="${i === sel}"`}>${g.banner
         ? `<img class="cv" src="${esc(g.banner)}" alt=""><b class="sr">${esc(g.name)}</b>`
         : `<span class="fb">${ico(g)}<b>${esc(g.name)}</b></span>`}
         <span class="chip">${esc(g.time)}</span></button>
-    </div>` : `
-    <div class="gi${i === sel ? ' sel' : ''}" style="--c:${g.bg};--fc:${g.fg}">
-      <button class="gh" data-i="${i}" aria-pressed="${i === sel}">${ico(g)}
-        <span class="nm"><b>${esc(g.name)}</b><span class="tm">${esc(g.time)}</span></span>
-        <span class="arr">›</span><span class="pm">+</span></button>
     </div>`).join('');
   const open = mob && sel != null;
   psheet.classList.toggle('on', open);
@@ -51,20 +50,16 @@ export function renderPlay() {
     const g = GAMES[sel];
     psheet.innerHTML = `<div class="bd"></div>
       <div class="pn" role="dialog" aria-modal="true" aria-label="${esc(g.name)}" style="--c:${g.bg};--fc:${g.fg}">
-        <div class="ph">${ico(g)}<span class="nm"><b>${esc(g.name)}</b><span>${esc(g.time)}</span></span><button class="x" aria-label="關閉">✕</button></div>
+        ${band(g, '<button class="x" aria-label="關閉">✕</button>')}${head(g, `<span class="tm">${esc(g.time)}</span>`)}
         <div class="gb"><p>${esc(g.intro)}</p>${startBtn(g)}<div class="board" data-code="${g.code}" style="display:contents">${board.html(g.code)}</div></div>
       </div>`;
     board.mount(psheet.querySelector('.board'), g.code);
   } else psheet.innerHTML = '';
   if (!mob && sel != null) {
     const g = GAMES[sel];
-    const meta = `<dl class="meta"><dt>時長</dt><dd>${esc(g.time)}</dd></dl>`;
-    // 有橫幅: 圖示壓在橫幅左下角, 標題與時長裝置排在圖示右邊
     detail.innerHTML = `
-      <div class="dl${g.banner ? ' has-cover' : ''}">
-        ${g.banner
-          ? `<div class="cover"><img src="${esc(g.banner)}" alt=""></div><div class="hd">${ico(g)}<div class="ht"><b>${esc(g.name)}</b>${meta}</div></div>`
-          : `<div class="hd">${ico(g)}<b>${esc(g.name)}</b></div>${meta}`}
+      <div class="dl" style="--c:${g.bg};--fc:${g.fg}">
+        ${band(g)}${head(g, `<dl class="meta"><dt>時長</dt><dd>${esc(g.time)}</dd></dl>`)}
         <p>${esc(g.intro)}</p>
         ${startBtn(g)}
       </div>

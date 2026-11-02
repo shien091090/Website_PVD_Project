@@ -6,11 +6,14 @@ let srv, browser;
 before(async () => { srv = await startServer(); browser = await openBrowser(); });
 after(async () => { await browser?.close(); await srv?.stop(); });
 
-// 4 款都有橫幅了, 把接力吉尼的橫幅拿掉來測沒有橫幅的樣子
-const dropJellyBanner = page => page.route(/\/js\/games\.js$/, async route => {
-  const body = (await (await route.fetch()).text()).replace("banner: 'media/games/jelly-jinni-banner.png'", 'banner: null');
-  await route.fulfill({ body, contentType: 'text/javascript' });
+// 改寫遊戲資料來測現有遊戲沒有的狀況
+const editGames = (page, edit) => page.route(/\/js\/games\.js$/, async route => {
+  await route.fulfill({ body: edit(await (await route.fetch()).text()), contentType: 'text/javascript' });
 });
+// 4 款都有橫幅了, 把接力吉尼的橫幅拿掉來測沒有橫幅的樣子
+const dropJellyBanner = page => editGames(page, js => js.replace("banner: 'media/games/jelly-jinni-banner.png'", 'banner: null'));
+// 把接力吉尼的主題色圖樣拿掉來測沒有圖樣的樣子
+const dropJellyPattern = page => editGames(page, js => js.replace("pattern: 'media/games/jelly-jinni-pattern.png'", 'pattern: null'));
 
 test('電腦開遊玩頁載入遊戲並記成玩過', async () => {
   const ctx = await browser.newContext(PC);
@@ -60,7 +63,7 @@ test('返回回到試玩頁並選回該款', async () => {
   await page.click('text=‹ 返回');
   await page.waitForFunction(() => location.hash === '#play/jelly-jinni');
   assert.equal(await page.locator('#pg-game iframe').count(), 0);
-  assert.equal(await page.locator('.gi.sel .nm b').textContent(), '接力吉尼(Jelly Jinni)');
+  assert.match(await page.locator('.gi.sel .gh').textContent(), /接力吉尼\(Jelly Jinni\)/);
   await ctx.close();
 });
 
@@ -131,34 +134,31 @@ test('手機橫拿: 返回鈕放進瀏海保留區, 遊戲左邊不多空一條'
   await ctx.close();
 });
 
-test('試玩頁介紹: 有橫幅的遊戲頂端放 21:9 橫幅, 圖示壓在橫幅左下角; 沒橫幅的照舊', async () => {
+test('試玩頁介紹: 頂端是主題色圖樣色帶(沒圖樣用純主色), 圖示壓在色帶下緣, 名稱在色帶下方', async () => {
   const ctx = await browser.newContext(PC);
   const page = await ctx.newPage();
-  await dropJellyBanner(page);
-  await page.goto(srv.url + '#play/dungeon-zoo');
-  const cover = page.locator('#detail .cover');
-  await cover.waitFor();
-  assert.match(await cover.locator('img').getAttribute('src'), /dungeon-zoo-banner\.png$/);
-  await page.waitForFunction(() => document.querySelector('#detail .cover img').complete);
-  const c = await cover.locator('img').boundingBox(), dl = await page.locator('#detail .dl').boundingBox();
-  const ic = await page.locator('#detail .hd .icon').boundingBox();
-  assert.ok(Math.abs(c.width / c.height - 21 / 9) < 0.03, `橫幅比例 ${c.width}x${c.height}`);
-  assert.ok(Math.abs(c.width - dl.width) < 2 && Math.abs(c.y - dl.y) < 4, '橫幅貼齊左半頂端');
-  assert.ok(ic.y < c.y + c.height && ic.y + ic.height > c.y + c.height, '圖示跨在橫幅下緣');
-  assert.ok(ic.x - c.x < c.width * 0.25, '圖示在左邊');
+  await dropJellyPattern(page);
+  await page.goto(srv.url + '#play/bubble-tempo');
+  const band = page.locator('#detail .band');
+  await band.waitFor();
+  assert.match(await band.evaluate(el => getComputedStyle(el).backgroundImage), /media\/games\/bubble-tempo-pattern\.png/);
+  assert.equal(await page.locator('#detail img[src*="banner"]').count(), 0, '介紹不放橫幅');
+  const c = await band.boundingBox(), ic = await page.locator('#detail .hd .icon').boundingBox(), t = await page.locator('#detail .hd b').boundingBox();
+  assert.ok(ic.y < c.y + c.height && ic.y + ic.height > c.y + c.height, '圖示跨在色帶下緣');
+  assert.ok(t.y >= c.y + c.height, '名稱在色帶下方');
+  assert.equal(await page.locator('#detail .hd b').textContent(), 'Bubble Tempo');
   await page.goto(srv.url + '#play/jelly-jinni');
-  await page.locator('#detail .hd').waitFor();
-  assert.equal(await page.locator('#detail .cover').count(), 0);
+  await page.locator('#detail .hd b:has-text("接力吉尼")').waitFor();
+  assert.deepEqual(await band.evaluate(el => [getComputedStyle(el).backgroundImage, getComputedStyle(el).backgroundColor]), ['none', 'rgb(71, 118, 195)']);
   await ctx.close();
 });
 
-test('試玩頁介紹: 窄螢幕標題不壓進橫幅, 開始鈕不用捲動就看得到', async () => {
+test('試玩頁介紹: 筆電矮螢幕名稱照樣顯示, 開始鈕不用捲動就看得到', async () => {
   const ctx = await browser.newContext({ viewport: { width: 1366, height: 640 } }); // 1366×768 筆電扣掉瀏覽器工具列
   const page = await ctx.newPage();
-  await page.goto(srv.url + '#play/dungeon-zoo');
-  await page.locator('#detail .cover img').waitFor();
-  const c = await page.locator('#detail .cover').boundingBox(), t = await page.locator('#detail .hd b').boundingBox();
-  if (t.height > 1) assert.ok(t.y >= c.y + c.height, `標題頂 ${t.y} 在橫幅底 ${c.y + c.height} 之下`);
+  await page.goto(srv.url + '#play/jelly-jinni');
+  await page.locator('#detail .band').waitFor();
+  assert.ok(await page.locator('#detail .hd b').isVisible());
   const b = await page.locator('#detail .startbtn').boundingBox(), dl = await page.locator('#detail .dl').boundingBox();
   assert.ok(b.y + b.height <= dl.y + dl.height, `開始鈕底 ${b.y + b.height} 超出介紹區底 ${dl.y + dl.height}`);
   await ctx.close();
@@ -199,30 +199,34 @@ test('遊玩頁擋掉 iPhone 的雙指縮放手勢(網頁與遊戲框內都擋)'
   await ctx.close();
 });
 
-test('手機遊戲清單: 有橫幅的用橫幅當按鈕, 沒有的用主色暫代; 抽屜不放橫幅; 電腦清單不變', async () => {
-  const ctx = await browser.newContext(PHONE);
-  const page = await ctx.newPage();
-  await dropJellyBanner(page);
-  await page.goto(srv.url + '#play');
-  await page.locator('#glist .gh').first().waitFor();
-  const zoo = page.locator('.gh:has-text("來馬戲團看一點大場面")');
-  assert.match(await zoo.locator('img.cv').getAttribute('src'), /dungeon-zoo-banner\.png$/);
-  assert.match(await zoo.locator('.chip').textContent(), /15–20 分鐘/);
-  const box = await zoo.boundingBox();
-  assert.ok(Math.abs(box.width / box.height - 21 / 9) < 0.35, `格子 ${box.width}x${box.height}`);
-  const nob = page.locator('.gh:has-text("接力吉尼")');
-  assert.equal(await nob.locator('img.cv').count(), 0);
-  assert.ok(await nob.locator('.fb').isVisible());
-  await zoo.click();
-  await page.locator('.psheet .pn').waitFor();
-  assert.equal(await page.locator('.psheet .cover, .psheet img[src*="banner"]').count(), 0);
-  await ctx.close();
-  const pc = await browser.newContext(PC);
-  const p2 = await pc.newPage();
-  await p2.goto(srv.url + '#play');
-  await p2.locator('#glist .gh').first().waitFor();
-  assert.equal(await p2.locator('#glist .gh.bn').count(), 0);
-  await pc.close();
+test('遊戲清單電腦手機都用橫幅當按鈕, 沒橫幅的用主色暫代; 手機抽屜頂端也是色帶, 名稱在色帶下方', async () => {
+  for (const [dev, w] of [[PHONE, 'phone'], [PC, 'pc']]) {
+    const ctx = await browser.newContext(dev);
+    const page = await ctx.newPage();
+    await dropJellyBanner(page);
+    await page.goto(srv.url + '#play');
+    await page.locator('#glist .gh').first().waitFor();
+    const zoo = page.locator('.gh:has-text("來馬戲團看一點大場面")');
+    assert.match(await zoo.locator('img.cv').getAttribute('src'), /dungeon-zoo-banner\.png$/, w);
+    assert.match(await zoo.locator('.chip').textContent(), /15–20 分鐘/);
+    await page.waitForFunction(() => [...document.querySelectorAll('#glist img.cv')].every(i => i.complete));
+    const box = await zoo.boundingBox();
+    assert.ok(Math.abs(box.width / box.height - 21 / 9) < 0.35, `${w} 格子 ${box.width}x${box.height}`);
+    const nob = page.locator('.gh:has-text("接力吉尼")');
+    assert.equal(await nob.locator('img.cv').count(), 0);
+    assert.ok(await nob.locator('.fb').isVisible());
+    if (w === 'phone') {
+      await zoo.click();
+      const band = page.locator('.psheet .band');
+      await band.waitFor();
+      await page.locator('.psheet .pn').evaluate(el => Promise.all(el.getAnimations().map(x => x.finished))); // 等抽屜滑上來
+      assert.equal(await page.locator('.psheet img[src*="banner"]').count(), 0);
+      const c = await band.boundingBox(), t = await page.locator('.psheet .hd b').boundingBox();
+      assert.ok(t.y >= c.y + c.height, '名稱在色帶下方');
+      assert.ok(await page.locator('.psheet .band .x').isVisible(), '關閉鈕在色帶上');
+    }
+    await ctx.close();
+  }
 });
 
 test('遊戲還在載入時遊戲框顯示載入中, 載完就收起', async () => {

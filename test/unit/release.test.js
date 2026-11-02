@@ -19,6 +19,7 @@ function makeRelease(edit = {}) {
     'game/audio/credits.md': '# 授權',
     'assets/icon.png': 'png',
     'assets/banner.png': 'png',
+    'assets/pattern.png': 'png',
     'assets/info.json': JSON.stringify(INFO),
     ...edit,
   };
@@ -54,7 +55,8 @@ test('程式裡有下載檔案的寫法要擋', () => {
   assert.match(errorsOf({ 'game/game.js': 'a.download = "log.json"' }).join('\n'), /game\.js/);
 });
 
-test('沒有圖示、橫幅或遊戲資料要擋', () => {
+test('沒有圖示、橫幅、主題色圖樣或遊戲資料要擋', () => {
+  assert.match(errorsOf({ 'assets/pattern.png': null }).join('\n'), /pattern\.png/);
   assert.match(errorsOf({ 'assets/icon.png': null }).join('\n'), /icon\.png/);
   assert.match(errorsOf({ 'assets/info.json': null }).join('\n'), /info\.json/);
   assert.match(errorsOf({ 'assets/banner.png': null }).join('\n'), /banner\.png/);
@@ -74,13 +76,13 @@ test('網站沒有的遊戲代號要擋', () => {
 
 test('套用遊戲資料只改這一款, 其他款不動', async () => {
   const src = readFileSync('site/js/games.js', 'utf8');
-  const out = applyInfo(src, { ...INFO, intro: "有'引號'的介紹" }, 'media/games/dungeon-zoo.png', 'media/games/dungeon-zoo-banner.png');
+  const out = applyInfo(src, { ...INFO, intro: "有'引號'的介紹" }, 'media/games/dungeon-zoo.png', 'media/games/dungeon-zoo-banner.png', 'media/games/dungeon-zoo-pattern.png');
   const { GAMES } = await import('data:text/javascript,' + encodeURIComponent(out));
   const { GAMES: before } = await import('../../site/js/games.js');
   const g = GAMES.find(x => x.code === 'dungeon-zoo');
   assert.deepEqual(g, {
     code: 'dungeon-zoo', name: INFO.name, letter: '來', time: INFO.time,
-    bg: INFO.color, fg: INFO.textColor, icon: 'media/games/dungeon-zoo.png', banner: 'media/games/dungeon-zoo-banner.png', intro: "有'引號'的介紹",
+    bg: INFO.color, fg: INFO.textColor, icon: 'media/games/dungeon-zoo.png', banner: 'media/games/dungeon-zoo-banner.png', pattern: 'media/games/dungeon-zoo-pattern.png', intro: "有'引號'的介紹",
   });
   assert.deepEqual(GAMES.filter(x => x.code !== 'dungeon-zoo'), before.filter(x => x.code !== 'dungeon-zoo'));
 });
