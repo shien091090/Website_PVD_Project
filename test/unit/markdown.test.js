@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseDevelop } from '../../site/js/markdown.js';
+import { parseDevelop, richText } from '../../site/js/markdown.js';
 
 const SRC = `---
 更新日期: 2026/10/20
@@ -54,4 +54,13 @@ test('沒有 front matter 也能解析', () => {
   const r = parseDevelop('## A\nx');
   assert.deepEqual(r.meta, {});
   assert.equal(r.sections[0].title, 'A');
+});
+test('刪除線', () => {
+  assert.match(parseDevelop('## A\n更是一位~~善於自嗨的~~熱愛').sections[0].html, /一位<del>善於自嗨的<\/del>熱愛/);
+});
+test('基本資料的值可以縮排接續多行, 用 richText 轉成換行與刪除線', () => {
+  const { meta } = parseDevelop('---\n工作室簡介: 第一行~~刪~~\n  第二行\n連結:\n- A | https://a.b\n---\n');
+  assert.equal(meta['工作室簡介'], '第一行~~刪~~\n第二行');
+  assert.equal(richText(meta['工作室簡介']), '第一行<del>刪</del><br>第二行');
+  assert.equal(richText('<b>'), '&lt;b&gt;');
 });

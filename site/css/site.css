@@ -402,6 +402,8 @@ img.logo { border: 0; object-fit: contain; }
 .studio .who small { font: 700 14px/1 var(--font); color: var(--muted); }
 .studio .who b { font: 900 22px/1.3 var(--font); }
 .studio .who p { font-size: 16px; line-height: 1.8; }
+/* 思源黑體沒有刪除線的位置資訊, 瀏覽器畫不出 line-through, 改用背景畫一條線 */
+.dev del { text-decoration: none; color: var(--muted); background: linear-gradient(currentColor, currentColor) 0 55% / 100% 2px no-repeat; }
 .links { display: flex; gap: 12px; flex-wrap: wrap; }
 .links a { border: 2px solid var(--ink); border-radius: 999px; padding: 11px 20px; font: 700 15px/1 var(--font); text-decoration: none; color: var(--ink); }
 .links a:hover { background: var(--ink); color: var(--on-ink); }

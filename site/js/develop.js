@@ -1,4 +1,4 @@
-import { parseDevelop } from './markdown.js';
+import { parseDevelop, richText } from './markdown.js';
 import { esc } from './format.js';
 
 // 開發頁內容來自 content/develop.md(使用者自己改檔推送即更新)
@@ -22,7 +22,7 @@ export async function renderDevelop() {
   box.innerHTML = `
     <div>${meta['更新日期'] ? `<span class="upd">最後更新 ${esc(meta['更新日期'])}</span>` : ''}<h1>${esc(meta['標題'] || '開發日誌')}</h1></div>
     ${sections.map((s, i) => `<section><h2><span>${i + 1}</span>${esc(s.title)}</h2>${s.html}</section>`).join('')}
-    <div class="studio">${logo}<div class="who"><small>開發者</small><b>${name}</b><p>${esc(meta['工作室簡介'] || '')}</p></div></div>
+    <div class="studio">${logo}<div class="who"><small>開發者</small><b>${name}</b><p>${richText(meta['工作室簡介'] || '')}</p></div></div>
     <div class="links">${(meta['連結'] || []).filter(l => /^https?:\/\//.test(l.url))
       .map(l => `<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)} ↗</a>`).join('')}</div>`;
 }
