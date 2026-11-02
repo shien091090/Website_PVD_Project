@@ -6,6 +6,12 @@ let srv, browser;
 before(async () => { srv = await startServer(); browser = await openBrowser(); });
 after(async () => { await browser?.close(); await srv?.stop(); });
 
+// 4 款都有橫幅了, 把接力吉尼的橫幅拿掉來測沒有橫幅的樣子
+const dropJellyBanner = page => page.route(/\/js\/games\.js$/, async route => {
+  const body = (await (await route.fetch()).text()).replace("banner: 'media/games/jelly-jinni-banner.png'", 'banner: null');
+  await route.fulfill({ body, contentType: 'text/javascript' });
+});
+
 test('電腦開遊玩頁載入遊戲並記成玩過', async () => {
   const ctx = await browser.newContext(PC);
   const page = await ctx.newPage();
@@ -14,8 +20,7 @@ test('電腦開遊玩頁載入遊戲並記成玩過', async () => {
   await frame.waitFor();
   assert.match(await frame.getAttribute('src'), /\/games\/jelly-jinni\/$/);
   const title = await page.frameLocator('#pg-game iframe').locator('title').textContent({ timeout: 10000 });
-  // 遊戲自己的標題, 新發布版同步前還是舊名
-  assert.match(title, /接力吉尼|幽影接力/);
+  assert.match(title, /接力吉尼/);
   const played = await page.evaluate(() => JSON.parse(localStorage.getItem('pvd:played')));
   assert.ok(played.includes('jelly-jinni'));
   await ctx.close();
@@ -129,6 +134,7 @@ test('手機橫拿: 返回鈕放進瀏海保留區, 遊戲左邊不多空一條'
 test('試玩頁介紹: 有橫幅的遊戲頂端放 21:9 橫幅, 圖示壓在橫幅左下角; 沒橫幅的照舊', async () => {
   const ctx = await browser.newContext(PC);
   const page = await ctx.newPage();
+  await dropJellyBanner(page);
   await page.goto(srv.url + '#play/dungeon-zoo');
   const cover = page.locator('#detail .cover');
   await cover.waitFor();
@@ -196,6 +202,7 @@ test('遊玩頁擋掉 iPhone 的雙指縮放手勢(網頁與遊戲框內都擋)'
 test('手機遊戲清單: 有橫幅的用橫幅當按鈕, 沒有的用主色暫代; 抽屜不放橫幅; 電腦清單不變', async () => {
   const ctx = await browser.newContext(PHONE);
   const page = await ctx.newPage();
+  await dropJellyBanner(page);
   await page.goto(srv.url + '#play');
   await page.locator('#glist .gh').first().waitFor();
   const zoo = page.locator('.gh:has-text("來馬戲團看一點大場面")');

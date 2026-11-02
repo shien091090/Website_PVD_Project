@@ -8,11 +8,10 @@ import { checkRelease, applyInfo } from './release.mjs';
 const RELEASE = {
   'bubble-tempo': 'E:/Project/Game/WebGame_BubbleCatcher/release',
   'dungeon-zoo': 'E:/Project/Game/WebGame_DungeonZoo/release',
+  'jelly-jinni': 'E:/Project/Game/WebGame_GhostEchoV2/release',
   'soul-smith-defense': 'E:/Project/Game/WebGame_SoulSmithDefense/release',
 };
-const SRC = {
-  'jelly-jinni': 'E:/Project/Game/WebGame_GhostEchoV2/polish/game/game',
-};
+const SRC = {};
 const LIMIT = 25 * 1024 * 1024; // Cloudflare Pages 單檔上限
 const GAMES_JS = 'site/js/games.js';
 
