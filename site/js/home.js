@@ -4,7 +4,7 @@ import { VIDEO } from './config.js';
 const home = document.getElementById('home'), stage = document.getElementById('stage'),
       film = document.getElementById('film'), title = document.getElementById('title');
 const keys = [...document.querySelectorAll('.key')];
-let s = 1, col = false, theme = 'light', show = () => {};
+let s = 1, col = false, theme = 'light', show = () => {}, fitP = null;
 
 const clip = () => {
   const v = VIDEO[theme] || VIDEO.light;
@@ -15,14 +15,20 @@ export function fit() {
   if (document.body.dataset.pg !== 'home') return;
   if (home.classList.contains('playing') || home.classList.contains('moving')) return;
   const H = document.getElementById('hero').clientHeight;
-  s = Math.min(innerWidth / 1920, H / 1080);
+  col = H > innerWidth * 1.1;
+  // 直拿且有直式影片: 舞台改成直的 1080x1920, 直排標題照影片第一格的大小和位置排, 點播放直接接上
+  const por = col && (VIDEO[theme] || VIDEO.light).portrait;
+  const W0 = por ? 1080 : 1920, H0 = por ? 1920 : 1080;
+  stage.style.setProperty('--sw', W0 + 'px');
+  stage.style.setProperty('--sh', H0 + 'px');
+  s = Math.min(innerWidth / W0, H / H0);
   stage.style.setProperty('--s', s);
   title.classList.remove('col');
   title.style.setProperty('--x0', (1920 - title.offsetWidth) / 2 + 'px');
-  col = H > innerWidth * 1.1;
   syncVideo();
+  fitP = null;
   if (!col) return;
-  let p = Math.min(innerWidth * .24, (H - 240) / 4.6) / s;
+  let p = por ? por.p : Math.min(innerWidth * .24, (H - 240) / 4.6) / s;
   const setP = () => { title.style.setProperty('--p', p + 'px'); title.style.setProperty('--g', p * .16 + 'px'); };
   setP();
   title.classList.add('col');
@@ -31,7 +37,10 @@ export function fit() {
   const room = (innerWidth - 32) / s;
   const W = widest();
   if (W > room) { p *= room / W; setP(); }
-  title.style.setProperty('--cy', 540 - title.offsetHeight / 2 + 'px');
+  const at = () => title.style.setProperty('--cy', (por && p === por.p ? por.titleTop : H0 / 2 - title.offsetHeight / 2) + 'px');
+  at();
+  // 太窄被縮小時, 播放前要先放回影片的大小
+  if (por && p !== por.p) fitP = () => { p = por.p; setP(); at(); };
 }
 
 function syncVideo() {
@@ -91,6 +100,11 @@ export function initHome(opts) {
     if (col && c === (VIDEO[theme] || VIDEO.light).landscape) {
       home.classList.add('moving');
       flip(() => title.classList.remove('col'));
+      setTimeout(reveal, 470);
+    } else if (fitP) {
+      // 直排被縮小過: 標題先放大回影片第一格的樣子再切影片
+      home.classList.add('moving');
+      flip(fitP);
       setTimeout(reveal, 470);
     } else if (film.requestVideoFrameCallback) {
       // 等跳到接播點後的第一格才顯示, 不然會先閃一下上次停下的畫面

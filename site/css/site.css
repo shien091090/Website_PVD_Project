@@ -47,10 +47,11 @@ body.lock { overflow: hidden; }
 .steps b { display: block; font-size: 1.15rem; margin-bottom: 2px; }
 .steps div > span { color: var(--muted); line-height: 1.7; } /* 只管說明文字, 不影響 P、V、D 色塊 */
 .intro .btn { justify-self: start; }
-.stage { position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px; margin: -540px 0 0 -960px; transform: scale(var(--s, .5)); }
+/* 舞台: 電腦 1920x1080; 手機直拿且有直式影片時 1080x1920 (--sw / --sh) */
+.stage { position: absolute; left: 50%; top: 50%; width: var(--sw, 1920px); height: var(--sh, 1080px); margin: calc(var(--sh, 1080px) / -2) 0 0 calc(var(--sw, 1920px) / -2); transform: scale(var(--s, .5)); }
 .title { position: absolute; left: var(--x0, 424px); top: var(--title-top, 435px); height: 210px; display: flex; align-items: center; gap: 22px; transition: opacity .25s; }
 /* 手機直排: 每列置中, 展開時色塊+字一起撐寬, 所以往左右兩側長 */
-.title.col { flex-direction: column; align-items: center; left: 0; width: 1920px; top: var(--cy); height: auto; gap: var(--g); }
+.title.col { flex-direction: column; align-items: center; left: 0; width: var(--sw, 1920px); top: var(--cy); height: auto; gap: var(--g); }
 .title.col .rest { position: static; transform: none; }
 .title.col .plate { width: var(--p); height: var(--p); border-radius: calc(var(--p) * .17); font-size: calc(var(--p) * .714); }
 .title.col .rest { font-size: calc(var(--p) * .714); }
@@ -71,7 +72,7 @@ body.lock { overflow: hidden; }
 .key.open .rest { max-width: 640px; padding-left: .04em; }
 .key:focus-visible .plate { box-shadow: 0 0 0 10px var(--bg), 0 0 0 18px var(--fg); }
 .plan { font: 900 176px/1 var(--font); color: var(--fg); margin-left: 34px; white-space: nowrap; }
-.film { position: absolute; inset: 0; width: 1920px; height: 1080px; opacity: 0; pointer-events: none; background: var(--bg); }
+.film { position: absolute; inset: 0; width: var(--sw, 1920px); height: var(--sh, 1080px); opacity: 0; pointer-events: none; background: var(--bg); }
 .playing .film { opacity: 1; }
 /* 影片播放時標題藏在影片底下, 不能被點到(點影片沒有反應) */
 .playing .title { opacity: 0; transition: none; pointer-events: none; visibility: hidden; }

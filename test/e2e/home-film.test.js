@@ -1,6 +1,6 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { startServer, openBrowser, PC } from './server.js';
+import { startServer, openBrowser, PC, PHONE } from './server.js';
 
 let srv, browser;
 before(async () => { srv = await startServer(); browser = await openBrowser(); });
@@ -63,4 +63,31 @@ test('首頁下方 P、V 色塊上的字是白色, D 是深色(亮暗主題都�
     assert.deepEqual(cols, ['rgb(255, 255, 255)', 'rgb(255, 255, 255)', 'rgb(45, 33, 68)'], theme);
     await ctx.close();
   }
+});
+
+test('手機直拿: 舞台是直的 1080x1920, 播放時 PVD計畫跟直式影片第一格同位置, 播放直式影片', async () => {
+  const ctx = await browser.newContext(PHONE);
+  const page = await ctx.newPage();
+  await page.goto(srv.url + '?theme=light');
+  await page.waitForFunction(() => document.getElementById('title').classList.contains('col'));
+  await page.evaluate(() => document.fonts.ready);
+  const where = () => page.evaluate(() => {
+    const st = document.getElementById('stage'), sr = st.getBoundingClientRect(), s = sr.width / st.offsetWidth;
+    const at = (e) => { const b = e.getBoundingClientRect(); return [(b.x - sr.x) / s, (b.y - sr.y) / s, b.width / s]; };
+    return { w: st.offsetWidth, h: st.offsetHeight, plates: [...document.querySelectorAll('#title .plate')].map(at), plan: at(document.querySelector('#title .plan')) };
+  });
+  const r0 = await where();
+  assert.deepEqual([r0.w, r0.h], [1080, 1920]);
+  assert.ok(Math.abs(r0.plates[0][2] - 210) < 21, `頁面上色塊接近影片大小 ${r0.plates[0]}`);
+  await page.click('#what');
+  await page.waitForFunction(() => document.getElementById('home').classList.contains('playing'), null, { timeout: 10000 });
+  // 直式影片 1.0 秒的位置(pvd-motion tools/probe-title.mjs 量的): 色塊 210, 左緣 435, 上緣 519.5 / 763.1 / 1006.7; 計畫上緣 1270.5
+  const r = await where();
+  [519.5, 763.1, 1006.7].forEach((y, i) => {
+    assert.ok(Math.abs(r.plates[i][0] - 435) < 2 && Math.abs(r.plates[i][1] - y) < 2 && Math.abs(r.plates[i][2] - 210) < 2, `第 ${i + 1} 塊 ${r.plates[i]}`);
+  });
+  assert.ok(Math.abs(r.plan[1] - 1270.5) < 3, `計畫 ${r.plan}`);
+  assert.match(await page.evaluate(() => document.getElementById('film').src), /pvd-light-portrait\.mp4$/);
+  assert.deepEqual(await page.evaluate(() => { const f = document.getElementById('film'); return [f.offsetWidth, f.offsetHeight]; }), [1080, 1920]);
+  await ctx.close();
 });
