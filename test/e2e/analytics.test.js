@@ -54,11 +54,26 @@ test('不在正式網址(預覽網址)時不載入數據服務, 頁面照常出�
   let loaded = false;
   await page.route('**/static/array.full.js', r => { loaded = true; r.fulfill({ contentType: 'text/javascript', body: FAKE('dark') }); });
   await page.goto(srv.url + '#play');
-  await page.waitForFunction(() => !document.documentElement.classList.contains('pvd-wait') && localStorage.getItem('pvd:theme'));
+  await page.waitForFunction(() => !document.documentElement.classList.contains('pvd-wait'));
   await page.click('.gh:has-text("接力吉尼")');
   await page.waitForTimeout(500);
   assert.equal(loaded, false);
   assert.equal(await page.evaluate(() => window.posthog), undefined);
+  await ctx.close();
+});
+
+test('不在正式網址: 不隨機分組, 預設亮色, 角落按鈕切換主題且重新整理後記得', async () => {
+  const ctx = await browser.newContext(PC);
+  const page = await ctx.newPage();
+  await page.goto(srv.url);
+  await page.locator('#thm').waitFor();
+  assert.equal(await page.evaluate(() => document.documentElement.className), '');
+  assert.equal(await page.evaluate(() => localStorage.getItem('pvd:theme')), null, '不存正式分組');
+  await page.click('#thm');
+  assert.equal(await page.evaluate(() => document.documentElement.className), 'dark');
+  await page.reload();
+  await page.locator('#thm').waitFor();
+  assert.equal(await page.evaluate(() => document.documentElement.className), 'dark');
   await ctx.close();
 });
 

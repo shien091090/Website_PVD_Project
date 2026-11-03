@@ -12,6 +12,23 @@ test('影片可以跳到指定秒數(伺服器回分段)', async () => {
   assert.equal((await res.arrayBuffer()).byteLength, 100);
 });
 
+test('影片播放時點畫面上 P、V、D 原本的位置沒有反應', async () => {
+  const ctx = await browser.newContext({ ...PC, colorScheme: 'light' });
+  const page = await ctx.newPage();
+  await page.goto(srv.url + '?theme=light');
+  await page.click('#what');
+  await page.waitForFunction(() => document.getElementById('home').classList.contains('playing'));
+  for (const k of ['play', 'vote', 'develop']) {
+    const box = await page.evaluate(k => { const r = document.querySelector(`.key[data-k="${k}"] .plate`).getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; }, k);
+    await page.mouse.click(box.x, box.y);
+  }
+  await page.waitForTimeout(300);
+  assert.equal(await page.evaluate(() => location.hash), '');
+  assert.equal(await page.evaluate(() => document.body.dataset.pg), 'home');
+  assert.ok(await page.evaluate(() => document.getElementById('home').classList.contains('playing')), '影片還在播');
+  await ctx.close();
+});
+
 test('看到一半關掉再按播放, 第一個顯示的畫面是接播點, 不閃上次停下的畫面', async () => {
   const ctx = await browser.newContext({ ...PC, colorScheme: 'light' });
   const page = await ctx.newPage();
