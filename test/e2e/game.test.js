@@ -1,6 +1,7 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { startServer, openBrowser, PC, PHONE, PHONE_L } from './server.js';
+import { byCode } from '../../site/js/games.js';
 
 let srv, browser;
 before(async () => { srv = await startServer(); browser = await openBrowser(); });
@@ -217,7 +218,7 @@ test('遊戲清單電腦手機都用橫幅當按鈕, 沒橫幅的用主色暫代
     await page.locator('#glist .gh').first().waitFor();
     const zoo = page.locator('.gh:has-text("來馬戲團看一點大場面")');
     assert.match(await zoo.locator('img.cv').getAttribute('src'), /dungeon-zoo-banner\.png$/, w);
-    assert.match(await zoo.locator('.chip').textContent(), /15–20 分鐘/);
+    assert.equal(await zoo.locator('.chip').textContent(), byCode('dungeon-zoo').time);
     await page.waitForFunction(() => [...document.querySelectorAll('#glist img.cv')].every(i => i.complete));
     const box = await zoo.boundingBox();
     assert.ok(Math.abs(box.width / box.height - 21 / 9) < 0.35, `${w} 格子 ${box.width}x${box.height}`);
