@@ -1,5 +1,11 @@
 // 4 款遊戲資料(前端與 API 共用)。名稱、介紹、時長、主色為暫定值, 等素材清單交來再換
 // code: 網址用代號, 上線後不改; icon: 圖示路徑, null 時用 letter 畫色塊; fg: 主色上的字色
+// 依時長由短到長: 先比下限, 再比上限
+export const byTime = (a, b) => {
+  const [a1, a2 = a1] = a.time.match(/\d+/g).map(Number), [b1, b2 = b1] = b.time.match(/\d+/g).map(Number);
+  return a1 - b1 || a2 - b2;
+};
+
 export const GAMES = [
   { code: 'bubble-tempo', name: 'Bubble Tempo', letter: 'B', time: '2–5 分鐘', bg: '#aaefd5', fg: '#2d2144', icon: 'media/games/bubble-tempo.png', banner: 'media/games/bubble-tempo-banner.png', pattern: 'media/games/bubble-tempo-pattern.png',
     intro: '指尖拖著節奏泡泡，染色、瞄準、對上拍子！在風格各異的關卡裡跟上越來越快的音樂，挑戰你的反應力與節奏感！' },
@@ -9,6 +15,6 @@ export const GAMES = [
     intro: '死掉不是結束！和上一代的自己攜手，接力跳躍、破解機關，共同抵達終點吧!' },
   { code: 'soul-smith-defense', name: '魂匠守衛者', letter: '魂', time: '10–20 分鐘', bg: '#a8cf9c', fg: '#2d2144', icon: 'media/games/soul-smith-defense.png', banner: 'media/games/soul-smith-defense-banner.png', pattern: 'media/games/soul-smith-defense-pattern.png',
     intro: '會衝上前砍怪的箭塔？拔敵人的攻擊招式來用？一款所有能力都能自由拼裝的塔防，發揮想像力守住主堡！' },
-];
+].sort(byTime);
 export const GAME_CODES = GAMES.map(g => g.code);
 export const byCode = code => GAMES.find(g => g.code === code) || null;
