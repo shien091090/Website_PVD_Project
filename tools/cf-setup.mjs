@@ -67,7 +67,7 @@ const apps = await cf('GET', '/access/apps');
 let app = apps.find(a => a.name === 'PVD計畫後台');
 if (!app) {
   app = await cf('POST', '/access/apps', {
-    name: 'PVD計畫後台', type: 'self_hosted', domain: `${DOMAIN}/admin`, session_duration: '24h', same_site_cookie_attribute: 'strict',
+    name: 'PVD計畫後台', type: 'self_hosted', domain: `${DOMAIN}/admin`, session_duration: '24h', same_site_cookie_attribute: 'lax',
     self_hosted_domains: [`${DOMAIN}/admin`, `${DOMAIN}/api/admin`, `*.${DOMAIN}/admin`, `*.${DOMAIN}/api/admin`],
   });
   await cf('POST', `/access/apps/${app.id}/policies`, { name: '只有工作室', decision: 'allow', include: [{ email: { email: env.ADMIN_EMAIL } }] });
