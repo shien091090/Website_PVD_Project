@@ -154,6 +154,35 @@ test('試玩頁介紹: 頂端是主題色圖樣色帶(沒圖樣用純主色), �
   await ctx.close();
 });
 
+test('電腦版介紹收成上方橫條: 按鈕在介紹右側, 去投票是靠右的小按鈕, 留言板在下方全寬', async () => {
+  const ctx = await browser.newContext(PC);
+  const page = await ctx.newPage();
+  await page.goto(srv.url + '#play/bubble-tempo');
+  const vote = page.locator('#detail .votebtn');
+  await vote.waitFor();
+  assert.equal(await vote.getAttribute('href'), '#vote');
+  const box = s => page.locator(s).boundingBox();
+  const [det, dl, dr, p, start, v] = await Promise.all(['#detail', '#detail .dl', '#detail .dr', '#detail .dl p', '#detail .startbtn', '#detail .votebtn'].map(box));
+  assert.ok(start.x >= p.x + p.width, '開始試玩在介紹文字右側');
+  assert.ok(v.y >= start.y + start.height, '去投票在開始試玩下方');
+  assert.ok(Math.abs(v.x + v.width - (start.x + start.width)) <= 2, '去投票靠右對齊');
+  assert.ok(v.height < start.height && v.width < start.width, '去投票比開始試玩小');
+  assert.ok(dr.y >= dl.y + dl.height - 1, '留言板在介紹下方');
+  assert.ok(dr.width >= det.width - 8, `留言板全寬 ${dr.width} / ${det.width}`);
+  await ctx.close();
+});
+
+test('手機抽屜也有去投票按鈕', async () => {
+  const ctx = await browser.newContext(PHONE);
+  const page = await ctx.newPage();
+  await page.goto(srv.url + '#play');
+  await page.click('.gh:has-text("Bubble Tempo")');
+  const vote = page.locator('.psheet .votebtn');
+  await vote.waitFor();
+  assert.equal(await vote.getAttribute('href'), '#vote');
+  await ctx.close();
+});
+
 test('筆電矮螢幕: 介紹名稱照樣顯示、開始鈕不用捲動; 清單 4 款一次看完不捲動', async () => {
   const ctx = await browser.newContext({ viewport: { width: 1366, height: 640 } }); // 1366×768 筆電扣掉瀏覽器工具列
   const page = await ctx.newPage();

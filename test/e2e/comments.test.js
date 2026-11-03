@@ -80,6 +80,55 @@ test('手機抽屜裡也能留言', async () => {
   await ctx.close();
 });
 
+// 假留言: 新到舊, 長短混搭
+const LENS = [200, 5, 60, 200, 20, 40, 8, 120];
+const fakeList = route => route.request().method() === 'GET'
+  ? route.fulfill({ contentType: 'application/json', body: JSON.stringify({ count: LENS.length, locked: false,
+    comments: LENS.map((n, i) => ({ id: i + 1, avatar: i % 8, body: `${i + 1}`.padEnd(n, '字'), createdAt: 0 })) }) })
+  : route.continue();
+
+test('電腦版留言排兩欄: 依新到舊放進較短的那欄, 兩欄高度差不超過一則; 視窗變寬重排', async () => {
+  const ctx = await browser.newContext(PC);
+  const page = await ctx.newPage();
+  await page.route('**/api/comments?game=*', fakeList);
+  await page.goto(srv.url + '#play/bubble-tempo');
+  await page.waitForFunction(n => document.querySelectorAll('#detail .cms .col .cm').length === n, LENS.length, { timeout: 15000 });
+  const check = () => page.evaluate(() => {
+    const cols = [...document.querySelectorAll('#detail .cms .col')];
+    const hs = [0, 0], issues = [], gap = parseFloat(getComputedStyle(cols[0]).rowGap) || 0;
+    const items = cols.flatMap((c, ci) => [...c.children].map(el => ({ ci, n: parseInt(el.querySelector('.t').textContent), h: el.offsetHeight })));
+    items.sort((a, b) => a.n - b.n);
+    for (const it of items) {
+      const want = hs[0] <= hs[1] ? 0 : 1;
+      if (Math.abs(hs[0] - hs[1]) > 1 && it.ci !== want) issues.push(`第 ${it.n} 則放到第 ${it.ci + 1} 欄`);
+      hs[it.ci] += it.h + (hs[it.ci] ? gap : 0);
+    }
+    const r = cols.map(c => c.getBoundingClientRect());
+    return { cols: cols.length, issues, sideBySide: Math.abs(r[0].top - r[1].top) < 1 && r[1].left > r[0].right };
+  });
+  let res = await check();
+  assert.equal(res.cols, 2);
+  assert.ok(res.sideBySide, '兩欄左右並排');
+  assert.deepEqual(res.issues, []);
+  assert.match(await page.locator('#detail .cms .col').first().locator('.cm .t').first().textContent(), /^1字/, '最新一則在左欄最上面');
+  await page.setViewportSize({ width: 1700, height: 800 });
+  await page.waitForTimeout(400);
+  res = await check();
+  assert.deepEqual(res.issues, []);
+  await ctx.close();
+});
+
+test('手機抽屜的留言維持單欄', async () => {
+  const ctx = await browser.newContext(PHONE);
+  const page = await ctx.newPage();
+  await page.route('**/api/comments?game=*', fakeList);
+  await page.goto(srv.url + '#play');
+  await pick(page, 'Bubble Tempo');
+  await page.waitForFunction(n => document.querySelectorAll('.psheet .cms .cm').length === n, LENS.length, { timeout: 15000 });
+  assert.equal(await page.locator('.psheet .cms .col').count(), 0);
+  await ctx.close();
+});
+
 test('送出途中留言板重畫, 錯誤訊息仍看得到且保留文字', async () => {
   const ctx = await browser.newContext(PC);
   const page = await ctx.newPage();

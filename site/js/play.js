@@ -3,7 +3,7 @@ import { AV, avHtml } from './avatars.js';
 import * as store from './store.js';
 import { esc } from './format.js';
 
-// 試玩頁(1b): 電腦左清單 + 右詳情; 手機點一款從底部拉出抽屜
+// 試玩頁(1b): 電腦左清單 + 右詳情(上方介紹橫條、下方留言板); 手機點一款從底部拉出抽屜
 export const mobileQ = matchMedia('(max-width: 720px)');
 export const touchQ = matchMedia('(hover: none) and (pointer: coarse)');
 const glist = document.getElementById('glist'), detail = document.getElementById('detail'), psheet = document.getElementById('psheet');
@@ -22,6 +22,7 @@ const startBtn = g => {
   const h = recHint();
   return (h ? `<p class="rec">${DEV_INFO}${h}</p>` : '') + `<a class="startbtn" href="#game/${g.code}">▶ 開始試玩</a>`;
 };
+const voteBtn = '<a class="votebtn" href="#vote">去投票 →</a>';
 
 // 留言板內容由外部提供(留言模組), 這裡只決定放在哪
 let board = { html: () => '', mount: () => {} };
@@ -51,7 +52,7 @@ export function renderPlay() {
     psheet.innerHTML = `<div class="bd"></div>
       <div class="pn" role="dialog" aria-modal="true" aria-label="${esc(g.name)}" style="--c:${g.bg};--fc:${g.fg}">
         ${band(g, '<button class="x" aria-label="關閉">✕</button>')}${head(g, `<span class="tm">${esc(g.time)}</span>`)}
-        <div class="gb"><p>${esc(g.intro)}</p>${startBtn(g)}<div class="board" data-code="${g.code}" style="display:contents">${board.html(g.code)}</div></div>
+        <div class="gb"><p>${esc(g.intro)}</p>${startBtn(g)}${voteBtn}<div class="board" data-code="${g.code}" style="display:contents">${board.html(g.code)}</div></div>
       </div>`;
     board.mount(psheet.querySelector('.board'), g.code);
   } else psheet.innerHTML = '';
@@ -59,9 +60,7 @@ export function renderPlay() {
     const g = GAMES[sel];
     detail.innerHTML = `
       <div class="dl" style="--c:${g.bg};--fc:${g.fg}">
-        ${band(g)}${head(g, `<dl class="meta"><dt>時長</dt><dd>${esc(g.time)}</dd></dl>`)}
-        <p>${esc(g.intro)}</p>
-        ${startBtn(g)}
+        ${band(g)}<div class="drow">${head(g, `<dl class="meta"><dt>時長</dt><dd>${esc(g.time)}</dd></dl><p>${esc(g.intro)}</p>`)}<div class="acts">${startBtn(g)}${voteBtn}</div></div>
       </div>
       <div class="dr board" data-code="${g.code}">${board.html(g.code)}</div>`;
     board.mount(detail.querySelector('.board'), g.code);

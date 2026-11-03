@@ -23,7 +23,7 @@ function html(code) {
   const head = `<h3>留言板<small>${mobileQ.matches ? '· ' : ''}${n} 則</small></h3>`;
   const list = !c ? '<p class="cmsg">讀取中…</p>'
     : c.error ? '<p class="cmsg">留言暫時讀不到，請稍後再試。</p>'
-    : c.comments.map(m => `<div class="cm">${avHtml(m.avatar)}<div class="t">${esc(m.body)}</div></div>`).join('');
+    : c.comments.map((m, i) => `<div class="cm" data-n="${i}">${avHtml(m.avatar)}<div class="t">${esc(m.body)}</div></div>`).join('');
   const form = c?.locked ? '<p class="clock">留言功能暫時無法使用</p>'
     : `<form class="cform"><button type="button" class="avbtn" aria-label="選擇頭像" aria-haspopup="dialog">${avHtml(myAv)}</button><input maxlength="200" placeholder="留一句話給這款遊戲…" aria-label="留言" value="${esc(drafts[code] || '')}"><button${sending[code] ? ' disabled' : ''}>${sending[code] ? '送出中…' : '送出'}</button></form><p class="cerr" role="alert"${errors[code] ? '' : ' hidden'}>${esc(errors[code] || '')}</p>`;
   return head + `<div class="cms">${list}</div>` + form;
@@ -43,8 +43,19 @@ function mount(el, code) {
 let skipFetch = false;
 export const board = {
   html,
-  mount: (el, code) => { if (!skipFetch) mount(el, code); },
+  mount: (el, code) => { columns(el); if (!skipFetch) mount(el, code); },
 };
+// 電腦版留言排兩欄: 依新到舊, 每則放進當下較短的那欄, 兩欄高度差最多一則
+function columns(el) {
+  const cms = el.querySelector('.cms');
+  if (!cms || mobileQ.matches || !el.closest('#detail')) return;
+  const items = [...cms.querySelectorAll('.cm')].sort((a, b) => a.dataset.n - b.dataset.n);
+  if (!items.length) return;
+  const cols = [0, 1].map(() => Object.assign(document.createElement('div'), { className: 'col' }));
+  cms.classList.add('two');
+  cms.replaceChildren(...cols);
+  for (const it of items) (cols[0].offsetHeight <= cols[1].offsetHeight ? cols[0] : cols[1]).append(it);
+}
 function redraw(code) {
   const focused = document.activeElement?.matches?.(`.board[data-code="${code}"] .cform input`);
   skipFetch = true;
@@ -76,6 +87,11 @@ async function submit(code) {
 
 export function initComments(opts = {}) {
   onPosted = opts.onPosted || onPosted;
+  // 欄寬或字型變了, 每則高度跟著變, 重排兩欄
+  let t;
+  const relayout = () => document.querySelectorAll('#detail .board').forEach(columns);
+  addEventListener('resize', () => { clearTimeout(t); t = setTimeout(relayout, 150); });
+  document.fonts?.ready.then(relayout);
   document.addEventListener('input', e => {
     const i = e.target.closest?.('.board .cform input'); if (!i) return;
     drafts[i.closest('.board').dataset.code] = i.value;
