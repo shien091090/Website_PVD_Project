@@ -16,16 +16,16 @@ test('送出留言後出現在最上面, 別的瀏覽器也看得到, 連送被�
   const page = await ctx.newPage();
   await page.goto(srv.url + '#play');
   await pick(page, '魂匠守衛者');
-  await page.fill('.board .cform input', '好玩');
+  await page.fill('.board .cform textarea', '好玩');
   await page.click('.board .cform button:has-text("送出")');
   await page.waitForFunction(() => document.querySelector('.board .cms .cm .t')?.textContent === '好玩', null, { timeout: 15000 });
   assert.match(await page.locator('.board h3').textContent(), /1 則/);
-  assert.equal(await page.locator('.board .cform input').inputValue(), '');
+  assert.equal(await page.locator('.board .cform textarea').inputValue(), '');
 
-  await page.fill('.board .cform input', '再一則');
+  await page.fill('.board .cform textarea', '再一則');
   await page.click('.board .cform button:has-text("送出")');
   await page.locator('.cerr:has-text("留言太快了")').waitFor({ timeout: 15000 });
-  assert.equal(await page.locator('.board .cform input').inputValue(), '再一則');
+  assert.equal(await page.locator('.board .cform textarea').inputValue(), '再一則');
 
   const other = await browser.newContext(PC);
   const p2 = await other.newPage();
@@ -51,10 +51,10 @@ test('伺服器錯誤時顯示失敗且保留文字', async () => {
   await page.route('**/api/comments', r => r.request().method() === 'POST'
     ? r.fulfill({ status: 500, contentType: 'application/json', body: '{"error":{"code":"server_error"}}' }) : r.continue());
   await page.goto(srv.url + '#play/jelly-jinni');
-  await page.fill('.board .cform input', '測試失敗');
+  await page.fill('.board .cform textarea', '測試失敗');
   await page.click('.board .cform button:has-text("送出")');
   await page.locator('.cerr:has-text("送出失敗，請稍後再試")').waitFor({ timeout: 15000 });
-  assert.equal(await page.locator('.board .cform input').inputValue(), '測試失敗');
+  assert.equal(await page.locator('.board .cform textarea').inputValue(), '測試失敗');
   await ctx.close();
 });
 
@@ -74,7 +74,7 @@ test('手機抽屜裡也能留言', async () => {
   const page = await ctx.newPage();
   await page.goto(srv.url + '#play');
   await pick(page, '接力吉尼');
-  await page.fill('.psheet .cform input', '手機留言');
+  await page.fill('.psheet .cform textarea', '手機留言');
   await page.click('.psheet .cform button:has-text("送出")');
   await page.waitForFunction(() => document.querySelector('.psheet .cms .cm .t')?.textContent === '手機留言', null, { timeout: 15000 });
   await ctx.close();
@@ -142,12 +142,12 @@ test('送出途中留言板重畫, 錯誤訊息仍看得到且保留文字', asy
     answered();
   });
   await page.goto(srv.url + '#play/bubble-tempo');
-  await page.fill('.board .cform input', '讀取中送出');
+  await page.fill('.board .cform textarea', '讀取中送出');
   await page.click('.board .cform button:has-text("送出")');
   await page.waitForFunction(() => !document.querySelector('.board .cmsg')?.textContent.includes('讀取中'), null, { timeout: 15000 });
   await page.waitForTimeout(300);
   assert.ok(await page.locator('.cerr:has-text("留言太快了")').isVisible());
-  assert.equal(await page.locator('.board .cform input').inputValue(), '讀取中送出');
+  assert.equal(await page.locator('.board .cform textarea').inputValue(), '讀取中送出');
   assert.equal(await page.locator('.board .cform button:has-text("送出")').isDisabled(), false);
   await ctx.close();
 });
@@ -157,11 +157,11 @@ test('手機打到一半轉成電腦版面, 文字還在', async () => {
   const page = await ctx.newPage();
   await page.goto(srv.url + '#play');
   await page.click('.gh:has-text("Bubble Tempo")');
-  await page.locator('.psheet .cform input').waitFor();
-  await page.fill('.psheet .cform input', '轉向前打的字');
+  await page.locator('.psheet .cform textarea').waitFor();
+  await page.fill('.psheet .cform textarea', '轉向前打的字');
   await page.setViewportSize({ width: 1280, height: 800 });
-  await page.locator('.detail .cform input').waitFor();
-  assert.equal(await page.locator('.detail .cform input').inputValue(), '轉向前打的字');
+  await page.locator('.detail .cform textarea').waitFor();
+  assert.equal(await page.locator('.detail .cform textarea').inputValue(), '轉向前打的字');
   await ctx.close();
 });
 
@@ -174,7 +174,7 @@ test('送出後按鈕立刻顯示送出中', async () => {
   });
   await page.goto(srv.url + '#play/jelly-jinni');
   await page.locator('.board .cms').waitFor();
-  await page.fill('.board .cform input', '等一下');
+  await page.fill('.board .cform textarea', '等一下');
   await page.click('.board .cform button:has-text("送出")');
   const btn = page.locator('.board .cform button:not(.avbtn)');
   await page.waitForFunction(() => document.querySelector('.board .cform button:not(.avbtn)')?.textContent === '送出中…', null, { timeout: 500 });
@@ -196,10 +196,10 @@ test('點進留言框就先做驗證, 按送出時不用再等驗證', async () 
   await page.route('**/turnstile/v0/api.js*', r => r.fulfill({ contentType: 'text/javascript', body: SLOW_TS }));
   await page.goto(srv.url + '#play/soul-smith-defense'); // 前面的測試鎖了 dungeon-zoo
   await page.locator('.board .cms').waitFor();
-  await page.click('.board .cform input');
+  await page.click('.board .cform textarea');
   await page.waitForFunction(() => window.__ex === 1);
   await page.waitForTimeout(1700);
-  await page.fill('.board .cform input', '很快');
+  await page.fill('.board .cform textarea', '很快');
   const t0 = Date.now();
   await page.click('.board .cform button:has-text("送出")');
   await page.waitForFunction(() => document.querySelector('.board .cms .cm .t')?.textContent === '很快', null, { timeout: 15000 });
@@ -220,3 +220,27 @@ test('打開留言板就先做驗證, 不用等點進留言框', async () => {
   assert.equal(await page.evaluate(() => window.__ex), 1, '備用的驗證還沒用掉, 換一款不再驗證');
   await ctx.close();
 });
+
+for (const [name, dev, sel] of [['電腦版', PC, '.board'], ['手機版', PHONE, '.psheet']]) {
+  test(`${name}留言框: 即時顯示字數與上限, 打到右端自動換行整段看得到, Enter 送出不換行`, async () => {
+    const ctx = await browser.newContext(dev);
+    const page = await ctx.newPage();
+    await page.goto(srv.url + '#play');
+    await pick(page, '魂匠守衛者');
+    if (sel === '.psheet') await page.locator('.psheet .cform textarea').waitFor();
+    const box = page.locator(`${sel} .cform textarea`), count = page.locator(`${sel} .cform .ccount`);
+    assert.equal(await count.textContent(), '0/200');
+    const h1 = await box.evaluate(e => e.clientHeight);
+    await box.fill('');
+    await box.pressSequentially('這款遊戲的節奏很棒😀');
+    assert.equal(await count.textContent(), '10/200'); // 表情符號算 1 字
+    await box.fill('很好玩'.repeat(30));
+    assert.equal(await count.textContent(), '90/200');
+    const m = await box.evaluate(e => ({ h: e.clientHeight, sh: e.scrollHeight }));
+    assert.ok(m.h > h1 * 1.5, `變成多列 (${h1} → ${m.h})`);
+    assert.ok(m.sh <= m.h + 1, '整段都看得到');
+    await box.press('Enter');
+    assert.ok(!(await box.inputValue()).includes('\n'), 'Enter 不會換行');
+    await ctx.close();
+  });
+}

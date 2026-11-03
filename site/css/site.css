@@ -16,7 +16,7 @@
 :root.dark :is(.page, .intro) { --fg: #d3dae6; --ink: #b9c4d8; --muted: #8b98b0; --hard: #04070d; color: var(--fg); }
 :root.dark :is(.page, .intro) { --bar: #0f1d33; --page: #18181d; --paper: #222128; --chip: #2a2931; --line: #34333c; --faint: #4a4855; --hov: #27262e; --selbg: #1d3640; --on-ink: #18181d; --fg: #eeece8; --ink: #77737f; --muted: #a8a5ae; }
 /* 炭灰: 文字用乾淨的米白 (不帶灰), 框線退成中灰讓卡片不刺眼; 「墨色鈕」(送出、首頁 hover) 改用亮字色 */
-:root.dark :is(.page, .intro) :is(.homebtn, .back, .links a, .gotry, .cform input, .psheet .x) { color: var(--fg); }
+:root.dark :is(.page, .intro) :is(.homebtn, .back, .links a, .gotry, .cform textarea, .psheet .x) { color: var(--fg); }
 :root.dark :is(.page, .intro) :is(.cform button, .homebtn:hover, .back:hover, .links a:hover, .badge) { background: var(--fg); color: var(--on-ink); }
 .dev h2 span { color: var(--dk); } /* 黃色編號塊上的數字固定深色 */
 /* 暗色的試玩鈕: 大面積紅太刺眼, 換成較深但不灰的紅 */
@@ -166,9 +166,10 @@ body.vend .vnote { display: flex; }
 .avgrid button:focus-visible { outline: 3px solid var(--teal); outline-offset: 3px; }
 .cm { display: flex; gap: 10px; align-items: flex-start; }
 .cm .t { background: var(--paper); border-radius: 4px 14px 14px 14px; padding: 9px 13px; font-size: 15px; line-height: 1.55; overflow-wrap: anywhere; }
-.cform { display: flex; align-items: center; gap: 8px; background: var(--paper); border: 2px solid var(--ink); border-radius: 14px; padding: 6px 6px 6px 14px; }
-.cform input { flex: 1; min-width: 0; border: 0; outline: 0; font: 500 15px/1.4 var(--font); color: var(--ink); background: none; padding: 4px 0; }
-.cform input::placeholder { color: var(--muted); }
+.cform { display: flex; align-items: flex-end; gap: 8px; background: var(--paper); border: 2px solid var(--ink); border-radius: 14px; padding: 6px 6px 6px 14px; }
+.cform textarea { flex: 1; min-width: 0; border: 0; outline: 0; font: 500 15px/1.4 var(--font); color: var(--ink); background: none; padding: 4px 0; resize: none; overflow-y: auto; max-height: 40vh; overflow-wrap: anywhere; align-self: center; }
+.cform .ccount { flex: none; margin-bottom: 10px; font: 600 12px/1 var(--font); color: var(--muted); font-variant-numeric: tabular-nums; }
+.cform textarea::placeholder { color: var(--muted); }
 .cform button { border: 0; background: var(--ink); color: var(--on-ink); border-radius: 10px; padding: 9px 14px; font: 700 13px/1 var(--font); cursor: pointer; }
 .cform button:disabled { opacity: .6; cursor: default; }
 .cform:focus-within { box-shadow: 0 0 0 3px var(--teal); }
@@ -281,8 +282,8 @@ body.vend .vnote { display: flex; }
   .gb .cform .avbtn { margin-left: -10px; }
   .gb .cm { gap: 8px; }
   .gb .cm .t { background: var(--chip); border-radius: 4px 12px 12px 12px; padding: 6px 10px; font-size: 13px; line-height: 1.5; }
-  .gb .cform { border-radius: 999px; padding: 4px 4px 4px 14px; }
-  .gb .cform input { font-size: 16px; } /* iOS 字小於 16px 會自動放大畫面 */
+  .gb .cform { border-radius: 22px; padding: 4px 4px 4px 14px; }
+  .gb .cform textarea { font-size: 16px; } /* iOS 字小於 16px 會自動放大畫面 */
   .gb .cform button { border-radius: 999px; }
 }
 

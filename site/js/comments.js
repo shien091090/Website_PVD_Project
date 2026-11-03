@@ -13,6 +13,10 @@ const ERR = {
   bad_body: '留言內容不能是空白，最多 200 字',
 };
 let onPosted = () => {};
+// 上限跟伺服器一樣以字元算(表情符號算 1 字)
+const MAX = 200, len = s => [...s].length;
+// 留言框跟著內容長高, 整段都看得到
+const grow = t => { t.style.height = 'auto'; if (t.scrollHeight) t.style.height = t.scrollHeight + 'px'; }; // 還沒顯示時量不到, 先用預設一列
 // 每款的輸入草稿、送出中、錯誤訊息存在這裡, 不綁在畫面元素上:
 // 留言板隨時可能重畫(讀取完成、手機轉向切版面), 重畫後照這些狀態畫回來
 const drafts = {}, sending = {}, errors = {};
@@ -25,7 +29,7 @@ function html(code) {
     : c.error ? '<p class="cmsg">留言暫時讀不到，請稍後再試。</p>'
     : c.comments.map((m, i) => `<div class="cm" data-n="${i}">${avHtml(m.avatar)}<div class="t">${esc(m.body)}</div></div>`).join('');
   const form = c?.locked ? '<p class="clock">留言功能暫時無法使用</p>'
-    : `<form class="cform"><button type="button" class="avbtn" aria-label="選擇頭像" aria-haspopup="dialog">${avHtml(myAv)}</button><input maxlength="200" placeholder="留一句話給這款遊戲…" aria-label="留言" value="${esc(drafts[code] || '')}"><button${sending[code] ? ' disabled' : ''}>${sending[code] ? '送出中…' : '送出'}</button></form><p class="cerr" role="alert"${errors[code] ? '' : ' hidden'}>${esc(errors[code] || '')}</p>`;
+    : `<form class="cform"><button type="button" class="avbtn" aria-label="選擇頭像" aria-haspopup="dialog">${avHtml(myAv)}</button><textarea rows="1" maxlength="${MAX}" placeholder="留一句話給這款遊戲…" aria-label="留言">${esc(drafts[code] || '')}</textarea><span class="ccount" aria-live="polite">${len(drafts[code] || '')}/${MAX}</span><button${sending[code] ? ' disabled' : ''}>${sending[code] ? '送出中…' : '送出'}</button></form><p class="cerr" role="alert"${errors[code] ? '' : ' hidden'}>${esc(errors[code] || '')}</p>`;
   return head + `<div class="cms">${list}</div>` + form;
 }
 
@@ -43,7 +47,7 @@ function mount(el, code) {
 let skipFetch = false;
 export const board = {
   html,
-  mount: (el, code) => { columns(el); if (!skipFetch) mount(el, code); },
+  mount: (el, code) => { columns(el); el.querySelectorAll('.cform textarea').forEach(grow); if (!skipFetch) mount(el, code); },
 };
 // 電腦版留言排兩欄: 依新到舊, 每則放進當下較短的那欄, 兩欄高度差最多一則
 function columns(el) {
@@ -57,10 +61,13 @@ function columns(el) {
   for (const it of items) (cols[0].offsetHeight <= cols[1].offsetHeight ? cols[0] : cols[1]).append(it);
 }
 function redraw(code) {
-  const focused = document.activeElement?.matches?.(`.board[data-code="${code}"] .cform input`);
+  const focused = document.activeElement?.matches?.(`.board[data-code="${code}"] .cform textarea`);
   skipFetch = true;
   try { rerenderBoard(code); } finally { skipFetch = false; }
-  if (focused) document.querySelector(`.board[data-code="${code}"] .cform input`)?.focus();
+  if (focused) {
+    const t = document.querySelector(`.board[data-code="${code}"] .cform textarea`);
+    t?.focus(); t?.setSelectionRange(t.value.length, t.value.length);
+  }
 }
 
 async function submit(code) {
@@ -93,10 +100,20 @@ export function initComments(opts = {}) {
   addEventListener('resize', () => { clearTimeout(t); t = setTimeout(relayout, 150); });
   document.fonts?.ready.then(relayout);
   document.addEventListener('input', e => {
-    const i = e.target.closest?.('.board .cform input'); if (!i) return;
+    const i = e.target.closest?.('.board .cform textarea'); if (!i) return;
+    if (/[\r\n]/.test(i.value)) i.value = i.value.replace(/[\r\n]+/g, ' '); // 貼上的換行改成空白, 跟伺服器存的一樣
     drafts[i.closest('.board').dataset.code] = i.value;
+    i.closest('.cform').querySelector('.ccount').textContent = `${len(i.value)}/${MAX}`;
+    grow(i);
   });
-  document.addEventListener('focusin', e => { if (e.target.closest?.('.board .cform input')) prefetchToken(); });
+  document.addEventListener('focusin', e => { if (e.target.closest?.('.board .cform textarea')) prefetchToken(); });
+  // Enter 送出, 不換行(輸入法選字中的 Enter 不算)
+  document.addEventListener('keydown', e => {
+    const t = e.target.closest?.('.board .cform textarea');
+    if (!t || e.key !== 'Enter' || e.isComposing || e.keyCode === 229) return;
+    e.preventDefault();
+    t.form.requestSubmit();
+  });
   document.addEventListener('submit', e => {
     const f = e.target.closest('.board .cform'); if (!f) return;
     e.preventDefault();
