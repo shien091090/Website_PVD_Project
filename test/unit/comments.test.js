@@ -39,16 +39,16 @@ test('HTML 原樣存入(前端負責跳脫)', async () => {
   assert.equal(r.body.comment.body, '<script>x</script>');
 });
 
-test('空白、超過 120 字被擋; 剛好 120 字可以', async () => {
+test('空白、超過 200 字被擋; 剛好 200 字可以', async () => {
   const s = setup();
   assert.equal((await s.post('   ')).body.error.code, 'bad_body');
-  assert.equal((await s.post('字'.repeat(121))).status, 400);
-  assert.equal((await s.post('字'.repeat(120))).status, 201);
+  assert.equal((await s.post('字'.repeat(201))).status, 400);
+  assert.equal((await s.post('字'.repeat(200))).status, 201);
 });
 
 test('內容清理: 控制字元移除、換行變空白', () => {
   assert.equal(cleanBody(' a\u0000b\nc '), 'ab c');
-  assert.equal(cleanBody('😀'.repeat(120)), '😀'.repeat(120));
+  assert.equal(cleanBody('😀'.repeat(200)), '😀'.repeat(200));
   assert.equal(cleanBody(42), null);
 });
 

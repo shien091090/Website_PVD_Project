@@ -1,5 +1,5 @@
 // 匿名留言: 只存頭像編號與內容; 訪客編號與 IP 雜湊只用來限制頻率, 不對外回傳
-export const MAX_LEN = 120;
+export const MAX_LEN = 200;
 
 export function cleanBody(text) {
   if (typeof text !== 'string') return null;

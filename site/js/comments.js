@@ -10,7 +10,7 @@ const ERR = {
   hour_limit: '這一小時留言次數已達上限',
   ip_limit: '這一小時留言次數已達上限',
   turnstile: '驗證沒有通過，請再試一次',
-  bad_body: '留言內容不能是空白，最多 120 字',
+  bad_body: '留言內容不能是空白，最多 200 字',
 };
 let onPosted = () => {};
 // 每款的輸入草稿、送出中、錯誤訊息存在這裡, 不綁在畫面元素上:
@@ -25,7 +25,7 @@ function html(code) {
     : c.error ? '<p class="cmsg">留言暫時讀不到，請稍後再試。</p>'
     : c.comments.map(m => `<div class="cm">${avHtml(m.avatar)}<div class="t">${esc(m.body)}</div></div>`).join('');
   const form = c?.locked ? '<p class="clock">留言功能暫時無法使用</p>'
-    : `<form class="cform"><button type="button" class="avbtn" aria-label="選擇頭像" aria-haspopup="dialog">${avHtml(myAv)}</button><input maxlength="120" placeholder="留一句話給這款遊戲…" aria-label="留言" value="${esc(drafts[code] || '')}"><button${sending[code] ? ' disabled' : ''}>${sending[code] ? '送出中…' : '送出'}</button></form><p class="cerr" role="alert"${errors[code] ? '' : ' hidden'}>${esc(errors[code] || '')}</p>`;
+    : `<form class="cform"><button type="button" class="avbtn" aria-label="選擇頭像" aria-haspopup="dialog">${avHtml(myAv)}</button><input maxlength="200" placeholder="留一句話給這款遊戲…" aria-label="留言" value="${esc(drafts[code] || '')}"><button${sending[code] ? ' disabled' : ''}>${sending[code] ? '送出中…' : '送出'}</button></form><p class="cerr" role="alert"${errors[code] ? '' : ' hidden'}>${esc(errors[code] || '')}</p>`;
   return head + `<div class="cms">${list}</div>` + form;
 }
 

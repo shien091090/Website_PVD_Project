@@ -15,7 +15,7 @@
 - 所有使用者看得到的文字用繁體中文，文案照原型與 spec 逐字（例：「投票已結束，但遊戲仍可以試玩」「留言功能暫時無法使用」「僅支援電腦遊玩」「哪一款遊戲你希望開發者繼續做完?」「M/D(週) HH:mm 截止」）。
 - 網站自己的本機儲存鍵一律 `pvd:` 開頭（`pvd:played`、`pvd:av`、`pvd:theme`）。
 - 投票期間任何 API 回應都不能含票數；只有 `/api/admin/*` 例外。
-- 留言最多 120 字；頻率限制：同訪客 30 秒 1 則、每小時 20 則；同 IP 每小時 60 則。
+- 留言最多 200 字；頻率限制：同訪客 30 秒 1 則、每小時 20 則；同 IP 每小時 60 則。
 - 訪客 cookie：`pvd_vid`，`HttpOnly; Secure; SameSite=Lax; Max-Age=31536000; Path=/`。
 - 時間一律存 UTC 毫秒；顯示用台灣時間（`Asia/Taipei`）。
 - 觸控判斷 `(hover: none) and (pointer: coarse)`；手機版型斷點 `max-width: 720px`。
