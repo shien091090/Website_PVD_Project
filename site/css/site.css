@@ -177,8 +177,8 @@ body.vend .vnote { display: flex; }
 .gotry:hover { color: var(--red); }
 
 /* ---------- 試玩頁 (1b): 左清單 + 右詳情; 手機改手風琴 ---------- */
-/* 清單欄寬跟著螢幕高度縮: 4 張 21:9 橫幅一次放得下(175 = 標頭 89 + 上下留白 36 + 3 個間距 42 + 陰影 8); 選中時往右推的 20 由清單的負右邊距借用 */
-.pmain { flex: 1; min-height: 0; display: grid; grid-template-columns: clamp(200px, calc((100vh - 175px) / 4 * 21 / 9), 400px) minmax(0, 1fr); gap: 28px; padding: 4px 32px 32px; }
+/* 清單欄寬跟著螢幕高度縮: 4 張 21:9 橫幅一次放得下(175 = 標頭 89 + 上下留白 36 + 3 個間距 42 + 陰影 8); 選中時往右推的 20 由清單的負右邊距借用; 欄距 42 = 推出去的 14 + 留白 28 */
+.pmain { flex: 1; min-height: 0; display: grid; grid-template-columns: clamp(200px, calc((100vh - 175px) / 4 * 21 / 9), 400px) minmax(0, 1fr); gap: 42px; padding: 4px 32px 32px; }
 @supports (height: 100svh) { .pmain { grid-template-columns: clamp(200px, calc((100svh - 175px) / 4 * 21 / 9), 400px) minmax(0, 1fr); } }
 /* 遊戲清單: 電腦手機都用橫幅當按鈕(名稱藏起來給讀屏), 時長放左下角(橫幅規格本來就留空) */
 .glist { display: flex; flex-direction: column; gap: 14px; min-height: 0; padding: 0 20px 8px 0; margin-right: -20px; }
@@ -193,7 +193,7 @@ body.vend .vnote { display: flex; }
 .gh.bn .fb b { font: 900 22px/1.15 var(--font); }
 .gh.bn .chip { position: absolute; left: 8px; bottom: 8px; display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,.92); color: #2d2144; border: 2px solid #2d2144; border-radius: 999px; padding: 5px 10px; font: 700 13px/1 var(--font); }
 .gh:hover { transform: translateX(6px); }
-.gi.sel .gh { transform: translateX(14px); box-shadow: 6px 6px 0 var(--hard); }
+.gi.sel .gh { transform: translateX(14px); }
 .gh:focus-visible { outline: 3px solid var(--teal); outline-offset: 3px; }
 /* 介紹頂端: 主題色圖樣色帶(不放字), 圖示壓在色帶下緣, 名稱和時長在下方白底 */
 .band { flex: none; position: relative; border-bottom: 3px solid var(--ink); background-color: var(--c); background-size: 128px 128px; background-repeat: repeat; }
