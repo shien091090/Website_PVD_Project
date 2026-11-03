@@ -29,8 +29,8 @@
   // ===== 觸控模式(window.PVDX && PVDX.on): 放大 1.4 倍、跟隨鏡頭 =====
   var TK = 1.4, ZT = 2.1, WORLD_W = 853.3333, HUD_T = 67.2;
   var CAM_FX = 0.15, CAM_FY = 0.08, CAM_TY = 205.71;
-  // 右上選單鍵(touch.js LAYOUT.d: 圓心 (OX + 1240, 92)、點擊半徑 44)的避讓框 = 圓心 ± 50; touch.js 若搬動選單鍵, 要同步這個常數
-  var TOUCH_MENU = { x: OX + 1190, y: 42, w: 100, h: 100 };
+  // 右上選單鍵(touch.js LAYOUT.menu: 圓心 (CW - 40, 92)、點擊半徑 44)的避讓框 = 圓心 ± 50; touch.js 若搬動選單鍵, 要同步這個常數
+  var TOUCH_MENU = { x: CW - 90, y: 42, w: 100, h: 100 };
   var PAUSE_HIT = { resume: [530, 304, 220, 56], restart: [530, 368, 220, 56] };
   function isTouch() { return !!(window.PVDX && window.PVDX.on); }
 
@@ -1012,7 +1012,8 @@
     // 觸控模式: 提到按鍵的字換成按鈕名; 手機沒有 Esc, 「卡住了」改指向選單鍵
     var tx = d.text, tk = d.keys.slice(), av = TUT_AVOID, av2 = null;
     if (touch) {
-      tx = tx.replace('按 Z', '按 A');
+      tx = tx.replace(' 按 Z', ' 按');   // 後面的鍵帽在手機上畫成勾爪圖示
+      if (id === 'hookFire') { tx = '蓄滿 再按「發射」'; tk = []; }
       if (id === 'stuck') { tx = '卡住了? 點選單重來'; tk = []; }
       av = TOUCH_MENU;
       av2 = touchDpadBox();

@@ -80,8 +80,8 @@
     // 共用格(最右下, 最大顆)與上方勾爪
     slot: { x: CW - 120, y: CH - 112, r: 82, hit: 100 },
     hook: { x: CW - 120, y: CH - 112 - 196, r: 66, hit: 84 },
-    // 選單鍵: 設計區右上角(設計座標 (1240, 92)); game.js 的 TOUCH_MENU 照這個位置避讓
-    menu: { x: OX + 1240, y: 92, r: 30, hit: 44 },
+    // 選單鍵: 整張畫布最右上角; game.js 的 TOUCH_MENU 照這個位置避讓
+    menu: { x: CW - 40, y: 92, r: 30, hit: 44 },
   };
   // 左右兩鍵的可按範圍: 左下一整塊, 以兩鍵中線分左右(手指在兩鍵間滑動會直接換方向)
   var LR_BOX = { x0: 0, x1: LAYOUT.right.x + LAYOUT.right.r + 40, y0: LAYOUT.left.y - LAYOUT.left.r - 40, mid: (LAYOUT.left.x + LAYOUT.right.x) / 2 };
