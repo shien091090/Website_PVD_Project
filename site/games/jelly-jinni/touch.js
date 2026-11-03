@@ -29,7 +29,7 @@
       if (g.screen === 'play') {
         if (g.paused) return none;                                                     // 暫停選單: 直接點選項
         if (g.phase === 'play') {
-          if (g.aiming) return { lr: false, hook: 'fire', slot: 'x', menu: true };    // 瞄準中: 發射 / 取消
+          if (g.aiming) return { lr: false, hook: 'fire', slot: 'x', menu: true, charge: g.charge || 0 };    // 瞄準中: 發射 / 取消
           return { lr: true, hook: g.level >= 2 ? (g.hookable ? 'on' : 'dim') : false, slot: 'up', menu: true };
         }
         if (g.phase === 'dying') return { lr: true, hook: false, slot: null, menu: false }; // 死亡演出 0.6 秒: 只留左右
@@ -110,9 +110,14 @@
       if (dim) ctx.globalAlpha = 0.4;
       ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); this.body(ctx, lit);
       if (ring) {
-        var t = (Date.now() % 900) / 900;
-        ctx.beginPath(); ctx.arc(b.x, b.y, b.r + 9, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (0.25 + 0.75 * t));
-        ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.strokeStyle = '#ffd24a'; ctx.stroke();
+        // 蓄力進度: 外圈跟著蓄力填滿, 滿了就停在整圈
+        var c = Math.max(0, Math.min(1, +ring || 0));
+        ctx.beginPath(); ctx.arc(b.x, b.y, b.r + 9, 0, Math.PI * 2);
+        ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.stroke();
+        if (c > 0) {
+          ctx.beginPath(); ctx.arc(b.x, b.y, b.r + 9, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * c);
+          ctx.lineCap = 'round'; ctx.strokeStyle = '#ffd24a'; ctx.stroke();
+        }
       }
       var fg = lit ? '#1a2030' : 'rgba(255,255,255,0.92)';
       drawIcon(ctx, icon, b.x, b.y - (label ? b.r * 0.16 : 0), b.r * (label ? 0.85 : 1), fg);
@@ -125,7 +130,7 @@
     draw: function (ctx, held, vis) {
       var L = LAYOUT;
       if (vis.lr) { this.button(ctx, L.left, 'left', null, !!held.left); this.button(ctx, L.right, 'right', null, !!held.right); }
-      if (vis.hook) this.button(ctx, L.hook, 'hook', vis.hook === 'fire' ? '發射' : '勾爪', vis.hook === 'fire' || !!held.z, vis.hook === 'dim' && !held.z, vis.hook === 'fire');
+      if (vis.hook) this.button(ctx, L.hook, 'hook', vis.hook === 'fire' ? '發射' : '勾爪', vis.hook === 'fire' || !!held.z, vis.hook === 'dim' && !held.z, vis.hook === 'fire' ? Math.max(0.001, vis.charge || 0) : 0);
       if (vis.slot) { var si = SLOT_ICON[vis.slot]; this.button(ctx, L.slot, si[0], si[1], !!held[vis.slot]); }
       if (vis.menu) this.button(ctx, L.menu, 'menu', null, !!held.esc);
     },

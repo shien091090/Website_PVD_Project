@@ -46,7 +46,7 @@
     },
     { // 2
       title: '一鉤飛天', hint: '鉤住跳起來的幽靈', newThing: 'hook', banner: [60, 70],
-      platforms: [P_(200, 241, 520), P_(440, 146, 414)], spikes: [{ x: 0, y: 444, w: 16 }], walls: [],
+      platforms: [P_(200, 241, 400), P_(440, 146, 414)], spikes: [{ x: 0, y: 444, w: 16 }], walls: [],
       grounds: [{ x: 0, w: 560 }],
       goal: { x: 780, y: 106 }
     },
@@ -1129,7 +1129,7 @@
   window.jjState = function () {
     var hk = false;
     try { hk = S.screen === 'play' && S.phase === 'play' && !S.paused && !S.aiming && hookUnlocked(S.level) && !!S.P && !!S.ghost && hookableNow(); } catch (e) { hk = false; }
-    return { screen: S.screen, phase: S.phase, paused: S.paused, aiming: S.aiming, level: S.level, muted: S.muted, hookable: !!hk };
+    return { screen: S.screen, phase: S.phase, paused: S.paused, aiming: S.aiming, charge: S.aiming ? S.charge : 0, level: S.level, muted: S.muted, hookable: !!hk };
   };
   // 觸控模式、暫停選單開著時, 直接點選項(規則 43f); 電腦版不收 pointer
   function onPointerDown(e) {
