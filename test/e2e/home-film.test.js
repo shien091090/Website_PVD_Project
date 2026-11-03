@@ -53,3 +53,14 @@ test('看到一半關掉再按播放, 第一個顯示的畫面是接播點, 不�
   assert.ok(shown >= 0.7 && shown < 2, `顯示時在第 ${shown} 秒`);
   await ctx.close();
 });
+
+test('首頁下方 P、V 色塊上的字是白色, D 是深色(亮暗主題都一樣)', async () => {
+  for (const theme of ['light', 'dark']) {
+    const ctx = await browser.newContext(PC);
+    const page = await ctx.newPage();
+    await page.goto(srv.url + '?theme=' + theme);
+    const cols = await page.evaluate(() => [...document.querySelectorAll('.steps .plate')].map(p => getComputedStyle(p.querySelector('b')).color));
+    assert.deepEqual(cols, ['rgb(255, 255, 255)', 'rgb(255, 255, 255)', 'rgb(45, 33, 68)'], theme);
+    await ctx.close();
+  }
+});

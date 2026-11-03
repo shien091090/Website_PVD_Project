@@ -45,7 +45,7 @@ body.lock { overflow: hidden; }
 .steps li { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 16px; align-items: start; }
 .steps .plate { width: 56px; height: 56px; border-radius: 10px; font-size: 38px; }
 .steps b { display: block; font-size: 1.15rem; margin-bottom: 2px; }
-.steps span { color: var(--muted); line-height: 1.7; }
+.steps div > span { color: var(--muted); line-height: 1.7; } /* 只管說明文字, 不影響 P、V、D 色塊 */
 .intro .btn { justify-self: start; }
 .stage { position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px; margin: -540px 0 0 -960px; transform: scale(var(--s, .5)); }
 .title { position: absolute; left: var(--x0, 424px); top: var(--title-top, 435px); height: 210px; display: flex; align-items: center; gap: 22px; transition: opacity .25s; }
