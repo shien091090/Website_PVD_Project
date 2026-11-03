@@ -287,10 +287,15 @@ test('遊戲有回報載入進度時, 載入畫面顯示百分比, 等遊戲說�
   let release;
   const gate = new Promise(r => { release = r; });
   await page.route(/\/games\/dungeon-zoo\/audio\/sound\.js/, async route => { await gate; await route.continue(); });
+  // 遊戲回報進度可能比測試讀文字快, 改記下載入畫面剛出現時的文字
+  await page.addInitScript(() => new MutationObserver((_, ob) => {
+    const el = document.querySelector('#pg-game .gload');
+    if (el) { window.firstLoad = el.textContent; ob.disconnect(); }
+  }).observe(document, { childList: true, subtree: true }));
   await page.goto(srv.url + '#game/dungeon-zoo', { waitUntil: 'commit' });
   const ld = page.locator('#pg-game .gload');
   await ld.waitFor({ state: 'visible' });
-  assert.match(await ld.textContent(), /遊戲載入中 0%/);
+  assert.match(await page.evaluate(() => window.firstLoad), /遊戲載入中 0%/);
   await page.waitForFunction(() => /[1-9]\d*%/.test(document.querySelector('#pg-game .gload')?.textContent || ''));
   const before = parseInt((await ld.textContent()).match(/(\d+)%/)[1]);
   await page.frames()[1].evaluate(() => parent.postMessage({ type: 'pvd:progress', progress: 0 }, location.origin));
