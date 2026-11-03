@@ -37,7 +37,9 @@ body.lock { overflow: hidden; }
 .intro { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 72px 120px; border-top: 1px solid var(--line); }
 .intro-in { max-width: 640px; margin: 0 auto; display: grid; gap: 28px; }
 .intro .tagm { justify-self: start; font: 700 .75rem/1 var(--font); letter-spacing: .08em; color: var(--muted); border: 1px dashed var(--line); border-radius: 999px; padding: 6px 10px; }
-.intro h2 { font: 900 clamp(1.8rem, 5vw, 2.6rem)/1.25 var(--font); margin: 0; text-wrap: balance; }
+/* 電腦一行放得下; 窄螢幕只在逗號後換行 */
+.intro h2 { font: 900 clamp(1.3rem, 6.4vw, 2.15rem)/1.25 var(--font); margin: 0; }
+.intro h2 span { display: inline-block; }
 .intro p { margin: 0; font-size: 1.05rem; line-height: 1.85; }
 .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 20px; }
 .steps li { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 16px; align-items: start; }

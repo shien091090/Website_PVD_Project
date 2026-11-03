@@ -92,8 +92,11 @@ export function initHome(opts) {
       home.classList.add('moving');
       flip(() => title.classList.remove('col'));
       setTimeout(reveal, 470);
-    } else if (film.requestVideoFrameCallback) film.requestVideoFrameCallback(reveal);
-    else film.addEventListener('playing', reveal, { once: true });
+    } else if (film.requestVideoFrameCallback) {
+      // 等跳到接播點後的第一格才顯示, 不然會先閃一下上次停下的畫面
+      const frame = (now, m) => (m.mediaTime >= c.start - 0.05 ? reveal() : film.requestVideoFrameCallback(frame));
+      film.requestVideoFrameCallback(frame);
+    } else film.addEventListener('playing', reveal, { once: true });
     film.play().catch(() => {});
     onVideo('play');
   });
