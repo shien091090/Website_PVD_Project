@@ -36,25 +36,36 @@ initVote({ onZero: () => loadState(), onPick: pickVote });
 let retry = null;
 async function loadState() {
   clearTimeout(retry);
-  try { setState(await getJSON('/api/state')); }
+  try {
+    const s = await getJSON('/api/state');
+    setState(sending && s.phase === 'live' ? { ...s, myVote: want } : s); // 改投還在送: 畫面維持最後點的那款
+  }
   catch { retry = setTimeout(loadState, 5000); }
 }
 const VOTE_ERR = { turnstile: '驗證沒有通過，請再試一次', ip_limit: '這個網路投票次數太多，請稍後再試' };
+// 一次只送一票: 送出中又改點, 等這票回來再送最後點的那款, 慢回來的舊票不會把打勾蓋回去
+let sending = false, want = null, saved = null;
 async function pickVote(code) {
-  const before = getState();
   setVoteError('');
-  setState({ ...before, myVote: code, now: undefined });
+  if (!sending) saved = getState().myVote || null;
+  want = code;
+  setState({ ...getState(), myVote: code, now: undefined });
   focusVoted();
+  if (sending) return;
+  sending = true;
   try {
-    const token = await turnstileToken();
-    const r = await postJSON('/api/vote', { game: code, token });
-    setState({ ...getState(), myVote: r.myVote, now: undefined });
-    track('vote_cast', { game: code, changed: !!before.myVote });
+    while (want !== saved) {
+      const game = want, token = await turnstileToken();
+      const r = await postJSON('/api/vote', { game, token });
+      track('vote_cast', { game, changed: !!saved });
+      saved = r.myVote;
+    }
   } catch (e) {
-    setState({ ...before, now: undefined });
-    if (e.code === 'ended' || e.code === 'no_round') return loadState();
-    setVoteError(VOTE_ERR[e.code] || '投票失敗，請稍後再試');
-  }
+    want = saved;
+    setState({ ...getState(), myVote: saved, now: undefined });
+    if (e.code === 'ended' || e.code === 'no_round') loadState();
+    else setVoteError(VOTE_ERR[e.code] || '投票失敗，請稍後再試');
+  } finally { sending = false; }
 }
 loadState();
 document.addEventListener('visibilitychange', () => { if (!document.hidden) loadState(); });

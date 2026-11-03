@@ -12,9 +12,9 @@ test('設定腳本: 已存在的資源先查再建(可重跑)', () => {
   assert.match(out, /GET .*\/challenges\/widgets/);
   assert.match(out, /GET .*\/access\/apps/);
 });
-test('設定腳本: 秘密同時設到正式與預覽環境, 後台登入 cookie 為 strict', () => {
+test('設定腳本: 秘密同時設到正式與預覽環境, 後台登入 cookie 為 lax(strict 登入後會一直重新導向)', () => {
   assert.match(out, /PATCH .*\/pages\/projects\/pvd-project .*"production".*"preview"/);
-  assert.match(out, /"same_site_cookie_attribute":"strict"/);
+  assert.match(out, /"same_site_cookie_attribute":"lax"/);
 });
 test('設定腳本: 測試環境(預覽網址)用另一個資料庫, 一樣套資料表', () => {
   assert.match(out, /GET .*\/d1\/database\?name=pvd-preview/);

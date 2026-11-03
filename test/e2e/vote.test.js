@@ -103,3 +103,30 @@ test('快速連點兩款: 畫面打勾與伺服器記錄一致, 不出現錯誤'
   assert.equal(await page.locator('.vr.on').getAttribute('data-k'), shown);
   await ctx.close();
 });
+
+test('先投 A 再投 B, A 的回應較慢: 畫面不跳回 A, 最後記錄是 B', async () => {
+  round(-60000, 3600000);
+  const ctx = await browser.newContext(PC);
+  const page = await ctx.newPage();
+  let n = 0;
+  await page.route('**/api/vote', async r => {
+    const first = n++ === 0;
+    if (first) await new Promise(res => setTimeout(res, 1500));
+    await r.continue();
+    await page.evaluate(() => { window.votesDone = (window.votesDone || 0) + 1; }).catch(() => {});
+  });
+  await page.goto(srv.url + '#vote');
+  await page.locator('#deadline:has-text("截止")').waitFor();
+  await page.click('.vr[data-k="bubble-tempo"]');
+  await page.waitForTimeout(200);
+  await page.click('.vr[data-k="jelly-jinni"]');
+  // 之後每次重畫都記下打勾的是哪款, 直到兩個投票請求都回來
+  await page.evaluate(() => { window.seen = new Set(); new MutationObserver(() => window.seen.add(document.querySelector('.vr.on')?.dataset.k)).observe(document.getElementById('vrows'), { childList: true }); });
+  await page.waitForFunction(() => window.votesDone >= 2 || false, null, { timeout: 30000 }).catch(() => {});
+  await page.waitForTimeout(1000);
+  assert.deepEqual([...await page.evaluate(() => [...window.seen])].filter(Boolean).filter(k => k !== 'jelly-jinni'), []);
+  await page.reload();
+  await page.locator('.vr.on').waitFor();
+  assert.equal(await page.locator('.vr.on').getAttribute('data-k'), 'jelly-jinni');
+  await ctx.close();
+});
