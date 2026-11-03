@@ -18,10 +18,10 @@
         (((navigator.maxTouchPoints || 0) > 0 || 'ontouchstart' in window) && !mm('(hover: hover)'));
       if (q) w = +q[1];
       else if (touch) {
-        // 螢幕比例(不分直拿橫拿)與橫拿時的可視區比例取大的
+        // 直拿時照螢幕比例; 橫拿時以實際可視區為準(網站框會扣掉瀏海安全區, 比整個螢幕窄; 取螢幕比例會上下留邊)
         var a = window.screen || {}, sw = a.width || 0, sh = a.height || 0, iw = window.innerWidth || 0, ih = window.innerHeight || 0;
         var r = sw > 0 && sh > 0 ? Math.max(sw, sh) / Math.min(sw, sh) : 0;
-        if (iw > ih && ih > 0) r = Math.max(r, iw / ih);
+        if (iw > ih && ih > 0) r = iw / ih;
         if (r > 0) w = 720 * r;
       }
     } catch (e) { /* 取不到就用 1280 */ }
@@ -33,9 +33,13 @@
   // 1280 設計區裡的 HUD 分成幾塊, 各自以錨點放大後貼齊畫面左緣 / 中央 / 右緣。hudPt 把原座標換成新座標(遊戲端的聚光燈、提示也用它)
   // 表演場的 HUD(和熱度表、時鐘排在一起)維持原大小; 地下城以外的畫面 HUD 帶高度不變(50), 放大最多 1.3 倍
   // 手機的倍數依畫面寬度: 21:9(1680)放到 1.6, 越窄兩側越沒空間, 到 16:9(1280)和電腦一樣 1.25
-  var HUD_KD = 1.25, HUD_KM = 1.25 + 0.35 * Math.max(0, Math.min(1, (VW - 1280) / 400));
+  var HUD_KD = 1.25, HUD_KM = 1.35;
 
-  var HL = VX + 24, HR = VX + VW - 24, HUD_LAST_H = 50;
+  // 觸控模式(鍵盤遊戲): 兩側是 touch.js 的黑塊與按鈕, HUD 一律收在設計區 0~1280 內; 電腦版照原本貼畫面兩緣
+  function TON() { return !!(window.PVDX && window.PVDX.on); }
+  function HL() { return TON() ? 24 : VX + 24; }
+  function HR() { return TON() ? 1256 : VX + VW - 24; }
+  var HUD_LAST_H = 50;
   var HUD_C = null;   // 這一幀地下城 HUD 第 1 行中段的中心 x 與倍數(drawHud 算, 任務列與遊戲端的聚光燈跟著用)
   function hudK(phase) {
     if (phase === 'show') return 1;
@@ -49,8 +53,8 @@
     var k = hudK(phase), hb = hudH(phase) / (phase === 'dungeon' ? 100 : 50);
     var row2 = phase === 'dungeon' && y >= 50, cy = row2 ? 74 : 25, ny = cy * hb + (y - cy) * k, nx;
     if (!row2 && x >= 420 && x < 860 && phase === 'dungeon' && HUD_C) return { x: HUD_C.x + (x - 640) * HUD_C.k, y: cy * hb + (y - cy) * HUD_C.k, k: HUD_C.k };
-    if (!row2) nx = x < 420 ? HL + (x - 20) * k : (x < 860 ? 640 + (x - 640) * k : HR + (x - 1268) * k);
-    else nx = x < 700 ? HL + (x - 20) * k : (x < 820 ? HL + 620 * k + (x - 700) * k : HR + (x - 1260) * k);
+    if (!row2) nx = x < 420 ? HL() + (x - 20) * k : (x < 860 ? 640 + (x - 640) * k : HR() + (x - 1268) * k);
+    else nx = x < 700 ? HL() + (x - 20) * k : (x < 820 ? HL() + 620 * k + (x - 700) * k : HR() + (x - 1260) * k);
     return { x: nx, y: ny, k: k };
   }
   // 選單、表演場、引導卡等不在地下城 HUD 帶裡的東西: 電腦 1.25 倍、手機 1.3 倍
@@ -60,9 +64,9 @@
   function showBand() { return Math.max(50, Math.round(48 * menuK())); }   // 時鐘圓環高 46, 放大後整個要在帶內
   var SHOW_C = null;   // 這一幀表演場資訊列中段的中心 x 與倍數(drawHudShow 算, 熱度表、時鐘、聚光燈跟著用)
   function showPt(x, y) {
-    var k = menuK(), mid = (HL + 384 * k + HR - 268 * k) / 2;
+    var k = menuK(), mid = (HL() + 384 * k + HR() - 268 * k) / 2;
     if (x >= 420 && x < 1000 && SHOW_C) return { x: SHOW_C.x + (x - 710) * SHOW_C.k, y: showBand() / 2 + (y - 25) * SHOW_C.k, k: SHOW_C.k };
-    var nx = x < 420 ? HL + (x - 20) * k : (x < 1000 ? mid + (x - 710) * k : HR + (x - 1268) * k);
+    var nx = x < 420 ? HL() + (x - 20) * k : (x < 1000 ? mid + (x - 710) * k : HR() + (x - 1268) * k);
     return { x: nx, y: showBand() / 2 + (y - 25) * k, k: k };
   }
   function showRect(cx, cy, w, h) { var p = showPt(cx, cy); return { x: p.x, y: p.y, w: w * p.k, h: h * p.k }; }
@@ -109,10 +113,21 @@
   }
   function circle(ctx, x, y, r) { ctx.beginPath(); ctx.arc(x, y, Math.max(0, r), 0, TAU); }
   function ell(ctx, x, y, rx, ry, rot) { ctx.beginPath(); ctx.ellipse(x, y, Math.max(0, rx), Math.max(0, ry), rot || 0, 0, TAU); }
+  // 手機字級下限(觸控模式才套用): 玩家要讀的字畫出來至少 21px(畫布高 720 的 1/35)。
+  // 依當下的縮放換算成這一層座標的字級; 縮放動畫中(< 0.75 倍)跟著一起縮, 不硬撐
+  function minFont(ctx) {
+    if (!TON() || !ctx.getTransform) return 0;
+    var m = ctx.getTransform(), dpr = (ctx.canvas && ctx.canvas.width ? ctx.canvas.width / VW : 1) || 1;
+    var sc = Math.sqrt(Math.abs(m.a * m.d - m.b * m.c)) / dpr;
+    return sc > 0 ? 21 / Math.max(sc, 0.75) : 0;
+  }
+  // 鍵帽高 = 字高 + 6; 觸控模式 + 9(字 21 時鍵帽 30, 小圖示下限)
+  function keyH(size) { return size + (TON() ? 9 : 6); }
   // 文字: 一律帶深色描邊(P10)
   function T(ctx, str, x, y, o) {
     o = o || {};
-    var size = o.size || 16;
+    var fmin = o.noMin ? 0 : minFont(ctx);
+    var size = Math.max(o.size || 16, fmin);
     str = String(str == null ? '' : str);
     ctx.save();
     ctx.font = (o.weight || 'bold') + ' ' + size + 'px ' + FONT;
@@ -121,7 +136,7 @@
     if (o.maxW) {
       var w = ctx.measureText(str).width;
       if (w > o.maxW && w > 0) {
-        size = Math.max(9, Math.floor(size * o.maxW / w));
+        size = Math.max(9, fmin, Math.floor(size * o.maxW / w));
         ctx.font = (o.weight || 'bold') + ' ' + size + 'px ' + FONT;
       }
     }
@@ -137,6 +152,7 @@
   }
   // 依寬度斷行(逐字, 適合中文)
   function wrapLines(ctx, str, maxW, size) {
+    size = Math.max(size, minFont(ctx));
     str = String(str == null ? '' : str);
     ctx.save();
     ctx.font = 'bold ' + size + 'px ' + FONT;
@@ -173,9 +189,9 @@
       ctx.beginPath(); ctx.moveTo(0, -9); ctx.lineTo(8, 1.5); ctx.lineTo(3, 1.5); ctx.lineTo(3, 9); ctx.lineTo(-3, 9); ctx.lineTo(-3, 1.5); ctx.lineTo(-8, 1.5); ctx.closePath();
       ctx.fillStyle = ink; ctx.fill();
     } else if (label === '空白') {
-      T(ctx, '空白', cx, fy + 0.5, { size: Math.max(8, Math.round((h - lip) * 0.6)), color: ink, stroke: false });
+      T(ctx, '空白', cx, fy + 0.5, { size: Math.max(8, Math.round((h - lip) * 0.6)), color: ink, stroke: false, noMin: true });
     } else {
-      T(ctx, String(label), cx, fy + 0.5, { size: Math.max(8, Math.round((h - lip) * 0.66)), color: ink, stroke: false });
+      T(ctx, String(label), cx, fy + 0.5, { size: Math.max(8, Math.round((h - lip) * 0.66)), color: ink, stroke: false, noMin: true });
     }
     ctx.restore();
   }
@@ -195,7 +211,7 @@
   }
   function richWidth(ctx, toks, size, weight) {
     ctx.save(); ctx.font = (weight || 'bold') + ' ' + size + 'px ' + FONT;
-    var w = 0, kh = size + 6;
+    var w = 0, kh = keyH(size);
     for (var i = 0; i < toks.length; i++) {
       var t = toks[i];
       if (t.k === 'key') w += keyW(t.s, kh) + 4;
@@ -210,14 +226,14 @@
     o = o || {};
     var toks = richTokens(str, !!o.tagCol);
     if (!toks.length) return 0;
-    var size = o.size || 16;
+    var fmin = minFont(ctx), size = Math.max(o.size || 16, fmin);
     var w = richWidth(ctx, toks, size, o.weight);
     if (o.maxW && w > o.maxW && w > 0) {
-      size = Math.max(9, Math.floor(size * o.maxW / w));
+      size = Math.max(9, fmin, Math.floor(size * o.maxW / w));
       w = richWidth(ctx, toks, size, o.weight);
-      if (w > o.maxW) { size = Math.max(8, Math.floor(size * o.maxW / w)); w = richWidth(ctx, toks, size, o.weight); }
+      if (w > o.maxW) { size = Math.max(8, fmin, Math.floor(size * o.maxW / w)); w = richWidth(ctx, toks, size, o.weight); }
     }
-    var al = o.align || 'center', cx = al === 'left' ? x : (al === 'right' ? x - w : x - w / 2), kh = size + 6;
+    var al = o.align || 'center', cx = al === 'left' ? x : (al === 'right' ? x - w : x - w / 2), kh = keyH(size);
     ctx.save(); ctx.font = (o.weight || 'bold') + ' ' + size + 'px ' + FONT;
     for (var i = 0; i < toks.length; i++) {
       var t = toks[i];
@@ -248,7 +264,8 @@
   // 依空白斷成最多 maxLines 行(每行仍可含鍵帽), 每行各自置中 / 靠左
   function richLines(ctx, str, x, y, o) {
     o = o || {};
-    var size = o.size || 16, maxW = o.maxW || 9999, maxLines = o.maxLines || 2, lh = o.lineH || (size + 8);
+    var size0 = o.size || 16, size = Math.max(size0, minFont(ctx)), maxW = o.maxW || 9999, maxLines = o.maxLines || 2;
+    var lh = (o.lineH || (size0 + 8)) * size / size0;   // 字被拉到下限時行距跟著放大
     var words = String(str == null ? '' : str).split(' '), lines = [], cur = '';
     for (var i = 0; i < words.length; i++) {
       var test = cur ? cur + ' ' + words[i] : words[i];
@@ -2395,9 +2412,11 @@
   function drawPickerPanel(ctx, s) {
     var layer = S(s.layer, 'cue') === 'program' ? 'program' : 'cue';
     var opts = Array.isArray(s.options) ? s.options : [];
-    var n = Math.min(10, opts.length), idx = Math.floor(N(s.index, 0)), RH = 44;
+    // 觸控模式(手機字級下限): 行高 44 → 60、面板加寬, 名稱 / 說明字放大到 21px 以上, 圖示放大到 30px 以上
+    var tch = TON();
+    var n = Math.min(10, opts.length), idx = Math.floor(N(s.index, 0)), RH = tch ? 60 : 44;
     var accent = layer === 'cue' ? P.cue : P.program;
-    var X = 760, W = 460, Y = 60;
+    var X = tch ? 736 : 760, W = tch ? 508 : 460, Y = 60, IK = tch ? 1.25 : 1;
     ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 16;
     rr(ctx, X, Y, W, 50 + RH * n, 12); ctx.fillStyle = '#1e2536'; ctx.fill(); ctx.restore();
     rr(ctx, X, Y, W, 50 + RH * n, 12); ctx.strokeStyle = accent; ctx.lineWidth = 2; ctx.stroke();
@@ -2421,25 +2440,30 @@
       if (tool) sepDone = true;
       var deny = act === 'denied', swap = act === 'swap' && used > 0;
       ctx.save(); if (deny) ctx.globalAlpha *= 0.4;
-      if (act === 'up' || act === 'down') pickArrow(ctx, X + 32, cy, act === 'up');
-      else if (act === 'clear') iconProg(ctx, 'clear', X + 32, cy, 12, 1);
-      else if (layer === 'cue') iconCue(ctx, CUE[key] ? key : '', X + 32, cy, 13, 1);
-      else iconProg(ctx, PROG[key] ? key : '', X + 32, cy, 13, 1);
-      var nm = S(o.name, '') || PICK_NAME[act] || '';
-      var desc = tool ? '' : S(o.desc, ''), tw = deny ? 300 : (swap ? 236 : 384);
+      var ix = X + 32 * (tch ? 1.15 : 1);
+      ctx.save(); ctx.translate(ix, cy); ctx.scale(IK, IK); ctx.translate(-ix, -cy);
+      if (act === 'up' || act === 'down') pickArrow(ctx, ix, cy, act === 'up');
+      else if (act === 'clear') iconProg(ctx, 'clear', ix, cy, 12, 1);
+      else if (layer === 'cue') iconCue(ctx, CUE[key] ? key : '', ix, cy, 13, 1);
+      else iconProg(ctx, PROG[key] ? key : '', ix, cy, 13, 1);
+      ctx.restore();
+      var nm = S(o.name, '') || PICK_NAME[act] || '', tx0 = X + (tch ? 70 : 58);
+      var desc = tool ? '' : S(o.desc, ''), tw = tch ? (deny ? 316 : (swap ? 230 : 420)) : (deny ? 300 : (swap ? 236 : 384));
       if (desc) {
-        T(ctx, nm, X + 58, cy - 9, { size: 17, align: 'left', maxW: tw, color: deny ? P.textDim : P.text });
-        T(ctx, desc, X + 58, cy + 11, { size: 13, align: 'left', color: P.textDim, maxW: tw });
-      } else T(ctx, nm, X + 58, cy, { size: 18, align: 'left', color: (act === 'clear' || deny) ? P.textDim : (tool ? '#e0e8f4' : P.text), maxW: tw });
+        T(ctx, nm, tx0, cy - (tch ? 13 : 9), { size: tch ? 22 : 17, align: 'left', maxW: tw, color: deny ? P.textDim : P.text });
+        T(ctx, desc, tx0, cy + (tch ? 14 : 11), { size: 13, align: 'left', color: P.textDim, maxW: tw });
+      } else T(ctx, nm, tx0, cy, { size: 18, align: 'left', color: (act === 'clear' || deny) ? P.textDim : (tool ? '#e0e8f4' : P.text), maxW: tw });
       ctx.restore();
       if (deny && used > 0) {
-        rr(ctx, X + W - 88, cy - 12, 74, 24, 12); ctx.fillStyle = '#2c3446'; ctx.fill(); ctx.strokeStyle = '#5a6274'; ctx.lineWidth = 1.5; ctx.stroke();
-        T(ctx, '第 ' + used + ' 列', X + W - 51, cy + 0.5, { size: 14, color: '#c8d0e0', maxW: 66 });
+        var dw = tch ? 100 : 74, dh = tch ? 32 : 24;
+        rr(ctx, X + W - 14 - dw, cy - dh / 2, dw, dh, dh / 2); ctx.fillStyle = '#2c3446'; ctx.fill(); ctx.strokeStyle = '#5a6274'; ctx.lineWidth = 1.5; ctx.stroke();
+        T(ctx, '第 ' + used + ' 列', X + W - 14 - dw / 2, cy + 0.5, { size: 14, color: '#c8d0e0', maxW: dw - 8 });
       } else if (swap) {
         // 互換: 亮的青框膠囊「⇄ 和第 N 列交換」(一般亮度, 選得到)
-        rr(ctx, X + W - 158, cy - 13, 144, 26, 13); ctx.fillStyle = '#16323a'; ctx.fill(); ctx.strokeStyle = P.cue; ctx.lineWidth = 1.5; ctx.stroke();
-        swapArrows(ctx, X + W - 140, cy);
-        T(ctx, '和第 ' + used + ' 列交換', X + W - 126, cy + 0.5, { size: 14, align: 'left', color: '#d8f4fa', maxW: 106 });
+        var sw2 = tch ? 196 : 144, sh2 = tch ? 34 : 26;
+        rr(ctx, X + W - 14 - sw2, cy - sh2 / 2, sw2, sh2, sh2 / 2); ctx.fillStyle = '#16323a'; ctx.fill(); ctx.strokeStyle = P.cue; ctx.lineWidth = 1.5; ctx.stroke();
+        swapArrows(ctx, X + W - sw2 + 4, cy);
+        T(ctx, '和第 ' + used + ' 列交換', X + W - sw2 + 18, cy + 0.5, { size: 14, align: 'left', color: '#d8f4fa', maxW: sw2 - 38 });
       }
       if (i === idx) selectFrame(ctx, X + 4, ry + 1, W - 8, RH - 2, 8);
     }
@@ -2879,7 +2903,9 @@
     rr(ctx, 431, 5, 418, 40, 10); ctx.strokeStyle = fr ? 'rgba(255,59,74,' + (0.5 + 0.5 * pulse).toFixed(3) + ')' : '#3a4256'; ctx.lineWidth = fr ? 2 : 1.5; ctx.stroke();
     // 文字區
     T(ctx, '熱度', 438, 16, { size: 13, align: 'left', color: P.textDim });
-    T(ctx, Math.round(heat) + '%', 472, 16, { size: 17, align: 'left', color: tc, maxW: 54 });
+    var hx = 472;   // 觸控模式「熱度」被拉到字級下限變寬: 百分比跟著往右排
+    if (TON()) { ctx.save(); ctx.font = 'bold ' + Math.max(13, minFont(ctx)) + 'px ' + FONT; hx = Math.max(472, 438 + ctx.measureText('熱度').width + 4); ctx.restore(); }
+    T(ctx, Math.round(heat) + '%', hx, 16, { size: 17, align: 'left', color: tc, maxW: 526 - hx });
     ctx.save(); ctx.translate(481, 35); ctx.scale(1 + 0.18 * bq, 1 + 0.18 * bq);
     T(ctx, TIER[tier].name, 0, 0, { size: 16, color: tc, maxW: 86 });
     ctx.restore();
@@ -2944,8 +2970,8 @@
   function drawHeatAlert(ctx, s) {
     var t = Math.max(0, N(s.t, 0));
     var a = 0.18 + 0.5 * (0.5 - 0.5 * Math.cos(TAU * t / 0.8));
-    ctx.translate(VX, 0);
-    var E = 40, W = VW, H = 720, c0 = 'rgba(255,59,74,' + a.toFixed(3) + ')', c1 = 'rgba(255,59,74,0)';
+    ctx.translate(TON() ? 0 : VX, 0);
+    var E = 40, W = TON() ? 1280 : VW, H = 720, c0 = 'rgba(255,59,74,' + a.toFixed(3) + ')', c1 = 'rgba(255,59,74,0)';
     var g;
     g = ctx.createLinearGradient(0, 0, 0, E); g.addColorStop(0, c0); g.addColorStop(1, c1); ctx.fillStyle = g; ctx.fillRect(0, 0, W, E);
     g = ctx.createLinearGradient(0, H, 0, H - E); g.addColorStop(0, c0); g.addColorStop(1, c1); ctx.fillStyle = g; ctx.fillRect(0, H - E, W, E);
@@ -3126,6 +3152,9 @@
     // 第 9 輪: 左邊能力面板 330×240 中心 (205,380)(x 40~370、y 260~500): 小標「目前能力」(205,285) + 三列「文字 + 圖示 × N」, 不寫數字
     // 文字左緣 x 60; 圖示 20×20、第 j 個中心 x 160 + 23j(三列第 1 個圖示對齊同一條直線); 列中心 y 335 / 395 / 455
     var st = (s.stats && typeof s.stats === 'object') ? s.stats : {};
+    // 觸控模式: 面板整塊往上移 120(下半會被方向鍵蓋住), 圖示放大到 30px 上下(小圖示下限)
+    var wtch = TON(), wsk = wtch ? 1.3 : 1, wsp = wtch ? 25 : 23;
+    ctx.save(); if (wtch) ctx.translate(0, -120);
     panel(ctx, 41, 261, 328, 238, 14, '#1c2232', P.line);
     T(ctx, '目前能力', 205, 285, { size: 19, color: P.textDim });
     ctx.fillStyle = '#2c3446'; ctx.fillRect(60, 304, 290, 2);
@@ -3134,12 +3163,13 @@
       var ra = rowsA[k], cnt = clamp(Math.floor(ra[2]), 0, 9);
       T(ctx, ra[1], 60, ra[3], { size: 22, align: 'left', color: '#ffffff', maxW: 86 });
       for (var j = 0; j < cnt; j++) {
-        var ix = 160 + 23 * j;
-        if (ra[0] === 'heart') { heartPath(ctx, ix, ra[3] + 0.5, 9.2); ctx.fillStyle = BOOST.heart.color; ctx.fill(); ctx.strokeStyle = P.outline; ctx.lineWidth = 1.5; ctx.stroke(); }
-        else if (ra[0] === 'rope') ropeIcon(ctx, ix, ra[3], 11, true);
-        else boostGlyph(ctx, 'atk', ix, ra[3], 8.6, BOOST.atk.color);
+        var ix = 160 + wsp * j;
+        if (ra[0] === 'heart') { heartPath(ctx, ix, ra[3] + 0.5, 9.2 * wsk); ctx.fillStyle = BOOST.heart.color; ctx.fill(); ctx.strokeStyle = P.outline; ctx.lineWidth = 1.5; ctx.stroke(); }
+        else if (ra[0] === 'rope') ropeIcon(ctx, ix, ra[3], wtch ? 12 : 11, true);
+        else boostGlyph(ctx, 'atk', ix, ra[3], 8.6 * wsk, BOOST.atk.color);
       }
     }
+    ctx.restore();
     // 卡片 260×360, 第 i 張中心 x = 820 + 290 ×(i − (n−1)/2)、y 380; 選中放大 280/260 倍(280×388 內)
     var SEL_K = 280 / 260;
     for (var i = 0; i < n; i++) {
@@ -3564,7 +3594,7 @@
       repIcon(ctx, repX - 16, 25, 11);
       T(ctx, repT, repX, 25, { size: 20, align: 'left', color: P.rep, maxW: 120 });
     });
-    var k0 = menuK(), lx = HL + (174 + sw - 20) * k0, rx = HR + (rStart - 1268) * k0;
+    var k0 = menuK(), lx = HL() + (174 + sw - 20) * k0, rx = HR() + (rStart - 1268) * k0;
     SHOW_C = { x: (lx + rx) / 2, k: Math.max(0.75, Math.min(k0, ((rx - lx) / 2 - 14) / 290)) };
     var msg = S(s.message, '');
     if (msg) showGrp(ctx, 932, 25, function () {
@@ -3601,8 +3631,10 @@
     // 第 1 行右: 金幣、名聲
     // 第 1 行右: (地下城)武器小圖示 + 攻擊加成, 金幣、名聲
     var atk = clamp(Math.floor(N(s.atk, 0)), 0, 9);
+    // 觸控模式: HUD 收在設計區內又放大, 第 1 行中段放不下 → 武器小圖示 + 攻擊加成改排到第 2 行收服列後面
+    var wRow2 = dg && TON();
     hudGrp(ctx, 1268, 25, phase, function () {
-      if (dg) {
+      if (dg && !wRow2) {
         iconWeapon(ctx, wpKey(s.weapon), 880, 26, 22);
         T(ctx, '+' + atk, 920, 25, { size: 19, color: atk > 0 ? P.boost : '#c8b880', strokeColor: '#3a2600', strokeW: 4, maxW: 40 });
       }
@@ -3615,7 +3647,7 @@
     // 第 1 行中: 時間條 + 秒數(見習草地是任務列), 放在左右兩塊中間; 中間放不下原倍數就少放大一點
     HUD_C = null;
     if (dg) {
-      var lx = HL + (leftEnd - 20) * k1, rx = HR + (866 - 1268) * k1, half = meadow ? 220 : 170;
+      var lx = HL() + (leftEnd - 20) * k1, rx = HR() + ((wRow2 ? 988 : 866) - 1268) * k1, half = meadow ? 220 : 170;
       HUD_C = { x: (lx + rx) / 2, k: Math.max(0.8, Math.min(k1, ((rx - lx) / 2 - 16) / half)) };
     }
     if (tmax > 0 && !meadow) hudGrp(ctx, 640, 25, phase, function () {
@@ -3625,23 +3657,29 @@
     if (!dg) {
       if (phase === 'setup1') { if (msg) richLine(ctx, msg, 480, 685, { size: 17, color: '#d8e0ee', maxW: 400 }); return; }
       // 按鍵提示置中, 最寬到左塊(天數)與右塊(金幣)之間的空間為止
-      var km = hudK(phase), mc = hudPt(640, 25).x, lx = HL + (152 - 20) * km, rx = HR + (988 - 1268) * km;
+      var km = hudK(phase), mc = hudPt(640, 25).x, lx = HL() + (152 - 20) * km, rx = HR() + (988 - 1268) * km;
       var mw = Math.max(120, Math.min(600, 2 * (Math.min(mc - lx, rx - mc) / km - 12)));
       if (msg) hudGrp(ctx, 640, 25, phase, function () { richLine(ctx, msg, tmax > 0 ? 880 : 640, 25, { size: 17, color: '#d8e0ee', maxW: tmax > 0 ? 200 : mw }); });
       return;
     }
     // 第 2 行左: 捕捉繩 + 收服列
     var rm = clamp(Math.floor(N(s.ropeMax, 5)), 0, 9), ro = clamp(Math.floor(N(s.ropes, 0)), 0, rm);
+    var cn = Array.isArray(s.caught) ? Math.min(10, s.caught.length) : 0, wx = (cn ? 346 + 28 * (cn - 1) + 13 : 359) + 34;
     hudGrp(ctx, 20, 74, phase, function () {
-      for (var k = 0; k < rm; k++) ropeIcon(ctx, 40 + k * 22, 74, 10, k < ro);
+      // 觸控模式: 繩圈放大到 30px 以上(小圖示下限), 間距跟著加大
+      for (var k = 0; k < rm; k++) ropeIcon(ctx, 40 + k * (wRow2 ? 24 : 22), 74, wRow2 ? 11.5 : 10, k < ro);
       caughtRow(ctx, Array.isArray(s.caught) ? s.caught : []);
+      if (wRow2) {
+        iconWeapon(ctx, wpKey(s.weapon), wx, 75, 22);
+        T(ctx, '+' + atk, wx + 40, 74, { size: 19, color: atk > 0 ? P.boost : '#c8b880', strokeColor: '#3a2600', strokeW: 4, maxW: 40 });
+      }
     });
     // 第 2 行右: 按鍵提示 / 訊息(靠右, 寬度到收服列最多 10 格為止)
     var xm = N(s.xCdMax, 0), xl = N(s.xCdLeft, 0), xcd = (xm > 0 && xl > 0) ? p01(xl, xm) : 0;
     var mcol = msg.indexOf('爆炸桶') >= 0 ? '#ff6b78' : ((msg.indexOf('繞') >= 0 || msg.indexOf('丟繩') >= 0) ? P.capture : '#d8e0ee');
     if (msg) {
-      var kk = hudK(phase), wEnd = hudPt(632, 74).x;
-      hudGrp(ctx, 1260, 74, phase, function () { richLine(ctx, msg, 1260, 74, { size: 16, color: mcol, maxW: (HR - wEnd - 24) / kk, xCd: xcd, align: 'right' }); });
+      var kk = hudK(phase), wEnd = wRow2 ? HL() + (wx + 66 - 20) * kk : hudPt(632, 74).x;
+      hudGrp(ctx, 1260, 74, phase, function () { richLine(ctx, msg, 1260, 74, { size: 16, color: mcol, maxW: (HR() - wEnd - 24) / kk, xCd: xcd, align: 'right' }); });
     }
   }
 
@@ -4016,6 +4054,16 @@
     ctx.restore();
   }
   var KEY_OK = { up: 1, down: 1, left: 1, right: 1, circle: 1 }; // 本輪 z、x 不再出現在 keys(改寫在 text 的鍵帽標記)
+  // 主教學泡泡畫出來(出現動畫結束後)的外框 {x0, y0, x1, y1}: 和 drawTutorial 同一套算法, 給遊戲端判斷泡泡會不會蓋到馴獸師
+  function tutBox(s) {
+    s = s || {};
+    var bx = N(s.bx, 640), by = N(s.by, 360), tx = N(s.x, bx), up = S(s.side, 'up') !== 'down';
+    var tk = Math.min(1.35, TON() ? HUD_KM : HUD_KD);
+    if (up) by -= 16 * (hudK('dungeon') - 1);
+    var HW = 158, HH = 46, baseY = up ? by + HH + 2 : by - HH - 2, TB = HW - 28, root0 = clamp(tx, bx - TB, bx + TB);
+    tk = Math.max(1, Math.min(tk, (up ? baseY - HUD_LAST_H - 4 : 716 - baseY) / (2 * HH + 4)));
+    return { x0: root0 + (bx - HW - root0) * tk, x1: root0 + (bx + HW - root0) * tk, y0: baseY + (by - HH - baseY) * tk, y1: baseY + (by + HH - baseY) * tk };
+  }
   function drawTutorial(ctx, s) {
     var bx = N(s.bx, 640), by = N(s.by, 360), tx = N(s.x, bx), ty = N(s.y, by + 100);
     var up = S(s.side, 'up') !== 'down'; // up: 泡泡在目標上方, 尾巴朝下
@@ -4109,8 +4157,9 @@
       var w = 0; for (var i = 0; i < segs.length; i++) w += ctx.measureText(segs[i].s).width;
       ctx.restore(); return w;
     }
+    var fmin = minFont(ctx); size = Math.max(size, fmin);
     var w = width(size);
-    if (maxW && w > maxW && w > 0) { size = Math.max(9, Math.floor(size * maxW / w)); w = width(size); }
+    if (maxW && w > maxW && w > 0) { size = Math.max(9, fmin, Math.floor(size * maxW / w)); w = width(size); }
     var cx = x - w / 2;
     ctx.save(); ctx.font = 'bold ' + size + 'px ' + FONT;
     for (var i = 0; i < segs.length; i++) {
@@ -4719,7 +4768,7 @@
   // 聲音開關圖示(電腦版): 畫面右上角、頂端資訊列下方; 開 = 喇叭 + 聲波, 關 = 灰喇叭 + 紅叉; 右下角小 [M] 鍵帽。
   // s.muted: 是否靜音; s.hud: 這個畫面有沒有畫頂端資訊列(有就放在它下方)
   function drawSoundIcon(ctx, s) {
-    var k = menuK(), sz = 40 * k, x = HR - sz, y = (B(s.hud) ? HUD_LAST_H : 0) + 12 * k, muted = B(s.muted);
+    var k = menuK(), sz = 40 * k, x = HR() - sz, y = (B(s.hud) ? HUD_LAST_H : 0) + 12 * k, muted = B(s.muted);
     rr(ctx, x, y, sz, sz, 9 * k); ctx.fillStyle = 'rgba(12,15,22,0.72)'; ctx.fill();
     ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1.5; ctx.stroke();
     ctx.save();
@@ -4799,7 +4848,7 @@
     drawFloatText: wrap(drawFloatText),
     drawResultPanel: wrap(drawResultPanel),
     drawHud: wrap(drawHud),
-    hudH: hudH, hudPt: hudPt, hudRect: hudRect, showPt: showPt, showRect: showRect,
+    hudH: hudH, tutBox: tutBox, hudPt: hudPt, hudRect: hudRect, showPt: showPt, showRect: showRect,
     drawQuestBanner: wrap(drawQuestBanner),
     drawTutorial: wrap(drawTutorial),
     drawGuide: wrap(drawGuide),

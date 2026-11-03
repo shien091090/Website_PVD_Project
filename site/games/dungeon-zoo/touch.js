@@ -50,14 +50,19 @@
     },
   };
 
-  // ───────── 版面(以 1680×720 為準; 右邊的按鈕對齊右緣, 換算成實際畫布寬) ─────────
-  var CW = (window.Art && Art.canvas && Art.canvas.width) || 1680, CH = (window.Art && Art.canvas && Art.canvas.height) || 720;
+  // ───────── 版面: 觸控時 1280×720 設計區置中、上下貼邊、不縮小(縮小後 HUD 字太小), 兩側塗黑, 按鈕靠兩側擺, 黑塊不夠寬時壓到設計區邊緣 ─────────
+  var CW = (window.Art && Art.canvas && Art.canvas.width) || 1280, CH = (window.Art && Art.canvas && Art.canvas.height) || 720;
+  // 按鈕中心: 黑塊夠寬就置中在黑塊裡, 不夠寬就貼著畫布外緣(離邊 16)
+  var SW = (CW - 1280) / 2, RO = 124, BR = 72, SR = BR * 0.8;
+  var DX = Math.max(SW / 2, RO + 16), AX = CW - Math.max(SW / 2, BR + 16);
+  var AY = CH - BR - 80, BY = AY - BR - 16 - SR, CY = BY - SR * 2 - 16;
   var LAYOUT = {
     // 圓弧方向鍵: 中心 (x, y), 外圈半徑 Ro、內圈半徑 Ri, 四段相連不留縫(gap 0, 方便斜按時同時壓到兩段; 要留縫才調大); 可按範圍半徑 R(比外圈大, 手指偏出去也算), 中心 dead 內不算
-    dpad: { x: 192, y: CH - 182, Ro: 168, Ri: 58, gap: 0, R: 190, dead: 26 },
-    a: { x: CW - 100, y: CH - 116, r: 80, hit: 96 },
-    b: { x: CW - 262, y: CH - 68, r: 62, hit: 76 },
-    c: { x: CW - 82, y: CH - 292, r: 54, hit: 66 },
+    dpad: { x: DX, y: CH - RO - 80, Ro: RO, Ri: RO * 0.36, gap: 0, R: RO + 24, dead: 20 },
+    // 右側黑塊由下往上一直排: A(最大, 拇指最順的位置)→ B → 繩索 C, 中心在同一條直線上, 彼此留 16
+    a: { x: AX, y: AY, r: BR, hit: BR + 16 },
+    b: { x: AX, y: BY, r: SR, hit: SR + 14 },
+    c: { x: AX, y: CY, r: SR, hit: SR + 14 },
   };
 
   // ───────── 是不是觸控模式 ─────────
@@ -70,6 +75,7 @@
   var KEYS = CONFIG.mode === 'keys';
 
   var PVDX = { on: ON, paused: false, held: {}, draw: function () { }, finish: function () { } };
+  if (ON && KEYS) PVDX.layout = LAYOUT;   // game.js 用它讓教學泡泡閃開按鈕(畫布座標)
   window.PVDX = PVDX;
   function call(fn, arg) { try { fn(arg); } catch (e) { console.error(e); } }
 
@@ -101,7 +107,7 @@
         }
         ctx.beginPath(); ctx.arc(d.x, d.y, d.Ri - d.gap, 0, Math.PI * 2); ctx.fillStyle = 'rgba(26,32,48,0.3)'; ctx.fill();
       }
-      var btns = [['a', 'A', 64], ['b', 'B', 50], ['c', null, 0]];
+      var btns = [['a', 'A', Math.round(BR * 0.8)], ['b', 'B', Math.round(SR * 0.8)], ['c', null, 0]];
       for (i = 0; i < btns.length; i++) {
         var id = btns[i][0], b = LAYOUT[id];
         if (!vis[id] || !K[id]) continue;
@@ -303,6 +309,12 @@
     checkOrient();
     if (!KEYS) return;
     for (var id in touches) { recompute(); break; }   // 場景換了(按鈕顯示變了)而手指還按著: 重新判定
+    // 設計區兩側塗純黑(蓋掉任何畫到兩側的背景、壓暗、特效), 按鈕畫在黑塊上
+    if (SW > 0) {
+      ctx.save(); ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, SW, CH); ctx.fillRect(CW - SW, 0, SW, CH);
+      ctx.restore();
+    }
     Pad.draw(ctx, held, CONFIG.visible());
   };
 })();

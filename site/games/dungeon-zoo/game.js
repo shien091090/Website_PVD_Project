@@ -7,7 +7,9 @@ const CW = (Art.canvas && Art.canvas.width) || 1280;
 const CH = (Art.canvas && Art.canvas.height) || 720;
 // 畫面 CW×720(CW 由 art.js 依裝置決定, 1280~1680)= 1280×720 的設計區置中、左右各多 OX。所有畫面先平移 OX 再畫, 介面座標維持原 1280 設計值;
 // 兩側由美術的整面底色補滿; 地下城鏡頭可視寬 = CW, 顯示範圍是設計座標 -OX ~ DW+OX。
+// 觸控模式: 兩側是 touch.js 的黑塊與按鈕, 鏡頭、出界判斷、邊緣提示都只用設計區 0 ~ DW(VEX() = 每側可見的延伸寬, 觸控為 0)
 const DW = 1280, OX = (CW - DW) / 2;
+function VEX() { return (window.PVDX && PVDX.on) ? 0 : OX; }
 const DAY_MAX = 4;
 const START_GOLD = 40;                     // 第 1 天開局 / 重來開局的底金(見習表演沒有金幣)
 const WAIT_SECS = 5;                       // 暗號「過 5 秒」
@@ -659,12 +661,73 @@ function tutUpdate(dt) {
 function tutGeo(c, def) {
   if (def.geo) return def.geo();
   const tg = def.tgt(); if (!tg) return null;
+  if (scene === 'dungeon' && D && TUT_DODGE[c.id]) return tutGeoDodge(c, tg);
   const side = tg.y < 300 ? 'down' : 'up';
   const ty = side === 'down' ? tg.y + tg.hh : tg.y - tg.hh;
   const top = (scene === 'dungeon' ? 100 : 50) + 52;
   const by = clamp(side === 'down' ? ty + 60 : ty - 60, top, CH - 52);
   const bx = clamp(tg.x, 170, DW - 170);
   return { x: tg.x, y: ty, bx, by, side };
+}
+// 地下城裡指向物件的泡泡(目標不是馴獸師自己): 會蓋到馴獸師(含頭上愛心)或目標時換位置
+// 候選順序: 原位置 → 目標另一側 → 原側往左 / 右閃開馴獸師 → 另一側往左 / 右; 都不行就挑蓋到最少的
+// 遲滯: 換走之後, 原位置要明顯空出來(多留 24)才換回; 目前位置還沒蓋到就不動, 換位置時新位置要多留 12
+// 目標不在畫面可見範圍內: 泡泡與箭頭都不畫(階段照樣未完成, 走回看得到的地方再出現)
+const TUT_DODGE = { 3: true, 4: true, 5: true, 6: true, 26: true, 27: true, 28: true };
+function tutGeoDodge(c, tg) {
+  const HH = Art.hudH ? Art.hudH('dungeon') : 100;
+  if (tg.x < 0 || tg.x > DW || tg.y < HH || tg.y > CH) { c.dodgePick = 0; return null; }
+  const top = 100 + 52;
+  // 目標在畫面上半放下方、否則上方(上下換邊也帶 30 的遲滯)
+  const s0 = c.side0 === 'down' ? (tg.y < 330 ? 'down' : 'up') : c.side0 === 'up' ? (tg.y < 270 ? 'down' : 'up') : (tg.y < 300 ? 'down' : 'up');
+  c.side0 = s0;
+  const s1 = s0 === 'down' ? 'up' : 'down';
+  const T = D.tamer, p = scr(T.x, T.y), hk = Art.hudPt ? Art.hudPt(0, 0).k || 1 : 1;
+  const hw = Math.max(36, 11 * T.maxHearts * hk);
+  const tam = { x0: p.x - hw, x1: p.x + hw, y0: p.y - 46 - 14 * hk, y1: p.y + 30 };
+  const tgb = { x0: tg.x - 28, x1: tg.x + 28, y0: tg.y - tg.hh, y1: tg.y + 24 };
+  const box0 = Art.tutBox ? Art.tutBox({ x: tg.x, bx: 640, by: 360, side: 'up' }) : { x0: 0, x1: 316 };
+  const halfW = (box0.x1 - box0.x0) / 2;
+  const mk = (side, bx) => {
+    const ty = side === 'down' ? tg.y + tg.hh : tg.y - tg.hh;
+    const by = clamp(side === 'down' ? ty + 60 : ty - 60, top, CH - 52);
+    const g = { x: tg.x, y: ty, bx: clamp(bx, 170, DW - 170), by, side };
+    // 放大後的泡泡以尾巴根部為錨, 可能超出畫面左右: 往內推回來
+    for (let i = 0; i < 2 && Art.tutBox; i++) {
+      const b = Art.tutBox(g), k = (b.x1 - b.x0) / 316;
+      if (b.x1 > DW - 6) g.bx -= (b.x1 - DW + 6) / k; else if (b.x0 < 6) g.bx += (6 - b.x0) / k; else break;
+    }
+    return g;
+  };
+  const bx0 = tg.x, lx = tam.x0 - 16 - halfW, rx = tam.x1 + 16 + halfW;
+  const lr = tg.x <= p.x ? [lx, rx] : [rx, lx];
+  const cands = [mk(s0, bx0), mk(s1, bx0), mk(s0, lr[0]), mk(s0, lr[1]), mk(s1, lr[0]), mk(s1, lr[1])];
+  const ov = (a, b, m) => Math.max(0, Math.min(a.x1 + m, b.x1) - Math.max(a.x0 - m, b.x0)) * Math.max(0, Math.min(a.y1 + m, b.y1) - Math.max(a.y0 - m, b.y0));
+  const boxOf = g => (Art.tutBox ? Art.tutBox(g) : { x0: g.bx - 158, x1: g.bx + 158, y0: g.by - 46, y1: g.by + 46 });
+  // 觸控按鈕(壓進設計區的部分)也盡量不蓋: 換成設計座標, 外框往內縮 12(只壓到邊一點不算)
+  const L = window.PVDX && PVDX.on && PVDX.layout, btns = [];
+  if (L) for (const k of ['dpad', 'a', 'b', 'c']) {
+    const o = L[k]; if (!o) continue; const r = (o.Ro || o.r) - 12;
+    btns.push({ x0: o.x - OX - r, x1: o.x - OX + r, y0: o.y - r, y1: o.y + r });
+  }
+  const btnOv = b => btns.reduce((s, q) => s + ov(b, q, 0), 0);
+  const ok = (i, m) => {
+    const b = boxOf(cands[i]);
+    if (b.y0 < HH - 2 || b.y1 > CH + 2 || b.x0 < -2 || b.x1 > DW + 2) return false;
+    return ov(b, tam, m) === 0 && ov(b, tgb, m) === 0 && btnOv(b) === 0;
+  };
+  let pick = c.dodgePick || 0;
+  if (pick !== 0 && ok(0, 24)) pick = 0;
+  else if (!ok(pick, 0)) {
+    pick = -1;
+    for (let i = 0; i < cands.length; i++) if (ok(i, 12)) { pick = i; break; }
+    if (pick < 0) {
+      let best = 1e12;
+      for (let i = 0; i < cands.length; i++) { const b = boxOf(cands[i]), a = ov(b, tam, 0) * 3 + ov(b, tgb, 0) + btnOv(b); if (a < best) { best = a; pick = i; } }
+    }
+  }
+  c.dodgePick = pick;
+  return cands[pick];
 }
 // mode: 'below' = 只畫 HUD 之下的(地下城); 'above' = 只畫 HUD 之上的(第 18 階段); 'all' = 全部(非地下城畫面, HUD 之後呼叫)
 function renderTutorial(mode) {
@@ -700,7 +763,7 @@ function renderTutNote() {
   if (n.phase === 'show' && !TS[n.id].where()) return;
   Art.drawTutorial(ctx, {
     stage: n.id, kind: 'note', text: TS[n.id].text(), keys: [], pressed: [],
-    x: 40 + 11 * (ropeMaxNow() - 1), y: 60, bx: 186, by: 26, side: 'up', phase: n.phase,
+    x: 40 + ((window.PVDX && PVDX.on) ? 12 : 11) * (ropeMaxNow() - 1), y: 60, bx: 186, by: 26, side: 'up', phase: n.phase,
     appearT: Math.min(0.25, n.age), appearDur: 0.25,
     doneT: n.phase === 'done' ? n.doneT : 0.6, doneDur: 0.6,
   });
@@ -755,7 +818,8 @@ function guideGeo(id) {
     case 24: {
       const p = D.exit ? scr(D.exit.x, D.exit.y) : { x: 640, y: 400 };
       let sx = p.x, sy = p.y, edge = null;
-      if (p.x < -OX || p.x > DW + OX || p.y < 100 || p.y > 720) { sx = clamp(p.x, 60 - OX, 1220 + OX); sy = clamp(p.y, 160, 660); edge = Math.atan2(p.y - sy, p.x - sx); }
+      const ex = VEX();
+      if (p.x < -ex || p.x > DW + ex || p.y < 100 || p.y > 720) { sx = clamp(p.x, 60 - ex, 1220 + ex); sy = clamp(p.y, 160, 660); edge = Math.atan2(p.y - sy, p.x - sx); }
       const below = sy < 410;
       return Object.assign(base, { text: '這是出口 可以中途離開', spot: circ(sx, sy, 50), edgeAngle: edge,
         cardX: clamp(sx, 240, 1040), cardY: below ? sy + 144 : sy - 144, tipX: sx, tipY: below ? sy + 52 : sy - 52 });
@@ -982,11 +1046,11 @@ function camOf() {
   if (!D) return { x: 0, y: 0 };
   const T = D.tamer;
   // 可視寬 CW: 地圖比可視寬窄時置中(兩側露出的是地下城背景底色), 否則跟著玩家並夾在地圖範圍內
-  const mapW = D.W * TILE;
-  const cx = mapW <= CW ? -(CW - mapW) / 2 : clamp(T.x - CW / 2, 0, mapW - CW);
+  const mapW = D.W * TILE, ex = VEX(), vw = DW + 2 * ex;
+  const cx = mapW <= vw ? -(vw - mapW) / 2 : clamp(T.x - vw / 2, 0, mapW - vw);
   const HH = Art.hudH ? Art.hudH('dungeon') : 100;   // HUD 帶高度(放大後可能超過 100), 地圖從它下面開始
   const cy = clamp(T.y - 310 - (HH - 100) / 2, 0, Math.max(0, D.H * TILE - (CH - HH)));
-  return { x: cx + OX, y: cy - HH };   // 設計座標畫面 = 世界 − cam(x 已含平移 OX)
+  return { x: cx + ex, y: cy - HH };   // 設計座標畫面 = 世界 − cam(x 已含平移 OX)
 }
 function monStat(sp) {
   const base = SP[sp];
@@ -3037,17 +3101,18 @@ function drawHazards(list, areaPhase, ox, oy, killer) {
   }
 }
 function tileKind(ch) { return ch === '#' ? 'wall' : ch === 'o' ? 'pillar' : ch === 'L' ? 'hurt' : ch === 'W' ? 'slow' : ch === 'G' ? 'bush' : 'floor'; }
-function onScr(x, y, m) { return x > -OX - m && x < DW + OX + m && y > (Art.hudH ? Art.hudH('dungeon') : 100) - m && y < CH + m; }
+function onScr(x, y, m) { const ex = VEX(); return x > -ex - m && x < DW + ex + m && y > (Art.hudH ? Art.hudH('dungeon') : 100) - m && y < CH + m; }
 const STATIC_FLOAT = { hint: true, boost: true, confetti: true, unlock: true };
 
 function renderDungeon() {
   const T = D.tamer, st = D.style, cam = camOf(), ox = cam.x, oy = cam.y, fl = D.fi + 1;
   Art.drawBackground(ctx, bgState('dungeon'));
   ctx.save();
-  ctx.beginPath(); ctx.rect(-OX, 100, CW, CH - 100); ctx.clip();
+  const ex = VEX();
+  ctx.beginPath(); ctx.rect(-ex, 100, DW + 2 * ex, CH - 100); ctx.clip();
   const wy0 = oy + 100;
   // 地圖比可視寬窄時, 地圖左右兩側的欄一律補牆(不露出地圖外的底色)
-  const c0 = Math.floor((ox - OX) / TILE), c1 = Math.floor((ox - OX + CW) / TILE);
+  const c0 = Math.floor((ox - ex) / TILE), c1 = Math.floor((ox - ex + DW + 2 * ex) / TILE);
   const r0 = Math.max(0, Math.floor(wy0 / TILE)), r1 = Math.min(D.H - 1, Math.floor((wy0 + 620) / TILE));
   for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
     const ch = (c < 0 || c >= D.W) ? '#' : D.grid[r][c], x = c * TILE + 30 - ox, y = r * TILE + 30 - oy;
