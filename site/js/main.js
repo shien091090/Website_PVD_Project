@@ -8,7 +8,8 @@ import { renderDevelop } from './develop.js';
 import { initTheme } from './theme.js';
 import { initGamePage, enterGame, leaveGame, lapGame } from './gamepage.js';
 import { board, initComments } from './comments.js';
-import { initAnalytics, track, trackPage, setTheme, initEngage } from './analytics.js';
+import { initAnalytics, track, trackPage, setTheme, initEngage, setSource } from './analytics.js';
+import { takeLinkSource } from './link.js';
 import * as store from './store.js';
 
 const show = name => { open(null); location.hash = name; };
@@ -16,6 +17,8 @@ const show = name => { open(null); location.hash = name; };
 // 數據: 主題決定後才送第一個頁面瀏覽, 讓每個事件都帶主題分組
 let themeReady = false, firstPage = null;
 const flag = new Promise(res => initAnalytics({ onFlags: res }));
+const linkSrc = takeLinkSource(); // 從社群短連結進站: 來源要排在第一個頁面瀏覽之前
+if (linkSrc) setSource(linkSrc);
 initTheme(flag, ({ theme, source }) => {
   setTheme(theme, source);
   themeReady = true;

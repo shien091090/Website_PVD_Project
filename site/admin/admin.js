@@ -54,21 +54,36 @@ $('clist').addEventListener('click', async e => {
 });
 onTab('comments', loadComments);
 
-// ---- 連結產生 ----
+// ---- 連結產生: 參數存在伺服器, 對外只給短代碼連結 /s/<代碼> ----
 const slug = v => v.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-function buildLink() {
-  const q = new URLSearchParams();
-  [['utm_source', 'usrc'], ['utm_campaign', 'ucamp'], ['utm_content', 'ucont']].forEach(([k, id]) => { const v = slug($(id).value); if (v) q.set(k, v); });
-  const page = $('upage').value;
-  $('uout').value = `${location.origin}/?${q}${page ? '#' + page : ''}`;
-  $('umsg').textContent = q.get('utm_source') ? '' : '請填平台';
+const PAGE_NAME = { '': '首頁', play: '試玩頁', vote: '投票頁', develop: '開發頁' };
+const LINK_ERR = { bad_source: '請填平台（英文小寫、數字、連字號）', bad_campaign: '活動只能用英文小寫、數字與連字號', bad_content: '貼文代號只能用英文小寫、數字與連字號', bad_page: '導連位置不正確' };
+const linkUrl = code => `${location.origin}/s/${code}`;
+async function copyText(text, msgEl, input) {
+  try { await navigator.clipboard.writeText(text); msgEl.textContent = '已複製'; }
+  catch { if (input) input.select(); msgEl.textContent = '請手動複製'; }
 }
-['usrc', 'ucamp', 'ucont', 'upage'].forEach(id => $(id).addEventListener('input', buildLink));
-$('ucopy').addEventListener('click', async () => {
-  buildLink();
-  try { await navigator.clipboard.writeText($('uout').value); $('umsg').textContent = '已複製'; } catch { $('uout').select(); $('umsg').textContent = '請手動複製'; }
+['usrc', 'ucamp', 'ucont'].forEach(id => $(id).addEventListener('blur', () => { $(id).value = slug($(id).value); }));
+$('umake').addEventListener('click', async () => {
+  const body = { source: slug($('usrc').value), campaign: slug($('ucamp').value), content: slug($('ucont').value), page: $('upage').value };
+  $('umsg').textContent = '';
+  try {
+    const l = await api('links', 'POST', body);
+    $('uout').value = linkUrl(l.code);
+    $('umsg').textContent = l.created ? '已產生新連結' : '這組設定之前產生過，沿用同一條連結';
+    loadLinks();
+  } catch (e) { if (e.message !== '401') $('umsg').innerHTML = `<span class="err">${esc(LINK_ERR[e.message] || e.message)}</span>`; }
 });
-buildLink();
+$('ucopy').addEventListener('click', () => { if ($('uout').value) copyText($('uout').value, $('umsg'), $('uout')); });
+async function loadLinks() {
+  try {
+    const { links } = await api('links');
+    $('ulist').innerHTML = links.map(l => `<tr><td>${fmt(l.createdAt)}</td><td>${esc(l.source)}</td><td>${esc(l.campaign || '—')}</td><td>${esc(l.content || '—')}</td><td>${PAGE_NAME[l.page] ?? esc(l.page)}</td>
+      <td><code>${esc(linkUrl(l.code))}</code></td><td><button class="b" data-copy="${esc(l.code)}">複製</button></td></tr>`).join('') || '<tr><td colspan="7" class="msg">還沒有產生過連結</td></tr>';
+  } catch (e) { if (e.message !== '401') $('ulist').innerHTML = `<tr><td colspan="7" class="err">讀取失敗：${esc(e.message)}</td></tr>`; }
+}
+$('ulist').addEventListener('click', e => { const b = e.target.closest('[data-copy]'); if (b) copyText(linkUrl(b.dataset.copy), $('umsg')); });
+onTab('links', loadLinks);
 
 // ---- 投票: 輪次清單、即時票數、同票指定勝出; 時間一律台灣時間 ----
 const toInput = ms => new Date(ms + 8 * 3600000).toISOString().slice(0, 16);

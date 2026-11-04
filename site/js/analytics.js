@@ -30,6 +30,15 @@ export function setTheme(theme, source) {
   run(p => { p.register({ theme, theme_source: source }); p.setPersonProperties({ theme }); });
 }
 
+// 從社群短連結進站: 之後的事件都帶來源; 第一次的來源記在人身上(儀表板依 $initial_utm_source 分組)
+export function setSource(l) {
+  const utm = { utm_source: l.s, utm_campaign: l.ca || undefined, utm_content: l.co || undefined };
+  run(p => {
+    p.register({ ...utm, link_code: l.c });
+    p.setPersonProperties({}, { $initial_utm_source: l.s, $initial_utm_campaign: l.ca || null, $initial_utm_content: l.co || null });
+  });
+}
+
 // 前景停留時間: 分頁看得到才計時(不要求滑鼠鍵盤互動, 遊戲框裡的操作上層看不到)
 export class Engage {
   constructor(now) { this.since = now; this.total = 0; this.interacted = false; }
