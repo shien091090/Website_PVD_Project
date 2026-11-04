@@ -307,8 +307,7 @@ body.vend .pmain { --vn: 60px; }
 .thm:hover { border-color: var(--ink); color: var(--ink); }
 .home.playing ~ .thm { display: none; }
 body[data-pg="vote"] .thm { left: auto; right: calc(12px + env(safe-area-inset-right, 0px)); bottom: calc(52px + env(safe-area-inset-bottom, 0px)); } /* 左下是截止日, 投票頁改疊在右下 */
-.rr .bar i { background: var(--faint) !important; }
-.rr.first .bar i { background: var(--red) !important; }
+
 .cd.live { background: none; border: 0; border-radius: 0; border-right: 2px solid var(--faint); padding: 6px 36px 6px 4px; }
 .vright { display: flex; flex-direction: column; gap: 14px; min-height: 0; }
 .vright h2 { margin: 0 0 4px; font: 900 30px/1.2 var(--font); }
@@ -555,4 +554,22 @@ html:has(body[data-pg="game"]), body[data-pg="game"] { touch-action: manipulatio
   .rr:not(.first) { margin-right: 14px; }
   .rr.first { margin-top: 10px; }
   .rr .crown { left: -12px; top: -24px; width: 48px; }
+}
+
+/* 票數條(方案 E): 實心條, 終點寫得票百分比; 第一名紅色加底部暗邊, 其他名次深灰紫 */
+.rr { --bar-o: #8d86a3; }
+:root.dark .rr { --bar-o: #6d6a78; }
+.rr .bar { background: var(--chip); }
+.rr .bar i { display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; min-width: 2.8em; background: var(--bar-o); border-right: 0; color: #fff; font: 900 12px/1 var(--font); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; }
+.rr.first .bar i { background: var(--red); font-size: 16px; padding-right: 12px; box-shadow: inset 0 -5px 0 rgba(0, 0, 0, .14); }
+.rr .bar.zero i { min-width: 0; padding: 0; }
+@media (min-width: 721px) {
+  .rr:not(.first) .bar { height: 24px; }
+  .rr:not(.first) .bar i { border-right-width: 0; }
+}
+@media (max-width: 720px) {
+  .rr.first .bar { height: 22px; }
+  .rr:not(.first) .bar { height: 16px; }
+  .rr .bar i { font-size: 10px; padding-right: 6px; }
+  .rr.first .bar i { font-size: 12px; padding-right: 8px; box-shadow: inset 0 -3px 0 rgba(0, 0, 0, .14); }
 }

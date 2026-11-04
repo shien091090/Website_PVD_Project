@@ -57,7 +57,7 @@ export function render() {
       <div class="body">${w.banner ? `<img class="wbn" src="${esc(w.banner)}" alt="">` : ico(w, 'wi')}<div style="display:flex;flex-direction:column;gap:inherit"><span class="k">投票結束 · 勝出</span><b>${winName(w.name)}</b><span class="vs">${wn.toLocaleString()} 票 · 佔 ${r.total ? Math.round(wn / r.total * 100) : 0}%</span></div></div>`;
     ranked.innerHTML = `<h2>最終票數<small>共 ${r.total.toLocaleString()} 票</small></h2>` + rk.map(({ g, n }, i) => `
       <div class="vr rr${i === 0 ? ' first' : ''}">${i === 0 ? CROWN : ''}<span class="rk">${i + 1}</span>${ico(g)}<span class="rn">${esc(g.name)}</span>
-        <span class="bar"><i data-w="${n / top * 100}%"></i></span>
+        <span class="bar${n ? '' : ' zero'}"><i data-w="${n / top * 100}%">${n ? Math.round(n / r.total * 100) + '%' : ''}</i></span>
         <span class="vc"><b>${n.toLocaleString()}</b><small> 票</small></span></div>`).join('');
     fitResults();
     requestAnimationFrame(() => requestAnimationFrame(() => ranked.querySelectorAll('.bar i').forEach(i => i.style.width = i.dataset.w)));
