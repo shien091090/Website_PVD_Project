@@ -13,7 +13,7 @@ const shape = r => r && { code: r.code, source: r.source, campaign: r.campaign, 
 export function cleanParams(body) {
   const v = k => String(body?.[k] ?? '').trim();
   const source = v('source'), campaign = v('campaign'), content = v('content'), page = v('page');
-  if (!SLUG_RE.test(source)) throw new HttpError(400, 'bad_source');
+  if (source && !SLUG_RE.test(source)) throw new HttpError(400, 'bad_source'); // 空白 = 不指定平台
   if (campaign && !SLUG_RE.test(campaign)) throw new HttpError(400, 'bad_campaign');
   if (content && !SLUG_RE.test(content)) throw new HttpError(400, 'bad_content');
   if (!PAGES.includes(page)) throw new HttpError(400, 'bad_page');

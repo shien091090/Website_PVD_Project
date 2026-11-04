@@ -57,7 +57,7 @@ onTab('comments', loadComments);
 // ---- 連結產生: 參數存在伺服器, 對外只給短代碼連結 /s/<代碼> ----
 const slug = v => v.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 const PAGE_NAME = { '': '首頁', play: '試玩頁', vote: '投票頁', develop: '開發頁' };
-const LINK_ERR = { bad_source: '請填平台（英文小寫、數字、連字號）', bad_campaign: '活動只能用英文小寫、數字與連字號', bad_content: '貼文代號只能用英文小寫、數字與連字號', bad_page: '導連位置不正確' };
+const LINK_ERR = { bad_source: '平台只能用英文小寫、數字與連字號；不想填請勾「不指定平台」', no_source: '請填平台，或勾「不指定平台」', bad_campaign: '活動只能用英文小寫、數字與連字號', bad_content: '貼文代號只能用英文小寫、數字與連字號', bad_page: '導連位置不正確' };
 const linkUrl = code => `${location.origin}/s/${code}`;
 async function copyText(text, msgEl, input) {
   try { await navigator.clipboard.writeText(text); msgEl.textContent = '已複製'; }
@@ -65,7 +65,8 @@ async function copyText(text, msgEl, input) {
 }
 ['usrc', 'ucamp', 'ucont'].forEach(id => $(id).addEventListener('blur', () => { $(id).value = slug($(id).value); }));
 $('umake').addEventListener('click', async () => {
-  const body = { source: slug($('usrc').value), campaign: slug($('ucamp').value), content: slug($('ucont').value), page: $('upage').value };
+  if (!$('unosrc').checked && !slug($('usrc').value)) { $('umsg').innerHTML = `<span class="err">${LINK_ERR.no_source}</span>`; return; }
+  const body = { source: $('unosrc').checked ? '' : slug($('usrc').value), campaign: slug($('ucamp').value), content: slug($('ucont').value), page: $('upage').value };
   $('umsg').textContent = '';
   try {
     const l = await api('links', 'POST', body);
@@ -74,11 +75,12 @@ $('umake').addEventListener('click', async () => {
     loadLinks();
   } catch (e) { if (e.message !== '401') $('umsg').innerHTML = `<span class="err">${esc(LINK_ERR[e.message] || e.message)}</span>`; }
 });
+$('unosrc').addEventListener('change', e => { $('usrc').disabled = e.target.checked; });
 $('ucopy').addEventListener('click', () => { if ($('uout').value) copyText($('uout').value, $('umsg'), $('uout')); });
 async function loadLinks() {
   try {
     const { links } = await api('links');
-    $('ulist').innerHTML = links.map(l => `<tr><td>${fmt(l.createdAt)}</td><td>${esc(l.source)}</td><td>${esc(l.campaign || '—')}</td><td>${esc(l.content || '—')}</td><td>${PAGE_NAME[l.page] ?? esc(l.page)}</td>
+    $('ulist').innerHTML = links.map(l => `<tr><td>${fmt(l.createdAt)}</td><td>${l.source ? esc(l.source) : '不指定'}</td><td>${esc(l.campaign || '—')}</td><td>${esc(l.content || '—')}</td><td>${PAGE_NAME[l.page] ?? esc(l.page)}</td>
       <td><code>${esc(linkUrl(l.code))}</code></td><td><button class="b" data-copy="${esc(l.code)}">複製</button></td></tr>`).join('') || '<tr><td colspan="7" class="msg">還沒有產生過連結</td></tr>';
   } catch (e) { if (e.message !== '401') $('ulist').innerHTML = `<tr><td colspan="7" class="err">讀取失敗：${esc(e.message)}</td></tr>`; }
 }

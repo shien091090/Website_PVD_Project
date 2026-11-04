@@ -31,11 +31,14 @@ export function setTheme(theme, source) {
 }
 
 // 從社群短連結進站: 之後的事件都帶來源; 第一次的來源記在人身上(儀表板依 $initial_utm_source 分組)
+// 不指定平台的連結不帶平台, 在儀表板跟直接進站的人算在一起, 但活動、貼文代號與連結代碼照記
 export function setSource(l) {
-  const utm = { utm_source: l.s, utm_campaign: l.ca || undefined, utm_content: l.co || undefined };
+  const utm = { utm_source: l.s || undefined, utm_campaign: l.ca || undefined, utm_content: l.co || undefined };
+  const props = Object.fromEntries(Object.entries({ ...utm, link_code: l.c }).filter(([, v]) => v));
+  const first = Object.fromEntries(Object.entries(utm).filter(([, v]) => v).map(([k, v]) => ['$initial_' + k, v]));
   run(p => {
-    p.register({ ...utm, link_code: l.c });
-    p.setPersonProperties({}, { $initial_utm_source: l.s, $initial_utm_campaign: l.ca || null, $initial_utm_content: l.co || null });
+    p.register(props);
+    if (Object.keys(first).length) p.setPersonProperties({}, first);
   });
 }
 

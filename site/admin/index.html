@@ -42,7 +42,7 @@
   <section id="tab-vote" hidden><div id="vbox"></div></section>
   <section id="tab-links" hidden>
     <p class="msg">每個平台、每篇貼文各產生一條連結，PostHog 就能分開看效果。參數存在伺服器，連結只會是一串短代碼，玩家看不到平台與活動。只能用英文小寫、數字與連字號。正式貼文的連結要在正式網址的後台產生。</p>
-    <div class="row"><label>平台 <input id="usrc" placeholder="threads" list="srcs"></label>
+    <div class="row"><label>平台 <input id="usrc" placeholder="threads" list="srcs"></label><label><input type="checkbox" id="unosrc"> 不指定平台</label>
       <datalist id="srcs"><option value="threads"><option value="facebook"><option value="bahamut"><option value="discord"><option value="instagram"></datalist>
       <label>活動 <input id="ucamp" value="pvd-round1"></label><label>貼文代號 <input id="ucont" placeholder="post-0101-short"></label></div>
     <div class="row"><label>開到 <select id="upage"><option value="">首頁</option><option value="play">試玩頁</option><option value="vote">投票頁</option><option value="develop">開發頁</option></select></label>

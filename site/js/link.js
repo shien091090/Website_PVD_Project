@@ -6,6 +6,6 @@ export function takeLinkSource(doc = document) {
   doc.cookie = `${NAME}=; Max-Age=0; Path=/; Secure; SameSite=Lax`;
   try {
     const v = JSON.parse(decodeURIComponent(m[1]));
-    return v && typeof v.s === 'string' && v.s ? v : null;
+    return v && typeof v.c === 'string' && v.c ? v : null; // 平台可以是空的(不指定平台)
   } catch { return null; }
 }

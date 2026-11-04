@@ -31,11 +31,13 @@ test('產生短連結: 代碼不含參數明碼, 同一組參數沿用同一個�
 
 test('產生短連結: 平台必填, 參數只能英文小寫數字連字號, 導連頁要在清單裡', async () => {
   const db = makeD1();
-  assert.equal((await make(db, { source: '', page: '' })).body.error.code, 'bad_source');
   assert.equal((await make(db, { source: 'Threads!', page: '' })).body.error.code, 'bad_source');
   assert.equal((await make(db, { source: 'fb', campaign: 'a b', page: '' })).body.error.code, 'bad_campaign');
   assert.equal((await make(db, { source: 'fb', page: 'admin' })).body.error.code, 'bad_page');
   assert.equal((await make(db, { source: 'fb', page: '' })).status, 201); // 活動、貼文代號可空
+  const none = await make(db, { source: '', campaign: 'pvd-round1', page: 'play' }); // 不指定平台
+  assert.equal(none.status, 201);
+  assert.equal(none.body.source, '');
 });
 
 test('打開短連結: 跳到導連頁並放來源 cookie; 查不到就回首頁、不放 cookie', async () => {
@@ -60,4 +62,5 @@ test('前台讀來源 cookie: 讀一次就刪, 壞掉的 cookie 不理', () => {
   assert.match(doc.set, /^pvd_link=; Max-Age=0/);
   assert.equal(takeLinkSource({ cookie: 'pvd_link=%7Bbad' }), null);
   assert.equal(takeLinkSource({ cookie: 'x=1' }), null);
+  assert.deepEqual(takeLinkSource({ cookie: 'pvd_link=' + encodeURIComponent(JSON.stringify({ c: 'Abc1234', s: '', ca: 'r1', co: '' })) }), { c: 'Abc1234', s: '', ca: 'r1', co: '' });
 });

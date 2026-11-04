@@ -23,6 +23,12 @@ test('後台產生短連結, 打開後跳到導連頁、網址列沒有參數、
   await page.locator('#umsg:has-text("沿用同一條連結")').waitFor();
   assert.equal(await page.inputValue('#uout'), url);
 
+  await page.check('#unosrc'); await page.fill('#ucont', 'post-0102');
+  assert.ok(await page.locator('#usrc').isDisabled());
+  await page.click('#umake');
+  await page.locator('#ulist tr:has-text("不指定")').waitFor();
+  assert.notEqual(await page.inputValue('#uout'), url);
+
   await page.goto(url);
   await page.waitForURL(srv.url + '#play');
   assert.equal(new URL(page.url()).search, '');
