@@ -183,8 +183,10 @@ body.vend .vnote { display: flex; }
 
 /* ---------- 試玩頁 (1b): 左清單 + 右詳情; 手機改手風琴 ---------- */
 /* 清單欄寬跟著螢幕高度縮: 4 張 21:9 橫幅一次放得下(175 = 標頭 89 + 上下留白 36 + 3 個間距 42 + 陰影 8); 選中時往右推的 20 由清單的負右邊距借用; 欄距 42 = 推出去的 14 + 留白 28 */
-.pmain { flex: 1; min-height: 0; display: grid; grid-template-columns: clamp(200px, calc((100vh - 175px) / 4 * 21 / 9), 400px) minmax(0, 1fr); gap: 42px; padding: 4px 32px 32px; }
-@supports (height: 100svh) { .pmain { grid-template-columns: clamp(200px, calc((100svh - 175px) / 4 * 21 / 9), 400px) minmax(0, 1fr); } }
+/* 投票結束時頂端多一條提示(高 44 + 下距 14), 也要從可用高度扣掉, 否則最後一張卡會被擠出畫面 */
+.pmain { --vn: 0px; flex: 1; min-height: 0; display: grid; grid-template-columns: clamp(200px, calc((100vh - 175px - var(--vn)) / 4 * 21 / 9), 400px) minmax(0, 1fr); gap: 42px; padding: 4px 32px 32px; }
+@supports (height: 100svh) { .pmain { grid-template-columns: clamp(200px, calc((100svh - 175px - var(--vn)) / 4 * 21 / 9), 400px) minmax(0, 1fr); } }
+body.vend .pmain { --vn: 60px; }
 /* 遊戲清單: 電腦手機都用橫幅當按鈕(名稱藏起來給讀屏), 時長放左下角(橫幅規格本來就留空) */
 .glist { display: flex; flex-direction: column; gap: 14px; min-height: 0; padding: 0 20px 8px 0; margin-right: -20px; }
 .gi { flex: none; display: flex; flex-direction: column; }
@@ -483,3 +485,48 @@ html:has(body[data-pg="game"]), body[data-pg="game"] { touch-action: manipulatio
 #pg-vote.pending #ranked { display: none; }
 #pg-vote.pending .win { flex: none; width: min(100%, 520px); min-height: 240px; }
 @media (min-width: 721px) and (max-width: 1000px) { .rr { gap: 12px; padding: 0 16px; } .rr .rn { min-width: 0; max-width: 6em; font-size: 22px; } .rr .vc { width: auto; } .rr .bar { min-width: 40px; } }
+
+/* 勝出卡名稱: 字數多時由 vote.js 縮字, 維持兩行內; 「中文(英文)」在括號前換行 */
+.win .body b { line-height: 1.08; overflow-wrap: anywhere; }
+.win .body b .nw { display: inline-block; white-space: nowrap; }
+/* 結果名次(電腦): 各列共用同一組欄寬, 長條起點與終點對齊(名稱欄寬由 vote.js 量最長的名稱); 第一名放大, 其他縮小 */
+@media (min-width: 721px) {
+  #ranked { --rnw: 9em; }
+  .rr { display: grid; grid-template-columns: 48px 80px var(--rnw) minmax(40px, 1fr) 110px; column-gap: 20px; flex: 1; min-height: 56px; }
+  .rr.first { flex: 1.7; }
+  .rr .rk, .rr .vc { width: auto; }
+  .rr .rn { width: auto; min-width: 0; max-width: none; white-space: normal; overflow: visible; line-height: 1.1; }
+  .rr .icon { justify-self: center; }
+  .rr.first .rk { font-size: 42px; }
+  .rr.first .icon { width: clamp(60px, 10vh, 80px); height: clamp(60px, 10vh, 80px); border-radius: 18px; font-size: clamp(32px, 5.6vh, 46px); }
+  .rr.first .rn { font-size: 30px; }
+  .rr.first .bar { height: 40px; }
+  .rr.first .vc b { font-size: 38px; }
+  .rr:not(.first) { border-width: 2px; }
+  .rr:not(.first) .rk { font-size: 24px; color: var(--muted); }
+  .rr:not(.first) .icon { width: clamp(38px, 6vh, 50px); height: clamp(38px, 6vh, 50px); border-radius: 12px; font-size: clamp(20px, 3.4vh, 28px); }
+  .rr:not(.first) .rn { font-size: 20px; }
+  .rr:not(.first) .bar { height: 20px; border-radius: 7px; }
+  .rr:not(.first) .bar i { border-radius: 7px; border-right-width: 2px; }
+  .rr:not(.first) .vc b { font-size: 22px; }
+}
+@media (min-width: 721px) and (max-width: 1000px) {
+  /* 窄視窗: 長條移到名稱下方一整行, 才有足夠長度 */
+  .rr { grid-template-columns: 34px 64px minmax(0, 1fr) auto; grid-template-areas: "rk ic rn vc" "rk ic bar bar"; align-content: center; gap: 6px 12px; padding: 10px 16px; }
+  .rr .rk { grid-area: rk; } .rr .icon { grid-area: ic; } .rr .rn { grid-area: rn; } .rr .vc { grid-area: vc; } .rr .bar { grid-area: bar; }
+  .rr.first .rn { font-size: 24px; }
+  .rr:not(.first) .rn { font-size: 17px; }
+}
+/* 結果名次(手機): 名稱可換行不截字, 第一名放大 */
+@media (max-width: 720px) {
+  .rr .rn { white-space: normal; overflow: visible; line-height: 1.15; }
+  .rr.first { flex: 1.5; }
+  .rr.first .rn { font-size: 19px; }
+  .rr.first .vc b { font-size: 23px; }
+  .rr.first .bar { height: 16px; }
+  .rr:not(.first) { border-width: 2px; }
+  .rr:not(.first) .rk { color: var(--muted); }
+  .rr:not(.first) .rn { font-size: 14px; }
+  .rr:not(.first) .vc b { font-size: 16px; }
+  .rr:not(.first) .bar { height: 9px; }
+}

@@ -86,7 +86,7 @@ async function loadVote() {
       <div class="row" style="margin-top:8px"><label>開始 <input type="datetime-local" id="nstart"></label><label>截止 <input type="datetime-local" id="nend"></label>
       <button class="b" id="nadd">新增</button><span class="msg" id="nmsg"></span></div></div>` +
     (d.rounds.map(r => `
-    <div class="card" data-id="${r.id}"><b>第 ${r.id} 輪</b>・${PHASE[r.phase]}・共 ${r.total} 票${r.winner ? `・勝出：${esc(nameOf(r.winner))}（後台指定）` : ''}
+    <div class="card" data-id="${r.id}"><b>第 ${r.id} 輪</b>・${PHASE[r.phase]}・共 ${r.total} 票${r.winner ? `・勝出：${esc(nameOf(r.winner))}（後台指定，前台公布時勝出款多加 1 票）` : ''}
       <div class="row" style="margin-top:8px"><label>開始 <input type="datetime-local" class="rs" value="${toInput(r.startsAt)}"></label>
         <label>截止 <input type="datetime-local" class="re" value="${toInput(r.endsAt)}"></label><button class="b rsave">儲存時間</button><button class="b danger rdel">刪除這一輪</button><span class="msg rmsg"></span></div>
       <div class="bars">${GAMES.map(g => `<div><span>${esc(g.name)}</span><span style="display:inline-block;height:12px;background:#2fc9ed;width:${r.counts[g.code] / max(r) * 240}px"></span><span>${r.counts[g.code]}</span></div>`).join('')}</div>

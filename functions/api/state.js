@@ -13,7 +13,9 @@ export async function onRequestGet(ctx) {
   if (phase === 'ended') {
     const { counts, total } = await tally(db, round.id);
     const winner = winnerOf(counts, round.winner);
-    results = winner ? { pending: false, winner, counts, total } : { pending: true };
+    // 同票由後台指定勝出時, 前台公布的票數替勝出款多加 1 票, 免得看起來勝出卻跟第二名同票(資料庫原始票數不動)
+    const bonus = winner && round.winner ? 1 : 0;
+    results = winner ? { pending: false, winner, counts: { ...counts, [winner]: counts[winner] + bonus }, total: total + bonus } : { pending: true };
   }
   return json({
     now, phase,

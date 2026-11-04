@@ -76,8 +76,10 @@ test('同票: 統計中, 後台指定後顯示勝出與票數', async () => {
   const r = (await s.state()).body.results;
   assert.equal(r.pending, false);
   assert.equal(r.winner, 'jelly-jinni');
-  assert.equal(r.total, 4);
+  assert.equal(r.total, 5); // 後台指定勝出款前台多加 1 票
+  assert.equal(r.counts['jelly-jinni'], 3);
   assert.equal(r.counts['bubble-tempo'], 2);
+  assert.equal((await s.call(roundsApi.onRequestGet, 'GET', '/api/admin/rounds')).body.rounds[0].counts['jelly-jinni'], 2); // 後台仍是原始票數
 });
 
 test('唯一最高票直接勝出; 非同票不能指定', async () => {

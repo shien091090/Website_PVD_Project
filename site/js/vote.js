@@ -53,11 +53,12 @@ export function render() {
     const wn = r.counts[w.code] || 0;
     winbox.innerHTML = `
       <span class="lb">投票結束 · 勝出</span>
-      <div class="body">${ico(w, 'wi')}<div style="display:flex;flex-direction:column;gap:inherit"><span class="k">投票結束 · 勝出</span><b>${esc(w.name)}</b><span class="vs">${wn.toLocaleString()} 票 · 佔 ${r.total ? Math.round(wn / r.total * 100) : 0}%</span></div></div>`;
+      <div class="body">${ico(w, 'wi')}<div style="display:flex;flex-direction:column;gap:inherit"><span class="k">投票結束 · 勝出</span><b>${winName(w.name)}</b><span class="vs">${wn.toLocaleString()} 票 · 佔 ${r.total ? Math.round(wn / r.total * 100) : 0}%</span></div></div>`;
     ranked.innerHTML = `<h2>最終票數<small>共 ${r.total.toLocaleString()} 票</small></h2>` + rk.map(({ g, n }, i) => `
       <div class="vr rr${i === 0 ? ' first' : ''}"><span class="rk">${i + 1}</span>${ico(g)}<span class="rn">${esc(g.name)}</span>
         <span class="bar"><i data-w="${n / top * 100}%"></i></span>
         <span class="vc"><b>${n.toLocaleString()}</b><small> 票</small></span></div>`).join('');
+    fitResults();
     requestAnimationFrame(() => requestAnimationFrame(() => ranked.querySelectorAll('.bar i').forEach(i => i.style.width = i.dataset.w)));
   } else if (r) {
     winbox.innerHTML = '<span class="lb">投票結束</span><div class="body"><div style="display:flex;flex-direction:column;gap:inherit"><span class="k">投票結束</span><b>結果統計中</b><span class="vs">勝出遊戲將由工作室公布</span></div></div>';
@@ -65,6 +66,35 @@ export function render() {
   }
   tick();
 }
+
+// 勝出卡名稱: 「中文(英文)」拆成兩段, 換行時落在括號前
+function winName(name) {
+  const m = name.match(/^(.+?)([(（].*)$/);
+  return m ? `<span class="nw">${esc(m[1])}</span><wbr><span class="nw">${esc(m[2])}</span>` : esc(name);
+}
+
+// 結果頁版面: 勝出卡名稱縮字到兩行內、不超出卡片; 名次各列名稱欄取最長名稱的寬度(上限為列寬 38%), 長條就能對齊
+function fitResults() {
+  if (!pg.classList.contains('end') || pg.classList.contains('pending')) return;
+  const b = document.querySelector('#winbox .body b');
+  if (b && b.offsetParent) {
+    b.style.fontSize = '';
+    let fs = parseFloat(getComputedStyle(b).fontSize);
+    const min = Math.max(14, fs * 0.4);
+    const fits = () => {
+      const lh = parseFloat(getComputedStyle(b).lineHeight) || fs * 1.08;
+      return b.scrollHeight <= lh * 2 + 2 && [b, ...b.querySelectorAll('.nw')].every(e => e.scrollWidth <= b.parentElement.clientWidth + 1);
+    };
+    while (!fits() && fs > min) { fs -= 2; b.style.fontSize = fs + 'px'; }
+  }
+  const rows = [...ranked.querySelectorAll('.rr')];
+  if (!rows.length || !rows[0].offsetParent || getComputedStyle(rows[0]).display !== 'grid' || innerWidth <= 1000) { ranked.style.removeProperty('--rnw'); return; }
+  ranked.style.setProperty('--rnw', 'max-content');
+  const need = Math.max(...rows.map(r => r.querySelector('.rn').getBoundingClientRect().width));
+  ranked.style.setProperty('--rnw', Math.ceil(Math.min(need, rows[0].clientWidth * 0.38)) + 'px');
+}
+let fitT;
+addEventListener('resize', () => { clearTimeout(fitT); fitT = setTimeout(fitResults, 120); });
 
 export function setVoteError(msg) {
   let el = pg.querySelector('.verr');
