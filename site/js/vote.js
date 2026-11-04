@@ -1,4 +1,4 @@
-import { GAMES, byCode } from './games.js';
+import { byCode } from './games.js';
 import { splitCountdown, deadlineLabel, esc } from './format.js';
 import { ico } from './play.js';
 import * as store from './store.js';
@@ -9,6 +9,10 @@ const pad = n => String(n).padStart(2, '0');
 const CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 const CROWN = '<span class="crown" aria-label="勝出"><svg viewBox="0 0 64 48" aria-hidden="true"><path d="M6 14l14 12L32 6l12 20 14-12-5 28H11z" fill="#ffd23f" stroke="#2d2144" stroke-width="4" stroke-linejoin="round"/><rect x="11" y="38" width="42" height="7" rx="2" fill="#f5a524" stroke="#2d2144" stroke-width="4"/><circle cx="32" cy="27" r="4" fill="#f45b52"/></svg></span>';
 let state = { phase: 'loading' }, offset = 0, onZero = () => {}, onPick = () => {}, zeroFired = false;
+
+// 選票上的選項以這一輪的候選清單為準; 網站上已經沒有的(下架遊戲)用存下來的名稱畫色塊
+const optOf = o => byCode(o.id) || { code: o.id, name: o.label, letter: o.label.slice(0, 1), bg: '#c9c4d6', fg: '#2d2144' };
+const options = () => (state.round?.options || []).map(optOf);
 
 export const serverNow = () => Date.now() + offset;
 
@@ -37,7 +41,7 @@ export function render() {
   pg.classList.toggle('none', state.phase === 'none' || state.phase === 'loading');
   document.getElementById('deadline').textContent = state.phase === 'live' ? deadlineLabel(state.round.endsAt) : '';
   const played = new Set(store.get('played', []));
-  vrows.innerHTML = state.phase === 'loading' ? '' : state.phase === 'none' ? '<p class="vmsg">投票尚未開放</p>' : GAMES.map(g => `
+  vrows.innerHTML = state.phase === 'loading' ? '' : state.phase === 'none' ? '<p class="vmsg">投票尚未開放</p>' : options().map(g => `
     <div class="vr${state.myVote === g.code ? ' on' : ''}" role="radio" tabindex="0" aria-checked="${state.myVote === g.code}" data-k="${g.code}">
       <span class="rd">${CHECK}</span>${ico(g)}
       <span class="nm"><b>${esc(g.name)}</b><span class="st">${played.has(g.code)
@@ -47,8 +51,9 @@ export function render() {
   const winbox = document.getElementById('winbox'), ranked = document.getElementById('ranked');
   const r = end ? state.results : null;
   if (r && !r.pending) {
-    const w = byCode(r.winner);
-    const rk = GAMES.map(g => ({ g, n: r.counts[g.code] || 0 }))
+    const opts = options();
+    const w = opts.find(g => g.code === r.winner) || optOf({ id: r.winner, label: r.winner });
+    const rk = opts.map(g => ({ g, n: r.counts[g.code] || 0 }))
       .sort((a, b) => (b.g === w) - (a.g === w) || b.n - a.n); // 勝出款排第一(同票由後台指定時也一樣)
     const top = Math.max(1, ...rk.map(x => x.n));
     const wn = r.counts[w.code] || 0;

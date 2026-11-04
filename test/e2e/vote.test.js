@@ -8,7 +8,12 @@ after(async () => { await browser?.close(); });
 beforeEach(async () => { srv = await startServer(); });
 afterEach(async () => { await srv?.stop(); });
 
-const round = (startOff, endOff) => { const n = Date.now(); srv.sql(`INSERT INTO rounds (starts_at, ends_at) VALUES (${n + startOff}, ${n + endOff})`); };
+const OPTS = ['bubble-tempo', 'dungeon-zoo', 'jelly-jinni', 'soul-smith-defense'];
+const round = (startOff, endOff) => {
+  const n = Date.now();
+  srv.sql(`INSERT INTO rounds (starts_at, ends_at) VALUES (${n + startOff}, ${n + endOff})`);
+  srv.sql('INSERT INTO round_options SELECT (SELECT max(id) FROM rounds), v.id, v.id, v.i FROM (' + OPTS.map((id, i) => `SELECT '${id}' AS id, ${i} AS i`).join(' UNION ALL ') + ') v');
+};
 const votes = list => srv.sql('INSERT INTO votes VALUES ' + list.map(([vid, g]) => `(1,'${vid}','${g}','h',1,1)`).join(','));
 
 test('投票、重新整理仍記得、改投, 倒數歸零自動切成結果', async () => {
@@ -128,5 +133,22 @@ test('先投 A 再投 B, A 的回應較慢: 畫面不跳回 A, 最後記錄是 B
   await page.reload();
   await page.locator('.vr.on').waitFor();
   assert.equal(await page.locator('.vr.on').getAttribute('data-k'), 'jelly-jinni');
+  await ctx.close();
+});
+
+test('後台開新一輪只勾 2 款候選, 投票頁只出現這 2 款', async () => {
+  const ctx = await browser.newContext(PC);
+  const page = await ctx.newPage();
+  await page.goto(srv.url + 'admin/');
+  await page.click('nav button[data-tab="vote"]');
+  await page.locator('#nadd').waitFor();
+  const tw = ms => new Date(ms + 8 * 3600000).toISOString().slice(0, 16);
+  await page.fill('#nstart', tw(Date.now() - 3600000)); await page.fill('#nend', tw(Date.now() + 3600000));
+  await page.uncheck('.nopt[value="dungeon-zoo"]'); await page.uncheck('.nopt[value="soul-smith-defense"]');
+  await page.click('#nadd');
+  await page.locator('.card[data-id="1"]').waitFor();
+  await page.goto(srv.url + '#vote');
+  await page.locator('#vrows .vr').first().waitFor();
+  assert.deepEqual(await page.locator('#vrows .vr').evaluateAll(els => els.map(e => e.dataset.k)), ['bubble-tempo', 'jelly-jinni']);
   await ctx.close();
 });

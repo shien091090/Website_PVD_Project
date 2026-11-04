@@ -1,5 +1,5 @@
 import { HttpError } from './http.js';
-import { GAME_CODES } from '../../site/js/games.js';
+import { roundOptions } from './rounds.js';
 
 // 每輪每訪客一筆, 改投就更新; 新訪客同 IP 每小時最多 30 票
 export async function castVote(db, { round, vid, ipHash, game, now }) {
@@ -16,8 +16,9 @@ export async function castVote(db, { round, vid, ipHash, game, now }) {
   return { changed: false };
 }
 
+// 只算這一輪選票上的選項
 export async function tally(db, roundId) {
-  const counts = Object.fromEntries(GAME_CODES.map(c => [c, 0]));
+  const counts = Object.fromEntries((await roundOptions(db, roundId)).map(o => [o.id, 0]));
   const { results } = await db.prepare('SELECT game, COUNT(*) AS n FROM votes WHERE round_id = ? GROUP BY game').bind(roundId).all();
   for (const r of results) if (r.game in counts) counts[r.game] = r.n;
   return { counts, total: Object.values(counts).reduce((a, b) => a + b, 0) };

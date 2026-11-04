@@ -1,5 +1,5 @@
 import { json, nowOf } from '../lib/http.js';
-import { currentRound, nextRound, phaseOf } from '../lib/rounds.js';
+import { currentRound, nextRound, phaseOf, roundOptions } from '../lib/rounds.js';
 import { tally, winnerOf, myVote } from '../lib/votes.js';
 import { lockedGames } from '../lib/comments.js';
 
@@ -19,7 +19,7 @@ export async function onRequestGet(ctx) {
   }
   return json({
     now, phase,
-    round: round && { id: round.id, startsAt: round.startsAt, endsAt: round.endsAt },
+    round: round && { id: round.id, startsAt: round.startsAt, endsAt: round.endsAt, options: await roundOptions(db, round.id) },
     next: next && { startsAt: next.startsAt },
     myVote: phase === 'live' ? await myVote(db, round.id, ctx.data.vid) : null,
     locks: await lockedGames(db),

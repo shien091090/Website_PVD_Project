@@ -89,7 +89,7 @@ onTab('links', loadLinks);
 const toInput = ms => new Date(ms + 8 * 3600000).toISOString().slice(0, 16);
 const fromInput = v => Date.parse(v + ':00+08:00');
 const PHASE = { upcoming: '尚未開始', live: '進行中', ended: '已結束' };
-const nameOf = code => GAMES.find(g => g.code === code)?.name || code;
+const nameOf = (r, code) => r.options.find(o => o.id === code)?.label || code;
 async function loadVote() {
   const box = $('vbox');
   box.innerHTML = '<p class="msg">讀取中…</p>';
@@ -99,19 +99,21 @@ async function loadVote() {
   box.innerHTML = `
     <div class="card"><b>新增一輪</b>
       <div class="row" style="margin-top:8px"><label>開始 <input type="datetime-local" id="nstart"></label><label>截止 <input type="datetime-local" id="nend"></label>
-      <button class="b" id="nadd">新增</button><span class="msg" id="nmsg"></span></div></div>` +
+      <button class="b" id="nadd">新增</button><span class="msg" id="nmsg"></span></div>
+      <div class="row" style="margin-top:8px">候選（網站上目前的遊戲，至少 2 款；新增後不能改，要改就刪掉重開）：${GAMES.map(g => `<label><input type="checkbox" class="nopt" value="${g.code}" checked> ${esc(g.name)}</label>`).join('')}</div></div>` +
     (d.rounds.map(r => `
-    <div class="card" data-id="${r.id}"><b>第 ${r.id} 輪</b>・${PHASE[r.phase]}・共 ${r.total} 票${r.winner ? `・勝出：${esc(nameOf(r.winner))}（後台指定，前台公布時勝出款多加 1 票）` : ''}
+    <div class="card" data-id="${r.id}"><b>第 ${r.id} 輪</b>・${PHASE[r.phase]}・共 ${r.total} 票${r.winner ? `・勝出：${esc(nameOf(r, r.winner))}（後台指定，前台公布時勝出款多加 1 票）` : ''}
       <div class="row" style="margin-top:8px"><label>開始 <input type="datetime-local" class="rs" value="${toInput(r.startsAt)}"></label>
         <label>截止 <input type="datetime-local" class="re" value="${toInput(r.endsAt)}"></label><button class="b rsave">儲存時間</button><button class="b danger rdel">刪除這一輪</button><span class="msg rmsg"></span></div>
-      <div class="bars">${GAMES.map(g => `<div><span>${esc(g.name)}</span><span style="display:inline-block;height:12px;background:#2fc9ed;width:${r.counts[g.code] / max(r) * 240}px"></span><span>${r.counts[g.code]}</span></div>`).join('')}</div>
+      <div class="bars">${r.options.map(o => `<div><span>${esc(o.label)}</span><span style="display:inline-block;height:12px;background:#2fc9ed;width:${r.counts[o.id] / max(r) * 240}px"></span><span>${r.counts[o.id]}</span></div>`).join('')}</div>
       ${r.phase === 'ended' && r.tie ? `<div class="row" style="margin-top:8px"><span class="err">同票，請指定勝出：</span>
-        <select class="wsel">${GAMES.filter(g => !r.total || r.counts[g.code] === max(r)).map(g => `<option value="${g.code}" ${r.winner === g.code ? 'selected' : ''}>${esc(g.name)}</option>`).join('')}</select>
+        <select class="wsel">${r.options.filter(o => !r.total || r.counts[o.id] === max(r)).map(o => `<option value="${o.id}" ${r.winner === o.id ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}</select>
         <button class="b wset">指定</button><span class="msg wmsg"></span></div>` : ''}
     </div>`).join('') || '<p class="msg">還沒有任何一輪。</p>');
   $('nadd').addEventListener('click', async () => {
-    try { await api('rounds', 'POST', { startsAt: fromInput($('nstart').value), endsAt: fromInput($('nend').value) }); loadVote(); }
-    catch (e) { $('nmsg').innerHTML = `<span class="err">${e.message === 'bad_times' ? '截止要晚於開始' : esc(e.message)}</span>`; }
+    const options = [...box.querySelectorAll('.nopt:checked')].map(c => c.value);
+    try { await api('rounds', 'POST', { startsAt: fromInput($('nstart').value), endsAt: fromInput($('nend').value), options }); loadVote(); }
+    catch (e) { $('nmsg').innerHTML = `<span class="err">${({ bad_times: '截止要晚於開始', too_few_options: '候選至少要勾 2 款' })[e.message] || esc(e.message)}</span>`; }
   });
   box.querySelectorAll('.card[data-id]').forEach(card => {
     const id = +card.dataset.id;

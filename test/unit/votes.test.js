@@ -17,7 +17,11 @@ function setup() {
     try { const r = await fn(ctx); const text = await r.text(); return { status: r.status, text, body: JSON.parse(text) }; }
     catch (e) { return { status: e.status, body: { error: { code: e.code } } }; }
   };
-  const round = (startsAt, endsAt) => db.prepare('INSERT INTO rounds (starts_at, ends_at) VALUES (?, ?)').bind(startsAt, endsAt).run();
+  const round = async (startsAt, endsAt, opts = ['bubble-tempo', 'dungeon-zoo', 'jelly-jinni', 'soul-smith-defense']) => {
+    const r = await db.prepare('INSERT INTO rounds (starts_at, ends_at) VALUES (?, ?)').bind(startsAt, endsAt).run();
+    for (const [i, id] of opts.entries()) await db.prepare('INSERT INTO round_options VALUES (?, ?, ?, ?)').bind(r.meta.last_row_id, id, id + '名', i).run();
+    return r;
+  };
   const state = o => call(stateApi.onRequestGet, 'GET', '/api/state', undefined, o);
   const vote = (game, o) => call(voteApi.onRequestPost, 'POST', '/api/vote', { game, token: 't' }, o);
   return { db, call, round, state, vote, set: t => { now = t; } };
@@ -134,7 +138,11 @@ test('同 IP 第 31 個新訪客 429', async () => {
 test('後台新增與修改輪次, 結束時間要晚於開始', async () => {
   const s = setup();
   assert.equal((await s.call(roundsApi.onRequestPost, 'POST', '/api/admin/rounds', { startsAt: T0, endsAt: T0 - 1 })).status, 400);
-  assert.equal((await s.call(roundsApi.onRequestPost, 'POST', '/api/admin/rounds', { startsAt: T0 - H, endsAt: T0 + H })).status, 201);
+  const ALL = ['bubble-tempo', 'dungeon-zoo', 'jelly-jinni', 'soul-smith-defense'];
+  assert.equal((await s.call(roundsApi.onRequestPost, 'POST', '/api/admin/rounds', { startsAt: T0 - H, endsAt: T0 + H })).body.error.code, 'too_few_options');
+  assert.equal((await s.call(roundsApi.onRequestPost, 'POST', '/api/admin/rounds', { startsAt: T0 - H, endsAt: T0 + H, options: ['bubble-tempo', 'nope'] })).body.error.code, 'unknown_option');
+  assert.equal((await s.call(roundsApi.onRequestPost, 'POST', '/api/admin/rounds', { startsAt: T0 - H, endsAt: T0 + H, options: ALL })).status, 201);
+  assert.deepEqual((await s.state()).body.round.options.map(o => o.id), ALL);
   assert.equal((await s.call(roundsApi.onRequestPut, 'PUT', '/api/admin/rounds', { id: 1, startsAt: T0 - H, endsAt: T0 + 9 * H })).status, 200);
   assert.equal((await s.state()).body.round.endsAt, T0 + 9 * H);
   assert.equal((await s.call(roundsApi.onRequestPut, 'PUT', '/api/admin/rounds', { id: 9, startsAt: T0, endsAt: T0 + H })).status, 404);
@@ -149,4 +157,34 @@ test('後台刪除輪次連同票一起刪, 前台回到上一輪或沒有輪次
   assert.equal(await s.db.prepare('SELECT COUNT(*) AS n FROM votes WHERE round_id = 2').first('n'), 0);
   assert.equal((await s.state()).body.round.id, 1);
   assert.equal((await s.call(roundsApi.onRequestDelete, 'DELETE', '/api/admin/rounds?id=2')).status, 404);
+});
+
+test('每一輪有自己的候選: 第二輪只能投新候選, 第一輪結果與名稱照樣保留', async () => {
+  const s = setup();
+  await s.round(T0 - 3 * H, T0 - 2 * H, ['jelly-jinni', 'dungeon-zoo']);
+  await s.db.prepare('INSERT INTO votes VALUES (1, ?, ?, ?, ?, ?)').bind('v1', 'jelly-jinni', 'h', 1, 1).run();
+  await s.db.prepare("UPDATE round_options SET option_id = 'old-game', label = '已下架的遊戲' WHERE round_id = 1 AND option_id = 'dungeon-zoo'").run();
+  await s.round(T0 - H, T0 + H, ['jelly-jinni', 'bubble-tempo']);
+  assert.equal((await s.vote('soul-smith-defense')).body.error.code, 'unknown_game');
+  assert.equal((await s.vote('jelly-jinni')).status, 200); // 冠軍第二輪從 0 票重新來
+  const st = (await s.state()).body;
+  assert.deepEqual(st.round.options.map(o => o.id), ['jelly-jinni', 'bubble-tempo']);
+  const rounds = (await s.call(roundsApi.onRequestGet, 'GET', '/api/admin/rounds')).body.rounds;
+  const r1 = rounds.find(r => r.id === 1), r2 = rounds.find(r => r.id === 2);
+  assert.deepEqual(r1.counts, { 'jelly-jinni': 1, 'old-game': 0 });
+  assert.equal(r1.options.find(o => o.id === 'old-game').label, '已下架的遊戲');
+  assert.deepEqual(r2.counts, { 'jelly-jinni': 1, 'bubble-tempo': 0 });
+  assert.equal((await s.call(roundsApi.onRequestDelete, 'DELETE', '/api/admin/rounds?id=2')).status, 200);
+  assert.equal(await s.db.prepare('SELECT COUNT(*) AS n FROM round_options WHERE round_id = 2').first('n'), 0);
+});
+
+test('資料庫升級時, 既有輪次自動補上第一波 4 款候選', async () => {
+  const { DatabaseSync } = await import('node:sqlite');
+  const { readFileSync } = await import('node:fs');
+  const db = new DatabaseSync(':memory:');
+  for (const f of ['0001_init.sql', '0002_links.sql']) db.exec(readFileSync(new URL('../../migrations/' + f, import.meta.url), 'utf8'));
+  db.exec('INSERT INTO rounds (starts_at, ends_at) VALUES (1, 2)');
+  db.exec(readFileSync(new URL('../../migrations/0003_round_options.sql', import.meta.url), 'utf8'));
+  assert.deepEqual(db.prepare('SELECT option_id FROM round_options WHERE round_id = 1 ORDER BY sort').all().map(r => r.option_id),
+    ['bubble-tempo', 'jelly-jinni', 'soul-smith-defense', 'dungeon-zoo']);
 });

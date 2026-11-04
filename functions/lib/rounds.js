@@ -9,6 +9,12 @@ export async function nextRound(db, now) {
 }
 export const phaseOf = (round, now) => (!round ? 'none' : now < round.endsAt ? 'live' : 'ended');
 
+// 這一輪選票上的選項(依後台勾選的順序)
+export async function roundOptions(db, roundId) {
+  const { results } = await db.prepare('SELECT option_id AS id, label FROM round_options WHERE round_id = ? ORDER BY sort').bind(roundId).all();
+  return results;
+}
+
 export async function allRounds(db) {
   const { results } = await db.prepare('SELECT * FROM rounds ORDER BY starts_at DESC, id DESC').all();
   return results.map(shape);
