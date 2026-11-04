@@ -492,7 +492,7 @@ html:has(body[data-pg="game"]), body[data-pg="game"] { touch-action: manipulatio
 /* 結果名次(電腦): 各列共用同一組欄寬, 長條起點與終點對齊(名稱欄寬由 vote.js 量最長的名稱); 第一名放大, 其他縮小 */
 @media (min-width: 721px) {
   #ranked { --rnw: 9em; }
-  .rr { display: grid; grid-template-columns: 48px 80px var(--rnw) minmax(40px, 1fr) 110px; column-gap: 20px; flex: 1; min-height: 56px; }
+  .rr { display: grid; grid-template-columns: 48px 108px var(--rnw) minmax(40px, 1fr) 110px; column-gap: 20px; flex: 1; min-height: 56px; }
   .rr.first { flex: 1.7; }
   .rr .rk, .rr .vc { width: auto; }
   .rr .rn { width: auto; min-width: 0; max-width: none; white-space: normal; overflow: visible; line-height: 1.1; }
@@ -512,7 +512,7 @@ html:has(body[data-pg="game"]), body[data-pg="game"] { touch-action: manipulatio
 }
 @media (min-width: 721px) and (max-width: 1000px) {
   /* 窄視窗: 長條移到名稱下方一整行, 才有足夠長度 */
-  .rr { grid-template-columns: 34px 64px minmax(0, 1fr) auto; grid-template-areas: "rk ic rn vc" "rk ic bar bar"; align-content: center; gap: 6px 12px; padding: 10px 16px; }
+  .rr { grid-template-columns: 34px 76px minmax(0, 1fr) auto; grid-template-areas: "rk ic rn vc" "rk ic bar bar"; align-content: center; gap: 6px 12px; padding: 10px 16px; }
   .rr .rk { grid-area: rk; } .rr .icon { grid-area: ic; } .rr .rn { grid-area: rn; } .rr .vc { grid-area: vc; } .rr .bar { grid-area: bar; }
   .rr.first .rn { font-size: 24px; }
   .rr:not(.first) .rn { font-size: 17px; }
@@ -529,4 +529,30 @@ html:has(body[data-pg="game"]), body[data-pg="game"] { touch-action: manipulatio
   .rr:not(.first) .rn { font-size: 14px; }
   .rr:not(.first) .vc b { font-size: 16px; }
   .rr:not(.first) .bar { height: 9px; }
+}
+
+/* 勝出卡: 用遊戲橫幅當主視覺 */
+.win .wbn { display: block; width: 100%; aspect-ratio: 21 / 9; object-fit: cover; border: 3px solid var(--ink); border-radius: 18px; box-shadow: 6px 6px 0 var(--hard); box-sizing: border-box; background: var(--paper); }
+/* 第一名左上角皇冠; 其他名次右側內縮, 讓第一名凸出來 */
+.rr.first { position: relative; }
+.rr.first { margin-top: 16px; }
+.rr .crown { position: absolute; left: -26px; top: -40px; width: 78px; transform: rotate(-18deg); pointer-events: none; filter: drop-shadow(2px 3px 0 rgba(45,33,68,.25)); }
+.rr .crown svg { display: block; width: 100%; height: auto; }
+.rr:not(.first) { margin-right: 32px; }
+@media (min-width: 721px) {
+  .rr.first .icon { width: clamp(72px, 12vh, 104px); height: clamp(72px, 12vh, 104px); border-radius: 22px; font-size: clamp(38px, 6.6vh, 58px); }
+  .rr:not(.first) .icon { width: clamp(50px, 8vh, 68px); height: clamp(50px, 8vh, 68px); border-radius: 15px; font-size: clamp(26px, 4.4vh, 38px); }
+}
+@media (min-width: 721px) and (max-width: 1000px) {
+  .rr.first .icon { width: 68px; height: 68px; }
+  .rr:not(.first) .icon { width: 50px; height: 50px; }
+  .rr:not(.first) { margin-right: 20px; }
+}
+@media (max-width: 720px) {
+  .win .wbn { width: 44%; flex: none; border-radius: 12px; border-width: 2px; box-shadow: 3px 3px 0 var(--hard); }
+  .rr.first .icon { width: 42px; height: 42px; border-radius: 11px; }
+  .rr:not(.first) .icon { width: 34px; height: 34px; }
+  .rr:not(.first) { margin-right: 14px; }
+  .rr.first { margin-top: 10px; }
+  .rr .crown { left: -12px; top: -24px; width: 48px; }
 }

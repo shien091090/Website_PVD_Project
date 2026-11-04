@@ -7,6 +7,7 @@ import * as store from './store.js';
 const pg = document.getElementById('pg-vote'), cdnums = document.getElementById('cdnums'), vrows = document.getElementById('vrows');
 const pad = n => String(n).padStart(2, '0');
 const CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+const CROWN = '<span class="crown" aria-label="勝出"><svg viewBox="0 0 64 48" aria-hidden="true"><path d="M6 14l14 12L32 6l12 20 14-12-5 28H11z" fill="#ffd23f" stroke="#2d2144" stroke-width="4" stroke-linejoin="round"/><rect x="11" y="38" width="42" height="7" rx="2" fill="#f5a524" stroke="#2d2144" stroke-width="4"/><circle cx="32" cy="27" r="4" fill="#f45b52"/></svg></span>';
 let state = { phase: 'loading' }, offset = 0, onZero = () => {}, onPick = () => {}, zeroFired = false;
 
 export const serverNow = () => Date.now() + offset;
@@ -53,9 +54,9 @@ export function render() {
     const wn = r.counts[w.code] || 0;
     winbox.innerHTML = `
       <span class="lb">投票結束 · 勝出</span>
-      <div class="body">${ico(w, 'wi')}<div style="display:flex;flex-direction:column;gap:inherit"><span class="k">投票結束 · 勝出</span><b>${winName(w.name)}</b><span class="vs">${wn.toLocaleString()} 票 · 佔 ${r.total ? Math.round(wn / r.total * 100) : 0}%</span></div></div>`;
+      <div class="body">${w.banner ? `<img class="wbn" src="${esc(w.banner)}" alt="">` : ico(w, 'wi')}<div style="display:flex;flex-direction:column;gap:inherit"><span class="k">投票結束 · 勝出</span><b>${winName(w.name)}</b><span class="vs">${wn.toLocaleString()} 票 · 佔 ${r.total ? Math.round(wn / r.total * 100) : 0}%</span></div></div>`;
     ranked.innerHTML = `<h2>最終票數<small>共 ${r.total.toLocaleString()} 票</small></h2>` + rk.map(({ g, n }, i) => `
-      <div class="vr rr${i === 0 ? ' first' : ''}"><span class="rk">${i + 1}</span>${ico(g)}<span class="rn">${esc(g.name)}</span>
+      <div class="vr rr${i === 0 ? ' first' : ''}">${i === 0 ? CROWN : ''}<span class="rk">${i + 1}</span>${ico(g)}<span class="rn">${esc(g.name)}</span>
         <span class="bar"><i data-w="${n / top * 100}%"></i></span>
         <span class="vc"><b>${n.toLocaleString()}</b><small> 票</small></span></div>`).join('');
     fitResults();
