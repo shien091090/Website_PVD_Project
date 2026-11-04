@@ -573,3 +573,8 @@ html:has(body[data-pg="game"]), body[data-pg="game"] { touch-action: manipulatio
   .rr .bar i { font-size: 10px; padding-right: 6px; }
   .rr.first .bar i { font-size: 12px; padding-right: 8px; box-shadow: inset 0 -3px 0 rgba(0, 0, 0, .14); }
 }
+
+/* 開發頁自介: 名字下面接工作室名稱, 最後一行 email */
+.studio .who .org { font: 700 15px/1.4 var(--font); color: var(--muted); margin-top: -4px; }
+.studio .who .mail { justify-self: start; align-self: flex-start; font: 700 15px/1.4 var(--font); color: var(--ink); text-decoration: underline; text-underline-offset: 3px; word-break: break-all; }
+.studio .who .mail:hover { color: var(--red); }
