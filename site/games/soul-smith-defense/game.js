@@ -402,7 +402,10 @@ function endLevel(win) {
   } else S.fails[G.level - 1]++;
   const T = S.tut; T.fx = null; T.view = null; T.lastView = null;
   ev('level_end', { result: win ? 'win' : 'lose', wave: G.wave, castleHp: hp, stars });
-  if (window.PVDX) PVDX.finish(); // 一局結束(通知網站)
+  if (window.PVDX && win) { // 通知網站: 單關通關, 最後一關再送全局通關(失敗不送)
+    PVDX.levelClear(G.level);
+    if (G.level === 4) PVDX.gameClear();
+  }
   setMusic(null);
   snd(win ? 'level_win' : 'level_lose');
 }
