@@ -30,7 +30,9 @@ const engage = initEngage(() => document.body.dataset.pg);
 renderHeaders();
 initHome({ show, onVideo: what => track(what === 'play' ? 'video_play' : 'video_complete') });
 initPlay({ onOpen: game => track('game_detail_open', { game }) });
-initGamePage({ onFinish: (game, seconds) => track('game_finish', { game, play_seconds: seconds }) });
+initGamePage({ onClear: (kind, game, seconds, level) => kind === 'level'
+  ? track('level_clear', { game, level, play_seconds: seconds })
+  : track('game_clear', { game, play_seconds: seconds }) });
 setBoard(board);
 initComments({ onPosted: game => track('comment_post', { game }) });
 initVote({ onZero: () => loadState(), onPick: pickVote });

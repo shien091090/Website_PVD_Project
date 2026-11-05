@@ -1,4 +1,4 @@
-// PostHog 補設定: 儀表板「PVD計畫」加上通關時間、每人停留時間、各頁停留時間; 主題 AB 的停留時間改成每人加總;
+// PostHog 補設定: 儀表板「PVD計畫」加上全局通關時間、各關通關時間、每人停留時間、各頁停留時間; 主題 AB 的停留時間改成每人加總;
 // 順便修好第一次設定時中文欄位名沒加引號、跑不起來的圖表
 // 用法: node tools/posthog-playtime.mjs [--dry-run]。已有同名圖表就跳過, 可以重跑
 // 需要 .secrets.env: POSTHOG_PERSONAL_KEY、POSTHOG_PROJECT_ID、POSTHOG_HOST(例 https://us.posthog.com)
@@ -34,13 +34,25 @@ async function upsert(name, description, query) {
   else { await ph('/insights/', { name, description, dashboards: [dash?.id], query: hogql(query) }); console.log(`已新增: ${name}`); }
 }
 
-await upsert('各遊戲通關時間', '玩完一局時, 這位玩家這款遊戲累計的實際遊玩時間(可能分好幾次玩; 暫停、分頁切走不算)', `
-SELECT toString(properties.game) AS 遊戲, count() AS 玩完次數,
+// 原本的「各遊戲通關時間」(舊的玩完一局事件)改名成全局通關, 另加各關通關時間
+const oldFinish = existing.find(i => i.name === '各遊戲通關時間');
+if (oldFinish && !existing.some(i => i.name === '各遊戲全局通關時間')) { oldFinish.name = '各遊戲全局通關時間'; if (!DRY) await ph(`/insights/${oldFinish.id}/`, { name: oldFinish.name }, 'PATCH'); }
+
+await upsert('各遊戲全局通關時間', '全部關卡過完、最後結算畫面出現時, 這位玩家累計的實際遊玩時間(可能分好幾次玩; 暫停、分頁切走不算)。Bubble Tempo 是生存制, 每次死掉結算算一次', `
+SELECT toString(properties.game) AS 遊戲, count() AS 通關次數, count(DISTINCT person_id) AS 人數,
   round(avg(toFloat(properties.play_seconds)) / 60, 1) AS 平均分鐘,
   round(median(toFloat(properties.play_seconds)) / 60, 1) AS 中位數分鐘
 FROM events
-WHERE event = 'game_finish' AND properties.play_seconds IS NOT NULL AND timestamp > now() - INTERVAL 90 DAY
-GROUP BY 遊戲 ORDER BY 玩完次數 DESC`);
+WHERE event = 'game_clear' AND properties.play_seconds IS NOT NULL AND timestamp > now() - INTERVAL 90 DAY
+GROUP BY 遊戲 ORDER BY 通關次數 DESC`);
+
+await upsert('各遊戲各關通關時間', '真的過關才算(失敗、重試不算), 時間含這一關失敗重試的時間; 馬戲團一天算一關', `
+SELECT toString(properties.game) AS 遊戲, toInt(properties.level) AS 關卡, count() AS 通關次數, count(DISTINCT person_id) AS 人數,
+  round(avg(toFloat(properties.play_seconds)) / 60, 1) AS 平均分鐘,
+  round(median(toFloat(properties.play_seconds)) / 60, 1) AS 中位數分鐘
+FROM events
+WHERE event = 'level_clear' AND properties.play_seconds IS NOT NULL AND timestamp > now() - INTERVAL 90 DAY
+GROUP BY 遊戲, 關卡 ORDER BY 遊戲, 關卡`);
 
 await upsert('每人在網站停留時間', '近 30 天每人看得到網頁的時間加總(含玩遊戲、跨多次造訪)', `
 SELECT count() AS 人數, round(avg(t) / 60000, 1) AS 平均分鐘, round(median(t) / 60000, 1) AS 中位數分鐘, round(max(t) / 60000, 1) AS 最長分鐘

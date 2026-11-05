@@ -155,7 +155,7 @@ test('網址 ?theme= 強制主題並出現切換鈕, 不存檔', async () => {
   await ctx.close();
 });
 
-test('遊玩時間只算真正在玩: 分頁切走的時間不算; 玩完一局帶上這款累計的遊玩時間', async () => {
+test('遊玩時間只算真正在玩: 分頁切走的時間不算; 單關通關與全局通關各自累計遊玩時間', async () => {
   const ctx = await browser.newContext(PC);
   const page = await ctx.newPage();
   await page.clock.install();
@@ -181,17 +181,37 @@ test('遊玩時間只算真正在玩: 分頁切走的時間不算; 玩完一局�
   // 時鐘仍照真實時間走, 載入與點擊會多幾秒; 重點是切走的 60 秒不算
   const s = (await ev('game_leave'))[0][2].seconds;
   assert.ok(s >= 15 && s < 45, `遊玩 ${s} 秒`);
-  // 第二次進來玩 20 秒後玩完: 累計 35 秒
+  // 第二次進來玩 20 秒後過第 1 關: 單關與全局都從第一次累計起
   await page.evaluate(() => { location.hash = '#game/jelly-jinni'; });
   await page.locator('#pg-game iframe').waitFor();
   await page.clock.runFor(20000);
   const f = await (await page.$('#pg-game iframe')).contentFrame();
   await f.waitForLoadState();
-  await f.evaluate(() => parent.postMessage({ type: 'pvd:finish' }, location.origin));
-  await page.waitForFunction(() => window.posthog.calls.some(c => c[1] === 'game_finish'));
-  const fin = (await ev('game_finish'))[0][2];
-  assert.equal(fin.game, 'jelly-jinni');
-  assert.ok(fin.play_seconds >= s + 20 && fin.play_seconds < s + 50, `累計 ${fin.play_seconds} 秒`);
+  const send = msg => f.evaluate(m => parent.postMessage(m, location.origin), msg);
+  await send({ type: 'pvd:level-clear', level: 1 });
+  await page.waitForFunction(() => window.posthog.calls.some(c => c[1] === 'level_clear'));
+  const l1 = (await ev('level_clear'))[0][2];
+  assert.equal(l1.game, 'jelly-jinni'); assert.equal(l1.level, 1);
+  assert.ok(l1.play_seconds >= s + 20 && l1.play_seconds < s + 50, `第 1 關 ${l1.play_seconds} 秒`);
+  // 再玩 30 秒過第 2 關: 單關只算這 30 秒; 沒帶關卡編號的不算
+  await page.clock.runFor(30000);
+  await send({ type: 'pvd:level-clear' });
+  await send({ type: 'pvd:level-clear', level: 2 });
+  await page.waitForFunction(() => window.posthog.calls.filter(c => c[1] === 'level_clear').length === 2);
+  const l2 = (await ev('level_clear'))[1][2];
+  assert.equal(l2.level, 2);
+  assert.ok(l2.play_seconds >= 30 && l2.play_seconds < 40, `第 2 關 ${l2.play_seconds} 秒`);
+  // 全局通關: 從開始累計到現在, 之後兩種計時都歸零
+  await page.clock.runFor(10000);
+  await send({ type: 'pvd:game-clear' });
+  await page.waitForFunction(() => window.posthog.calls.some(c => c[1] === 'game_clear'));
+  const g = (await ev('game_clear'))[0][2];
+  assert.equal(g.game, 'jelly-jinni');
+  assert.ok(g.play_seconds >= l1.play_seconds + 40 && g.play_seconds < l1.play_seconds + 55, `全局 ${g.play_seconds} 秒`);
+  await page.clock.runFor(5000);
+  await send({ type: 'pvd:level-clear', level: 1 });
+  await page.waitForFunction(() => window.posthog.calls.filter(c => c[1] === 'level_clear').length === 3);
+  assert.ok((await ev('level_clear'))[2][2].play_seconds < 10);
   await ctx.close();
 });
 

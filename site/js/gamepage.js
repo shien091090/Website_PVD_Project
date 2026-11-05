@@ -15,7 +15,7 @@ const setLoad = pct => {
   if (!el || pct < +el.dataset.p) return;
   el.dataset.p = pct; el.style.setProperty('--p', pct + '%'); el.querySelector('b').textContent = `遊戲載入中 ${pct}%`;
 };
-let onFinish = () => {};
+let onClear = () => {};
 
 // 遊玩時間只算真正在玩: 遊戲框載入且沒暫停(分頁切走、手機轉直)才計時
 // lapAt: 上次回報離開時的累計值; savedAt: 上次存進本機「這款累計遊玩時間」時的累計值
@@ -25,12 +25,13 @@ function setRunning(on) {
   if (on && runSince == null) runSince = Date.now();
   if (!on && runSince != null) { acc += Date.now() - runSince; runSince = null; }
 }
-// 把還沒存的遊玩時間加進本機的這款累計(跨多次進出, 玩完一局時歸零)
+// 把還沒存的遊玩時間加進本機的這款累計(跨多次進出): playtime 是全局計時(全局通關時歸零),
+// leveltime 是單關計時(單關通關或全局通關時歸零); 單位毫秒
 function saveTotal() {
-  const t = store.get('playtime', {}), a = active();
-  t[code] = (t[code] || 0) + (a - savedAt); savedAt = a;
-  store.set('playtime', t);
-  return t;
+  const t = store.get('playtime', {}), l = store.get('leveltime', {}), d = active() - savedAt;
+  t[code] = (t[code] || 0) + d; l[code] = (l[code] || 0) + d; savedAt += d;
+  store.set('playtime', t); store.set('leveltime', l);
+  return { t, l };
 }
 function lap() {
   const a = active(), s = Math.round((a - lapAt) / 1000);
@@ -97,7 +98,7 @@ export function lapGame() {
 }
 
 export function initGamePage(opts = {}) {
-  onFinish = opts.onFinish || onFinish;
+  onClear = opts.onClear || onClear;
   portraitQ.addEventListener('change', sync);
   document.addEventListener('visibilitychange', sync);
   addEventListener('message', e => {
@@ -108,10 +109,19 @@ export function initGamePage(opts = {}) {
       return setLoad(Math.floor(Math.min(1, Math.max(0, +e.data.progress || 0)) * 100));
     }
     if (type === 'pvd:loaded') { reporting = true; return hideLoad(); }
-    if (type !== 'pvd:finish') return;
-    // 玩完一局: 帶上這款累計的遊玩時間, 然後歸零, 下一局重新累計
-    const t = saveTotal(), total = Math.round(t[code] / 1000);
-    t[code] = 0; store.set('playtime', t);
-    onFinish(code, total);
+    if (type !== 'pvd:level-clear' && type !== 'pvd:game-clear') return;
+    // 單關通關: 帶這一關累計的時間(含失敗重試), 只歸零單關計時
+    // 全局通關: 帶從開始玩到現在累計的時間, 兩種計時都歸零
+    const { t, l } = saveTotal();
+    if (type === 'pvd:level-clear') {
+      const level = Math.floor(+e.data.level);
+      if (!(level >= 1)) return;
+      const s = Math.round(l[code] / 1000);
+      l[code] = 0; store.set('leveltime', l);
+      return onClear('level', code, s, level);
+    }
+    const s = Math.round(t[code] / 1000);
+    t[code] = 0; l[code] = 0; store.set('playtime', t); store.set('leveltime', l);
+    onClear('game', code, s);
   });
 }
