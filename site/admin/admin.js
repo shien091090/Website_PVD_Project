@@ -1,4 +1,5 @@
 import { GAMES } from '../js/games.js';
+import { SITE } from '../js/config.js';
 
 const $ = id => document.getElementById(id);
 export const fmt = ms => new Date(ms).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false });
@@ -11,6 +12,15 @@ export async function api(path, method = 'GET', body) {
   if (!r.ok) throw new Error(d?.error?.code || r.status);
   return d;
 }
+
+// 環境標示: 跟送數據用同一份正式網址清單判斷, 正式網址才是正式資料庫
+const PROD = SITE.analyticsHosts.includes(location.hostname);
+const ENV = PROD ? { cls: 'env-prod', text: '正式環境・真實資料', tag: '【正式】' }
+  : location.hostname === 'localhost' ? { cls: 'env-test', text: '本機開發', tag: '【本機】' }
+  : { cls: 'env-test', text: '測試環境・預覽網址，不影響正式站', tag: '【測試】' };
+document.body.classList.add(ENV.cls);
+$('env').textContent = ENV.text;
+document.title = ENV.tag + document.title;
 
 // 分頁籤
 const tabs = {};

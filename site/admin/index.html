@@ -30,10 +30,16 @@
   .card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 12px; }
   .bars div { display: flex; gap: 8px; align-items: center; font-size: 14px; margin: 4px 0; }
   .bars span:first-child { width: 160px; }
+  /* 環境標示: 正式紅、測試黃, 頂端色條 + 標題旁徽章, 避免在錯的後台操作 */
+  body { border-top: 8px solid var(--env, #b9b4c6); }
+  .env { padding: 4px 12px; border-radius: 999px; font-weight: 700; font-size: 14px; color: #fff; background: var(--env, #b9b4c6); }
+  body.env-prod { --env: #e0362b; }
+  body.env-test { --env: #e8a400; }
+  body.env-test .env { color: #2d2144; }
 </style>
 </head>
 <body>
-<header><b>PVD計畫後台</b><nav><button data-tab="comments" class="on">留言</button> <button data-tab="vote">投票</button> <button data-tab="links">連結產生</button></nav><small id="who"></small></header>
+<header><b>PVD計畫後台</b><span class="env" id="env"></span><nav><button data-tab="comments" class="on">留言</button> <button data-tab="vote">投票</button> <button data-tab="links">連結產生</button></nav><small id="who"></small></header>
 <main>
   <section id="tab-comments">
     <div class="row"><label>遊戲 <select id="cgame"></select></label><label><input type="checkbox" id="lock"> 鎖住這款的留言</label><span class="msg" id="cstat"></span></div>
