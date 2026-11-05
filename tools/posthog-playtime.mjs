@@ -1,8 +1,8 @@
 // PostHog 補設定: 儀表板「PVD計畫」加上全局通關時間、各關通關時間、每人停留時間、各頁停留時間; 主題 AB 的停留時間改成每人加總;
 // 順便修好第一次設定時中文欄位名沒加引號、跑不起來的圖表
-// 用法: node tools/posthog-playtime.mjs [--dry-run]。已有同名圖表就跳過, 可以重跑
+// 用法: node tools/posthog-playtime.mjs [--dry-run] [--since="YYYY-MM-DD HH:mm"]。已有同名圖表就跳過, 可以重跑
 // 需要 .secrets.env: POSTHOG_PERSONAL_KEY、POSTHOG_PROJECT_ID、POSTHOG_HOST(例 https://us.posthog.com)
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { quoteCJK } from './hogql.mjs';
 
 const DRY = process.argv.includes('--dry-run');
@@ -24,6 +24,17 @@ async function ph(path, body, method = 'POST') {
 const dash = (await ph('/dashboards/?limit=200', null, 'GET')).results.find(d => d.name === 'PVD計畫' && !d.deleted);
 if (!dash && !DRY) { console.error('找不到儀表板「PVD計畫」, 請先跑 posthog-setup.mjs'); process.exit(1); }
 const existing = (await ph('/insights/?limit=200', null, 'GET')).results.filter(i => !i.deleted);
+// 數據起算時間(台灣時間): 存在 tools/posthog-since.txt, 儀表板每張圖只算這之後的事件。
+// 正式發布時改成上線時間再重跑本工具, 封測數據就不會算進去; 也可用 --since="2026-11-20 00:00" 直接指定並存檔
+const sinceArg = process.argv.find(a => a.startsWith('--since='))?.slice(8);
+const SINCE_FILE = 'tools/posthog-since.txt';
+const SINCE = (sinceArg || readFileSync(SINCE_FILE, 'utf8')).trim();
+if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(SINCE)) { console.error(`起算時間格式要是 YYYY-MM-DD HH:mm, 收到: ${SINCE}`); process.exit(1); }
+if (sinceArg && !DRY) writeFileSync(SINCE_FILE, SINCE + '\n');
+// 趨勢與漏斗圖的日期照專案時區(UTC)解讀, 先換成 UTC
+const SINCE_UTC = new Date(SINCE.replace(' ', 'T') + ':00+08:00').toISOString().slice(0, 19);
+const SINCE_SQL = `timestamp >= toDateTime('${SINCE}:00', 'Asia/Taipei')`;
+console.log(`數據起算: ${SINCE}(台灣時間)`);
 const hogql = query => ({ kind: 'DataVisualizationNode', source: { kind: 'HogQLQuery', query: quoteCJK(query) } });
 // 一段前景時間超過 2 小時視為分頁擺著沒看, 只算 2 小時
 const FG = 'least(toFloat(properties.fg_ms), 7200000)';
@@ -43,7 +54,7 @@ SELECT toString(properties.game) AS 遊戲, count() AS 通關次數, count(DISTI
   round(avg(toFloat(properties.play_seconds)) / 60, 1) AS 平均分鐘,
   round(median(toFloat(properties.play_seconds)) / 60, 1) AS 中位數分鐘
 FROM events
-WHERE event = 'game_clear' AND properties.play_seconds IS NOT NULL AND timestamp > now() - INTERVAL 90 DAY
+WHERE event = 'game_clear' AND properties.play_seconds IS NOT NULL AND ${SINCE_SQL}
 GROUP BY 遊戲 ORDER BY 通關次數 DESC`);
 
 await upsert('各遊戲各關通關時間', '真的過關才算(失敗、重試不算), 時間含這一關失敗重試的時間; 馬戲團一天算一關', `
@@ -51,20 +62,20 @@ SELECT toString(properties.game) AS 遊戲, toInt(properties.level) AS 關卡, c
   round(avg(toFloat(properties.play_seconds)) / 60, 1) AS 平均分鐘,
   round(median(toFloat(properties.play_seconds)) / 60, 1) AS 中位數分鐘
 FROM events
-WHERE event = 'level_clear' AND properties.play_seconds IS NOT NULL AND timestamp > now() - INTERVAL 90 DAY
+WHERE event = 'level_clear' AND properties.play_seconds IS NOT NULL AND ${SINCE_SQL}
 GROUP BY 遊戲, 關卡 ORDER BY 遊戲, 關卡`);
 
-await upsert('每人在網站停留時間', '近 30 天每人看得到網頁的時間加總(含玩遊戲、跨多次造訪)', `
+await upsert('每人在網站停留時間', '每人看得到網頁的時間加總(含玩遊戲、跨多次造訪)', `
 SELECT count() AS 人數, round(avg(t) / 60000, 1) AS 平均分鐘, round(median(t) / 60000, 1) AS 中位數分鐘, round(max(t) / 60000, 1) AS 最長分鐘
 FROM (SELECT person_id, sum(${FG}) AS t FROM events
-  WHERE event = 'engaged' AND timestamp > now() - INTERVAL 30 DAY GROUP BY person_id)`);
+  WHERE event = 'engaged' AND ${SINCE_SQL} GROUP BY person_id)`);
 
-await upsert('各頁面停留時間', '近 30 天各頁看得到的時間; 平均每人 = 總時間 / 有到過這頁的人數', `
+await upsert('各頁面停留時間', '各頁看得到的時間; 平均每人 = 總時間 / 有到過這頁的人數', `
 SELECT multiIf(p = 'home', '首頁', p = 'play', '試玩頁', p = 'game', '遊玩中', p = 'vote', '投票頁', p = 'develop', '開發日誌', p) AS 頁面,
   count(DISTINCT person_id) AS 人數, round(sum(f) / 60000 / count(DISTINCT person_id), 1) AS 平均每人分鐘,
   round(sum(f) / 3600000, 1) AS 總時數
 FROM (SELECT person_id, toString(properties.page) AS p, ${FG} AS f FROM events
-  WHERE event = 'engaged' AND timestamp > now() - INTERVAL 30 DAY)
+  WHERE event = 'engaged' AND ${SINCE_SQL})
 GROUP BY 頁面 ORDER BY 總時數 DESC`);
 
 await upsert('各遊戲平均遊玩時間', '每次離開遊玩頁(含直接關分頁)一筆實際遊玩時間; 超過 2 小時不計', `
@@ -72,7 +83,7 @@ SELECT toString(properties.game) AS 遊戲, count() AS 遊玩次數,
   round(avg(toFloat(properties.seconds)) / 60, 1) AS 平均分鐘,
   round(median(toFloat(properties.seconds)) / 60, 1) AS 中位數分鐘
 FROM events
-WHERE event = 'game_leave' AND timestamp > now() - INTERVAL 30 DAY
+WHERE event = 'game_leave' AND ${SINCE_SQL}
   AND toFloat(properties.seconds) BETWEEN 0 AND 7200
 GROUP BY 遊戲 ORDER BY 遊玩次數 DESC`);
 
@@ -84,6 +95,15 @@ SELECT theme AS 主題, count() AS 人數, round(avg(fg) / 1000, 1) AS 平均停
 FROM (
   SELECT person_id, argMax(toString(properties.theme), timestamp) AS theme,
     sum(${FG}) AS fg, max(toString(properties.interacted) = 'true') AS inter
-  FROM events WHERE event = 'engaged' AND timestamp > now() - INTERVAL 90 DAY
+  FROM events WHERE event = 'engaged' AND ${SINCE_SQL}
   GROUP BY person_id
 ) GROUP BY theme ORDER BY theme`);
+
+// 趨勢與漏斗圖(第一次設定建的)沒有查詢語法可改, 直接把日期範圍設成從起算時間開始
+for (const name of ['各來源人數與裝置', '漏斗: 進站 → 開始玩 → 投票', '漏斗: 進站 → 開始玩 → 留言']) {
+  const i = existing.find(x => x.name === name);
+  if (!i?.query) { console.log(`找不到: ${name}`); continue; }
+  const q = structuredClone(i.query), src = q.source || q;
+  src.dateRange = { ...(src.dateRange || {}), date_from: SINCE_UTC, date_to: null, explicitDate: true };
+  await ph(`/insights/${i.id}/`, { query: q }, 'PATCH'); console.log(`已更新起算時間: ${name}`);
+}
