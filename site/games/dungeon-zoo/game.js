@@ -1003,6 +1003,7 @@ function weaponInput(dt) {
 // 一天結束(表演之後); 見習日不計入天數
 function advanceDay() {
   if (G.day >= 1) G.log[G.day - 1] = G.todayD;
+  if (G.day >= 1 && window.PVDX) PVDX.levelClear(G.day);   // 過完一天 = 單關通關(見習日不算), 通知網站(touch.js)
   if (G.day >= DAY_MAX) { toResult(); return; }
   beginDay(G.day + 1);
 }
@@ -3003,7 +3004,7 @@ function toResult() {
   const stars = G.rep >= STAR_AT[2] ? 3 : G.rep >= STAR_AT[1] ? 2 : G.rep >= STAR_AT[0] ? 1 : 0;
   RS = { t: 0, stars, shown: 0 };
   setScene('result');
-  if (window.PVDX) PVDX.finish();   // 玩完一局: 通知網站(touch.js)
+  if (window.PVDX) PVDX.gameClear();   // 4 天跑完 = 全局通關, 緊接在第 4 天的單關通關之後(touch.js)
 }
 function resultInput(dt) {
   RS.t += dt;
