@@ -44,7 +44,7 @@ const q = s => `'${String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
 
 // 只換掉 games.js 裡這款遊戲的那一筆, 其他內容原樣保留
 export function applyInfo(src, info, icon, banner, pattern) {
-  const re = new RegExp(`  \\{ code: '${info.code}',[\\s\\S]*?\\},\\n`);
+  const re = new RegExp(`  \\{ code: '${info.code}',[\\s\\S]*?\\},\\r?\\n`);
   if (!re.test(src)) throw new Error(`games.js 裡找不到 ${info.code}`);
   const entry = `  { code: ${q(info.code)}, name: ${q(info.name)}, letter: ${q([...info.name][0])}, time: ${q(info.time)}, `
     + `bg: ${q(info.color)}, fg: ${q(info.textColor)}, icon: ${q(icon)}, banner: ${q(banner)}, pattern: ${q(pattern)},\n    intro: ${q(info.intro)} },\n`;
