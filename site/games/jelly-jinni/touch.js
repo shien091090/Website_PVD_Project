@@ -6,10 +6,12 @@
      鍵盤遊戲 → 畫面上層畫虛擬按鈕, 輸入走遊戲的 inputDown / inputUp(和鍵盤同一條路徑), 鍵帽字換成手機版;
      滑鼠遊戲 → 不畫按鈕, 點擊就等於觸控(需要時把觸控轉成滑鼠事件), 遊戲區拖曳不捲動頁面;
      直拿手機時蓋提示並暫停。手機不放任何聲音按鈕, 交給手機本身的靜音與音量
-   - 電腦與手機都有: 收 pvd:pause / pvd:resume 暫停 / 繼續(含音效)、Esc 暫停(CONFIG.escPause)、PVDX.finish() 通知網站玩完一局
+   - 電腦與手機都有: 收 pvd:pause / pvd:resume 暫停 / 繼續(含音效)、Esc 暫停(CONFIG.escPause)、PVDX.levelClear(level) / PVDX.gameClear() 通知網站單關通關 / 全局通關
    遊戲要掛的鉤子(設計見 game-studio-lab docs/2026-10-31-release-mobile-design.md):
      每幀 `if (!(window.PVDX && PVDX.paused)) update(dt);`, 畫完 `if (window.PVDX) PVDX.draw(ctx);`;
-     一局結束 `if (window.PVDX) PVDX.finish();`;
+     真的過了第 level 關(從 1 起)那一刻 `if (window.PVDX) PVDX.levelClear(level);`, 失敗、重試、重來、放棄都不送;
+     全部關卡過完、最後結算畫面出現時 `if (window.PVDX) PVDX.gameClear();`(緊接在最後一關過關後就兩個都送, 先單關再全局);
+     同一時間點只送一次, 不放在每幀或會重複進入的畫面裡;
      鍵盤遊戲另有全域 inputDown(k) / inputUp(k) / inputReset(), inputDown 開頭 `if (window.PVDX && PVDX.paused) return;` */
 (function () {
   // ───────── 每款遊戲要改的設定 ─────────
@@ -95,7 +97,7 @@
   var ON = CONFIG.mode !== 'none' && (forced || coarse || (hasTouch && !hover));
   var KEYS = CONFIG.mode === 'keys';
 
-  var PVDX = { on: ON, paused: false, held: {}, draw: function () { }, finish: function () { } };
+  var PVDX = { on: ON, paused: false, held: {}, draw: function () { }, levelClear: function () { }, gameClear: function () { } };
   window.PVDX = PVDX;
   function call(fn, arg) { try { fn(arg); } catch (e) { console.error(e); } }
 
@@ -207,9 +209,12 @@
     }, true);
   });
 
-  // 玩完一局: 通知上層網站(不在 iframe 裡就不送)
-  PVDX.finish = function () {
-    try { if (window.parent && window.parent !== window) window.parent.postMessage({ type: 'pvd:finish' }, location.origin); } catch (e) { /* 本機 file:// 開啟時略過 */ }
+  // 通關通知: 上層網站計算各關與全部通關時間(不在 iframe 裡就不送)
+  function post(msg) {
+    try { if (window.parent && window.parent !== window) window.parent.postMessage(msg, location.origin); } catch (e) { /* 本機 file:// 開啟時略過 */ }
+  }
+  PVDX.levelClear = function (level) { post({ type: 'pvd:level-clear', level: level }); };
+  PVDX.gameClear = function () { post({ type: 'pvd:game-clear' });
   };
 
   // ───────── 觸控模式 ─────────
