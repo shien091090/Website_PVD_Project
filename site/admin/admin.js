@@ -67,16 +67,17 @@ onTab('comments', loadComments);
 // ---- 連結產生: 參數存在伺服器, 對外只給短代碼連結 /s/<代碼> ----
 const slug = v => v.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 const PAGE_NAME = { '': '首頁', play: '試玩頁', vote: '投票頁', develop: '開發頁' };
-const LINK_ERR = { bad_source: '平台只能用英文小寫、數字與連字號；不想填請勾「不指定平台」', no_source: '請填平台，或勾「不指定平台」', bad_campaign: '活動只能用英文小寫、數字與連字號', bad_content: '貼文代號只能用英文小寫、數字與連字號', bad_page: '導連位置不正確' };
+const LINK_ERR = { bad_source: '平台只能用英文小寫、數字與連字號；不想填請選「不指定平台」', no_source: '請填平台名稱，或選「不指定平台」', bad_campaign: '活動只能用英文小寫、數字與連字號', bad_content: '貼文代號只能用英文小寫、數字與連字號', bad_page: '導連位置不正確' };
 const linkUrl = code => `${location.origin}/s/${code}`;
 async function copyText(text, msgEl, input) {
   try { await navigator.clipboard.writeText(text); msgEl.textContent = '已複製'; }
   catch { if (input) input.select(); msgEl.textContent = '請手動複製'; }
 }
-['usrc', 'ucamp', 'ucont'].forEach(id => $(id).addEventListener('blur', () => { $(id).value = slug($(id).value); }));
+['usrc2', 'ucamp', 'ucont'].forEach(id => $(id).addEventListener('blur', () => { $(id).value = slug($(id).value); }));
 $('umake').addEventListener('click', async () => {
-  if (!$('unosrc').checked && !slug($('usrc').value)) { $('umsg').innerHTML = `<span class="err">${LINK_ERR.no_source}</span>`; return; }
-  const body = { source: $('unosrc').checked ? '' : slug($('usrc').value), campaign: slug($('ucamp').value), content: slug($('ucont').value), page: $('upage').value };
+  const other = $('usrc').value === '*', source = other ? slug($('usrc2').value) : $('usrc').value;
+  if (other && !source) { $('umsg').innerHTML = `<span class="err">${LINK_ERR.no_source}</span>`; return; }
+  const body = { source, campaign: slug($('ucamp').value), content: slug($('ucont').value), page: $('upage').value, note: $('unote').value.trim() };
   $('umsg').textContent = '';
   try {
     const l = await api('links', 'POST', body);
@@ -85,21 +86,29 @@ $('umake').addEventListener('click', async () => {
     loadLinks();
   } catch (e) { if (e.message !== '401') $('umsg').innerHTML = `<span class="err">${esc(LINK_ERR[e.message] || e.message)}</span>`; }
 });
-$('unosrc').addEventListener('change', e => { $('usrc').disabled = e.target.checked; });
+$('usrc').addEventListener('change', e => { $('usrc2').hidden = e.target.value !== '*'; if (!$('usrc2').hidden) $('usrc2').focus(); });
 $('ucopy').addEventListener('click', () => { if ($('uout').value) copyText($('uout').value, $('umsg'), $('uout')); });
 async function loadLinks() {
   try {
     const { links } = await api('links');
-    $('ulist').innerHTML = links.map(l => `<tr><td>${fmt(l.createdAt)}</td><td>${l.source ? esc(l.source) : '不指定'}</td><td>${esc(l.campaign || '—')}</td><td>${esc(l.content || '—')}</td><td>${PAGE_NAME[l.page] ?? esc(l.page)}</td>
-      <td><code>${esc(linkUrl(l.code))}</code></td><td><button class="b" data-copy="${esc(l.code)}">複製</button></td></tr>`).join('') || '<tr><td colspan="7" class="msg">還沒有產生過連結</td></tr>';
-  } catch (e) { if (e.message !== '401') $('ulist').innerHTML = `<tr><td colspan="7" class="err">讀取失敗：${esc(e.message)}</td></tr>`; }
+    $('ulist').innerHTML = links.map(l => `<tr><td>${fmt(l.createdAt)}</td><td>${l.source ? esc(l.source) : '不指定'}</td><td>${esc(l.campaign || '—')}</td><td>${esc(l.content || '—')}</td><td>${PAGE_NAME[l.page] ?? esc(l.page)}</td><td class="t">${esc(l.note || '')}</td>
+      <td><code>${esc(linkUrl(l.code))}</code></td><td><button class="b" data-copy="${esc(l.code)}">複製</button></td></tr>`).join('') || '<tr><td colspan="8" class="msg">還沒有產生過連結</td></tr>';
+  } catch (e) { if (e.message !== '401') $('ulist').innerHTML = `<tr><td colspan="8" class="err">讀取失敗：${esc(e.message)}</td></tr>`; }
 }
 $('ulist').addEventListener('click', e => { const b = e.target.closest('[data-copy]'); if (b) copyText(linkUrl(b.dataset.copy), $('umsg')); });
 onTab('links', loadLinks);
 
 // ---- 投票: 輪次清單、即時票數、同票指定勝出; 時間一律台灣時間 ----
-const toInput = ms => new Date(ms + 8 * 3600000).toISOString().slice(0, 16);
-const fromInput = v => Date.parse(v + ':00+08:00');
+// 日期時間選擇: 日期 + 時(00~23)、分、秒下拉, 不用瀏覽器內建的上午/下午
+const two = n => String(n).padStart(2, '0');
+const nums = (n, v) => Array.from({ length: n }, (_, i) => `<option${i === v ? ' selected' : ''}>${two(i)}</option>`).join('');
+// ms 沒給時: 日期留空, 時間用 def(例 [23, 59, 59])
+function dtHtml(cls, ms, def = [0, 0, 0]) {
+  const t = ms == null ? null : new Date(ms + 8 * 3600000).toISOString();
+  const [h, m, s] = t ? [+t.slice(11, 13), +t.slice(14, 16), +t.slice(17, 19)] : def;
+  return `<span class="dt ${cls}"><input type="date" value="${t ? t.slice(0, 10) : ''}"><select title="時">${nums(24, h)}</select>:<select title="分">${nums(60, m)}</select>:<select title="秒">${nums(60, s)}</select></span>`;
+}
+const dtVal = el => { const [d, h, m, s] = [...el.querySelectorAll('input, select')].map(x => x.value); return d ? Date.parse(`${d}T${h}:${m}:${s}+08:00`) : NaN; };
 const PHASE = { upcoming: '尚未開始', live: '進行中', ended: '已結束' };
 const nameOf = (r, code) => r.options.find(o => o.id === code)?.label || code;
 async function loadVote() {
@@ -110,13 +119,13 @@ async function loadVote() {
   const max = r => Math.max(1, ...Object.values(r.counts));
   box.innerHTML = `
     <div class="card"><b>新增一輪</b>
-      <div class="row" style="margin-top:8px"><label>開始 <input type="datetime-local" id="nstart"></label><label>截止 <input type="datetime-local" id="nend"></label>
+      <div class="row" style="margin-top:8px"><label>開始 ${dtHtml('nstart', null)}</label><label>截止 ${dtHtml('nend', null, [23, 59, 59])}</label>
       <button class="b" id="nadd">新增</button><span class="msg" id="nmsg"></span></div>
       <div class="row" style="margin-top:8px">候選（網站上目前的遊戲，至少 2 款；新增後不能改，要改就刪掉重開）：${GAMES.map(g => `<label><input type="checkbox" class="nopt" value="${g.code}" checked> ${esc(g.name)}</label>`).join('')}</div></div>` +
     (d.rounds.map(r => `
     <div class="card" data-id="${r.id}"><b>第 ${r.id} 輪</b>・${PHASE[r.phase]}・共 ${r.total} 票${r.winner ? `・勝出：${esc(nameOf(r, r.winner))}（後台指定，前台公布時勝出款多加 1 票）` : ''}
-      <div class="row" style="margin-top:8px"><label>開始 <input type="datetime-local" class="rs" value="${toInput(r.startsAt)}"></label>
-        <label>截止 <input type="datetime-local" class="re" value="${toInput(r.endsAt)}"></label><button class="b rsave">儲存時間</button><button class="b danger rdel">刪除這一輪</button><span class="msg rmsg"></span></div>
+      <div class="row" style="margin-top:8px"><label>開始 ${dtHtml('rs', r.startsAt)}</label>
+        <label>截止 ${dtHtml('re', r.endsAt)}</label><button class="b rsave">儲存時間</button><button class="b danger rdel">刪除這一輪</button><span class="msg rmsg"></span></div>
       <div class="bars">${r.options.map(o => `<div><span>${esc(o.label)}</span><span style="display:inline-block;height:12px;background:#2fc9ed;width:${r.counts[o.id] / max(r) * 240}px"></span><span>${r.counts[o.id]}</span></div>`).join('')}</div>
       ${r.phase === 'ended' && r.tie ? `<div class="row" style="margin-top:8px"><span class="err">同票，請指定勝出：</span>
         <select class="wsel">${r.options.filter(o => !r.total || r.counts[o.id] === max(r)).map(o => `<option value="${o.id}" ${r.winner === o.id ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}</select>
@@ -124,13 +133,14 @@ async function loadVote() {
     </div>`).join('') || '<p class="msg">還沒有任何一輪。</p>');
   $('nadd').addEventListener('click', async () => {
     const options = [...box.querySelectorAll('.nopt:checked')].map(c => c.value);
-    try { await api('rounds', 'POST', { startsAt: fromInput($('nstart').value), endsAt: fromInput($('nend').value), options }); loadVote(); }
+    if (Number.isNaN(dtVal(box.querySelector('.nstart'))) || Number.isNaN(dtVal(box.querySelector('.nend')))) { $('nmsg').innerHTML = '<span class="err">請選開始與截止的日期</span>'; return; }
+    try { await api('rounds', 'POST', { startsAt: dtVal(box.querySelector('.nstart')), endsAt: dtVal(box.querySelector('.nend')), options }); loadVote(); }
     catch (e) { $('nmsg').innerHTML = `<span class="err">${({ bad_times: '截止要晚於開始', too_few_options: '候選至少要勾 2 款' })[e.message] || esc(e.message)}</span>`; }
   });
   box.querySelectorAll('.card[data-id]').forEach(card => {
     const id = +card.dataset.id;
     card.querySelector('.rsave').addEventListener('click', async () => {
-      try { await api('rounds', 'PUT', { id, startsAt: fromInput(card.querySelector('.rs').value), endsAt: fromInput(card.querySelector('.re').value) }); loadVote(); }
+      try { await api('rounds', 'PUT', { id, startsAt: dtVal(card.querySelector('.rs')), endsAt: dtVal(card.querySelector('.re')) }); loadVote(); }
       catch (e) { card.querySelector('.rmsg').innerHTML = `<span class="err">${e.message === 'bad_times' ? '截止要晚於開始' : esc(e.message)}</span>`; }
     });
     // 刪除輪次(連同票)也用兩段式按鈕

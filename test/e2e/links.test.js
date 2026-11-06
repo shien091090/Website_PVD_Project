@@ -11,23 +11,27 @@ test('後台產生短連結, 打開後跳到導連頁、網址列沒有參數、
   const page = await ctx.newPage();
   await page.goto(srv.url + 'admin/');
   await page.click('nav button[data-tab="links"]');
-  await page.fill('#usrc', 'threads'); await page.fill('#ucamp', 'pvd-round1'); await page.fill('#ucont', 'post-0101');
+  await page.selectOption('#usrc', 'threads'); await page.fill('#unote', '週五貼文'); await page.fill('#ucamp', 'pvd-round1'); await page.fill('#ucont', 'post-0101');
   await page.selectOption('#upage', 'play');
   await page.click('#umake');
   await page.locator('#umsg:has-text("已產生新連結")').waitFor();
   const url = await page.inputValue('#uout');
   assert.match(url, /\/s\/[A-Za-z0-9]{7}$/);
   assert.ok(!/threads|round1|post-0101|play/.test(url));
-  await page.locator('#ulist tr:has-text("threads")').waitFor();
+  await page.locator('#ulist tr:has-text("threads"):has-text("週五貼文")').waitFor();
   await page.click('#umake');
   await page.locator('#umsg:has-text("沿用同一條連結")').waitFor();
   assert.equal(await page.inputValue('#uout'), url);
 
-  await page.check('#unosrc'); await page.fill('#ucont', 'post-0102');
-  assert.ok(await page.locator('#usrc').isDisabled());
+  await page.selectOption('#usrc', ''); await page.fill('#ucont', 'post-0102');
   await page.click('#umake');
   await page.locator('#ulist tr:has-text("不指定")').waitFor();
   assert.notEqual(await page.inputValue('#uout'), url);
+  await page.selectOption('#usrc', '*');
+  assert.ok(await page.locator('#usrc2').isVisible());
+  await page.fill('#usrc2', 'PTT'); await page.fill('#ucont', 'post-0103');
+  await page.click('#umake');
+  await page.locator('#ulist tr:has-text("ptt")').waitFor();
 
   await page.goto(url);
   await page.waitForURL(srv.url + '#play');

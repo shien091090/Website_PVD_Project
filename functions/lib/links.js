@@ -8,7 +8,7 @@ const ALPHA = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789'; // �
 
 export const newCode = (len = 7) => [...crypto.getRandomValues(new Uint8Array(len))].map(b => ALPHA[b % ALPHA.length]).join('');
 
-const shape = r => r && { code: r.code, source: r.source, campaign: r.campaign, content: r.content, page: r.page, createdAt: r.created_at };
+const shape = r => r && { code: r.code, source: r.source, campaign: r.campaign, content: r.content, page: r.page, note: r.note || '', createdAt: r.created_at };
 
 export function cleanParams(body) {
   const v = k => String(body?.[k] ?? '').trim();
@@ -17,7 +17,8 @@ export function cleanParams(body) {
   if (campaign && !SLUG_RE.test(campaign)) throw new HttpError(400, 'bad_campaign');
   if (content && !SLUG_RE.test(content)) throw new HttpError(400, 'bad_content');
   if (!PAGES.includes(page)) throw new HttpError(400, 'bad_page');
-  return { source, campaign, content, page };
+  const note = v('note').slice(0, 200);
+  return { source, campaign, content, page, note };
 }
 
 // 同一組參數重複產生時回傳既有的代碼, 貼出去的連結才不會一組參數好幾條
@@ -26,16 +27,21 @@ export async function createLink(db, params, now) {
   const find = () => db.prepare('SELECT * FROM links WHERE source = ? AND campaign = ? AND content = ? AND page = ?')
     .bind(p.source, p.campaign, p.content, p.page).first();
   const old = await find();
-  if (old) return { ...shape(old), created: false };
+  // 備註不算在參數裡: 同一組參數沿用舊代碼, 有填新備註就更新備註
+  const keep = async row => {
+    if (p.note && p.note !== row.note) { await db.prepare('UPDATE links SET note = ? WHERE code = ?').bind(p.note, row.code).run(); row = { ...row, note: p.note }; }
+    return { ...shape(row), created: false };
+  };
+  if (old) return keep(old);
   for (let i = 0; i < 5; i++) {
     const code = newCode();
     try {
-      await db.prepare('INSERT INTO links (code, source, campaign, content, page, created_at) VALUES (?, ?, ?, ?, ?, ?)')
-        .bind(code, p.source, p.campaign, p.content, p.page, now).run();
+      await db.prepare('INSERT INTO links (code, source, campaign, content, page, note, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+        .bind(code, p.source, p.campaign, p.content, p.page, p.note, now).run();
       return { code, ...p, createdAt: now, created: true };
     } catch (e) {
       const dup = await find(); // 同時有人產生同一組
-      if (dup) return { ...shape(dup), created: false };
+      if (dup) return keep(dup);
     }
   }
   throw new HttpError(500, 'code_collision');

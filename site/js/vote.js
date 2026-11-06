@@ -40,7 +40,11 @@ export function render() {
   pg.classList.toggle('pending', end && !!state.results?.pending);
   pg.classList.toggle('none', state.phase === 'none' || state.phase === 'loading');
   document.getElementById('deadline').textContent = state.phase === 'live' ? deadlineLabel(state.round.endsAt) : '';
-  document.getElementById('vhint').textContent = state.phase === 'live' && state.myVote ? '再點一次已選的那款可以取消' : '';
+  // 選了就等於投票, 不用另外送出: 下方顯示投票狀態(送出中 / 已完成投票 + 哪一款)
+  const done = document.getElementById('vdone'), mine = state.myVote && options().find(g => g.code === state.myVote);
+  done.className = 'vdone' + (state.phase !== 'live' ? ' off' : mine ? (state.sending ? ' wait' : ' ok') : '');
+  done.innerHTML = state.phase !== 'live' ? '' : !mine ? '<span class="tip">點一款就完成投票，不用另外按送出</span>'
+    : `<span class="ok">${state.sending ? '投票送出中…' : `${CHECK}已完成投票`}</span>${ico(mine)}<b>${esc(mine.name)}</b><span class="tip">再點一次已選的那款可以取消</span>`;
   const played = new Set(store.get('played', []));
   vrows.innerHTML = state.phase === 'loading' ? '' : state.phase === 'none' ? '<p class="vmsg">投票尚未開放</p>' : options().map(g => `
     <div class="vr${state.myVote === g.code ? ' on' : ''}" role="radio" tabindex="0" aria-checked="${state.myVote === g.code}" data-k="${g.code}">

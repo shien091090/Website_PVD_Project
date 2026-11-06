@@ -42,11 +42,14 @@ test('已投的那款再點一次就取消投票, 重新整理後也沒有票', 
   await page.goto(srv.url + '#vote');
   await page.locator('#deadline:has-text("截止")').waitFor();
   const voted = () => page.waitForResponse(r => r.url().endsWith('/api/vote') && r.status() === 200, { timeout: 15000 });
+  await page.locator('#vdone:has-text("不用另外按送出")').waitFor();
   await Promise.all([voted(), page.click('.vr[data-k="dungeon-zoo"]')]);
-  await page.locator('#vhint:has-text("取消")').waitFor();
+  await page.locator('#vdone.ok:has-text("已完成投票")').waitFor();
+  assert.match(await page.textContent('#vdone'), /來馬戲團看一點大場面/);
+  assert.ok(await page.locator('#vdone .icon').count());
   await Promise.all([voted(), page.click('.vr[data-k="dungeon-zoo"]')]);
   assert.equal(await page.locator('.vr.on').count(), 0);
-  assert.equal(await page.textContent('#vhint'), '');
+  await page.locator('#vdone:not(.ok):has-text("不用另外按送出")').waitFor();
   await page.reload();
   await page.locator('.vr[data-k="dungeon-zoo"]').waitFor();
   assert.equal(await page.locator('.vr.on').count(), 0);
@@ -161,8 +164,15 @@ test('後台開新一輪只勾 2 款候選, 投票頁只出現這 2 款', async 
   await page.goto(srv.url + 'admin/');
   await page.click('nav button[data-tab="vote"]');
   await page.locator('#nadd').waitFor();
-  const tw = ms => new Date(ms + 8 * 3600000).toISOString().slice(0, 16);
-  await page.fill('#nstart', tw(Date.now() - 3600000)); await page.fill('#nend', tw(Date.now() + 3600000));
+  // 日期 + 時分秒下拉(24 小時制)
+  const setDt = async (cls, ms) => {
+    const t = new Date(ms + 8 * 3600000).toISOString();
+    await page.fill(`.${cls} input`, t.slice(0, 10));
+    const sel = page.locator(`.${cls} select`);
+    for (const [i, a] of [[0, 11], [1, 14], [2, 17]]) await sel.nth(i).selectOption(t.slice(a, a + 2));
+  };
+  assert.equal(await page.locator('.nstart select').first().locator('option').count(), 24);
+  await setDt('nstart', Date.now() - 3600000); await setDt('nend', Date.now() + 3600000);
   await page.uncheck('.nopt[value="dungeon-zoo"]'); await page.uncheck('.nopt[value="soul-smith-defense"]');
   await page.click('#nadd');
   await page.locator('.card[data-id="1"]').waitFor();

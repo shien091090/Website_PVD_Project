@@ -43,7 +43,7 @@ async function loadState() {
   clearTimeout(retry);
   try {
     const s = await getJSON('/api/state');
-    setState(sending && s.phase === 'live' ? { ...s, myVote: want } : s); // 改投還在送: 畫面維持最後點的那款
+    setState(sending && s.phase === 'live' ? { ...s, myVote: want, sending: true } : s); // 改投還在送: 畫面維持最後點的那款
   }
   catch { retry = setTimeout(loadState, 5000); }
 }
@@ -54,7 +54,7 @@ async function pickVote(code) {
   setVoteError('');
   if (!sending) saved = getState().myVote || null;
   want = code;
-  setState({ ...getState(), myVote: code, now: undefined });
+  setState({ ...getState(), myVote: code, sending: !!code || sending, now: undefined });
   if (code) focusVoted();
   if (sending) return;
   sending = true;
@@ -71,7 +71,7 @@ async function pickVote(code) {
     setState({ ...getState(), myVote: saved, now: undefined });
     if (e.code === 'ended' || e.code === 'no_round') loadState();
     else setVoteError(VOTE_ERR[e.code] || '投票失敗，請稍後再試');
-  } finally { sending = false; }
+  } finally { sending = false; setState({ ...getState(), sending: false, now: undefined }); }
 }
 loadState();
 document.addEventListener('visibilitychange', () => { if (!document.hidden) loadState(); });

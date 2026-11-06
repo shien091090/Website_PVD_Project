@@ -40,6 +40,20 @@ test('產生短連結: 平台必填, 參數只能英文小寫數字連字號, �
   assert.equal(none.body.source, '');
 });
 
+test('連結備註: 不影響代碼, 同一組參數填新備註會更新, 不填則保留', async () => {
+  const db = makeD1();
+  const a = await make(db, { source: 'threads', campaign: 'r1', page: '', note: '第一篇' });
+  assert.equal(a.body.note, '第一篇');
+  const b = await make(db, { source: 'threads', campaign: 'r1', page: '', note: '改過的備註' });
+  assert.equal(b.body.code, a.body.code);
+  assert.equal(b.body.note, '改過的備註');
+  const c = await make(db, { source: 'threads', campaign: 'r1', page: '' });
+  assert.equal(c.body.note, '改過的備註');
+  const list = await call(adminLinks.onRequestGet, db, 'GET', '/api/admin/links');
+  assert.equal(list.body.links.length, 1);
+  assert.equal(list.body.links[0].note, '改過的備註');
+});
+
 test('打開短連結: 跳到導連頁並放來源 cookie; 查不到就回首頁、不放 cookie', async () => {
   const db = makeD1();
   const { body: l } = await make(db, { source: 'threads', campaign: 'pvd-round1', content: 'post-0101', page: 'play' });

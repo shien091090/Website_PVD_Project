@@ -346,6 +346,17 @@ body[data-pg="vote"] .thm { left: auto; right: calc(12px + env(safe-area-inset-r
 .rr .vc { width: 120px; text-align: right; flex: none; }
 .rr .vc b { font: 900 30px/1 var(--font); font-variant-numeric: tabular-nums; }
 .rr .vc small { font: 700 13px/1 var(--font); color: var(--muted); }
+/* 投票狀態列: 選了就等於投票, 顯示「已完成投票」+ 那款的小圖示與名稱 */
+.vdone { flex: none; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 20px; border: 2px dashed var(--faint); border-radius: 16px; font: 700 16px/1.2 var(--font); color: var(--muted); }
+.vdone.off { display: none; }
+.vdone.ok, .vdone.wait { border: 3px solid var(--ink); background: var(--paper); color: var(--fg); }
+.vdone .ok { display: inline-flex; align-items: center; gap: 8px; font: 900 20px/1 var(--font); white-space: nowrap; }
+.vdone.ok .ok { color: #1f9d55; }
+.vdone .ok svg { width: 26px; height: 26px; background: #1f9d55; border-radius: 50%; padding: 4px; box-sizing: border-box; }
+.vdone .icon { width: 40px; height: 40px; border-radius: 11px; font-size: 22px; flex: none; }
+.vdone b { font: 900 20px/1.1 var(--font); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vdone .tip { margin-left: auto; font-size: 14px; color: var(--muted); white-space: nowrap; }
+.vdone:not(.ok):not(.wait) .tip { margin: 0 auto; }
 .vmain .ended { display: none; }
 #pg-vote.end .vmain .live { display: none; }
 #pg-vote.end .vmain .ended { display: flex; }
@@ -369,7 +380,12 @@ body[data-pg="vote"] .thm { left: auto; right: calc(12px + env(safe-area-inset-r
   .cd > .lb { display: none; }
   .vright { flex: 1; gap: 10px; }
   .vright h2 { font-size: 19px; margin: 2px 0 0; }
-  .vright h2 small { font-size: 12px; margin-left: 4px; }
+  .vdone { min-height: 46px; padding: 6px 12px; gap: 8px; flex-wrap: wrap; font-size: 14px; }
+  .vdone .ok, .vdone b { font-size: 16px; }
+  .vdone .ok svg { width: 22px; height: 22px; }
+  .vdone .icon { width: 30px; height: 30px; border-radius: 8px; font-size: 17px; }
+  .vdone .tip { font-size: 12px; }
+  .vdone.ok .tip, .vdone.wait .tip { flex-basis: 100%; margin: 0; }
   .vr { gap: 12px; padding: 8px 12px 8px 10px; border-radius: 16px; }
   .vr .rd { width: 36px; height: 36px; border-width: 2px; }
   .vr .rd svg { width: 19px; height: 19px; }
