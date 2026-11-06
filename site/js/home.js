@@ -27,6 +27,7 @@ export function fit() {
   title.style.setProperty('--x0', (1920 - title.offsetWidth) / 2 + 'px');
   syncVideo();
   fitP = null;
+  placeWhat();
   if (!col) return;
   let p = por ? por.p : Math.min(innerWidth * .24, (H - 240) / 4.6) / s;
   const setP = () => { title.style.setProperty('--p', p + 'px'); title.style.setProperty('--g', p * .16 + 'px'); };
@@ -41,6 +42,15 @@ export function fit() {
   at();
   // 太窄被縮小時, 播放前要先放回影片的大小
   if (por && p !== por.p) fitP = () => { p = por.p; setP(); at(); };
+}
+
+// 橫向畫面: 「PVD計畫是什麼?」放在標題正下方, 跟著舞台縮放; 直拿照原本放在底部
+function placeWhat() {
+  const hero = document.getElementById('hero');
+  hero.classList.toggle('wide', !col);
+  if (col) return;
+  hero.style.setProperty('--ws', s);
+  hero.style.setProperty('--wy', title.getBoundingClientRect().bottom - hero.getBoundingClientRect().top + 56 * s + 'px');
 }
 
 function syncVideo() {

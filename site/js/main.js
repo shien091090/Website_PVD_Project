@@ -55,14 +55,15 @@ async function pickVote(code) {
   if (!sending) saved = getState().myVote || null;
   want = code;
   setState({ ...getState(), myVote: code, now: undefined });
-  focusVoted();
+  if (code) focusVoted();
   if (sending) return;
   sending = true;
   try {
     while (want !== saved) {
-      const game = want, token = await turnstileToken();
+      // 取消投票不用防機器人驗證
+      const game = want, token = game ? await turnstileToken() : undefined;
       const r = await postJSON('/api/vote', { game, token });
-      track('vote_cast', { game, changed: !!saved });
+      if (game) track('vote_cast', { game, changed: !!saved }); else track('vote_cancel', { game: saved });
       saved = r.myVote;
     }
   } catch (e) {

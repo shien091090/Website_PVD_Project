@@ -20,7 +20,7 @@
 :root.dark :is(.page, .intro) :is(.cform button, .homebtn:hover, .back:hover, .links a:hover, .badge) { background: var(--fg); color: var(--on-ink); }
 .dev h2 span { color: var(--dk); } /* 黃色編號塊上的數字固定深色 */
 /* 暗色的試玩鈕: 大面積紅太刺眼, 換成較深但不灰的紅 */
-:root.dark .page .startbtn { background: #c9403a; color: #fdf3f1; filter: none; }
+:root.dark .page .startbtn { background: #e8777b; color: #fff; filter: none; }
 :root.dark .page .cd.live .n.sec b { color: #26a3bf; }
 html, body { height: 100%; }
 body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font); }
@@ -85,6 +85,7 @@ body.lock { overflow: hidden; }
 .what { position: absolute; right: calc(24px + env(safe-area-inset-right, 0px)); bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
 .close { position: fixed; left: calc(20px + env(safe-area-inset-left, 0px)); top: calc(20px + env(safe-area-inset-top, 0px)); }
 .home:not(.playing) .close, .home.playing .what { display: none; }
+.hero.wide .what { right: auto; bottom: auto; left: 50%; top: var(--wy); transform: translateX(-50%); font-size: max(17px, calc(36px * var(--ws, 1))); border-width: 3px; padding: .75em 1.5em; white-space: nowrap; }
 @media (max-width: 640px) {
   .what { right: auto; left: 50%; transform: translateX(-50%); bottom: calc(64px + env(safe-area-inset-bottom, 0px)); white-space: nowrap; }
   .more { bottom: calc(22px + env(safe-area-inset-bottom, 0px)); }
@@ -368,6 +369,7 @@ body[data-pg="vote"] .thm { left: auto; right: calc(12px + env(safe-area-inset-r
   .cd > .lb { display: none; }
   .vright { flex: 1; gap: 10px; }
   .vright h2 { font-size: 19px; margin: 2px 0 0; }
+  .vright h2 small { font-size: 12px; margin-left: 4px; }
   .vr { gap: 12px; padding: 8px 12px 8px 10px; border-radius: 16px; }
   .vr .rd { width: 36px; height: 36px; border-width: 2px; }
   .vr .rd svg { width: 19px; height: 19px; }

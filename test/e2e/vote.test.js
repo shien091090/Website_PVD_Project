@@ -35,6 +35,25 @@ test('投票、重新整理仍記得、改投, 倒數歸零自動切成結果', 
   await ctx.close();
 });
 
+test('已投的那款再點一次就取消投票, 重新整理後也沒有票', async () => {
+  round(-60000, 600000);
+  const ctx = await browser.newContext(PC);
+  const page = await ctx.newPage();
+  await page.goto(srv.url + '#vote');
+  await page.locator('#deadline:has-text("截止")').waitFor();
+  const voted = () => page.waitForResponse(r => r.url().endsWith('/api/vote') && r.status() === 200, { timeout: 15000 });
+  await Promise.all([voted(), page.click('.vr[data-k="dungeon-zoo"]')]);
+  await page.locator('#vhint:has-text("取消")').waitFor();
+  await Promise.all([voted(), page.click('.vr[data-k="dungeon-zoo"]')]);
+  assert.equal(await page.locator('.vr.on').count(), 0);
+  assert.equal(await page.textContent('#vhint'), '');
+  await page.reload();
+  await page.locator('.vr[data-k="dungeon-zoo"]').waitFor();
+  assert.equal(await page.locator('.vr.on').count(), 0);
+  assert.equal(srv.sql('SELECT count(*) AS n FROM votes')[0].n, 0);
+  await ctx.close();
+});
+
 test('已結束: 勝出卡與 4 條長條, 全站結束狀態', async () => {
   round(-7200000, -3600000);
   votes([['a', 'bubble-tempo'], ['b', 'bubble-tempo'], ['c', 'bubble-tempo'], ['d', 'jelly-jinni']]);

@@ -40,6 +40,7 @@ export function render() {
   pg.classList.toggle('pending', end && !!state.results?.pending);
   pg.classList.toggle('none', state.phase === 'none' || state.phase === 'loading');
   document.getElementById('deadline').textContent = state.phase === 'live' ? deadlineLabel(state.round.endsAt) : '';
+  document.getElementById('vhint').textContent = state.phase === 'live' && state.myVote ? '再點一次已選的那款可以取消' : '';
   const played = new Set(store.get('played', []));
   vrows.innerHTML = state.phase === 'loading' ? '' : state.phase === 'none' ? '<p class="vmsg">投票尚未開放</p>' : options().map(g => `
     <div class="vr${state.myVote === g.code ? ' on' : ''}" role="radio" tabindex="0" aria-checked="${state.myVote === g.code}" data-k="${g.code}">
@@ -117,7 +118,8 @@ export function initVote(opts) {
   onPick = opts.onPick || onPick;
   cdnums.innerHTML = [['d', '天'], ['h', '時'], ['m', '分'], ['s', '秒']].map(([k, u]) => `<div class="n${k === 's' ? ' sec' : ''}"><b data-u="${k}">00</b><i>${u}</i></div>`).join('');
   setInterval(tick, 1000);
-  const pick = el => { if (state.phase === 'live' && el.dataset.k !== state.myVote) onPick(el.dataset.k); };
+  // 點已投的那款再點一次 = 取消投票
+  const pick = el => { if (state.phase === 'live') onPick(el.dataset.k === state.myVote ? null : el.dataset.k); };
   vrows.addEventListener('click', e => { if (e.target.closest('.gotry')) return; const r = e.target.closest('.vr'); if (r) pick(r); });
   vrows.addEventListener('keydown', e => { const r = e.target.closest('.vr'); if (r && (e.key === ' ' || e.key === 'Enter')) { e.preventDefault(); pick(r); } });
 }

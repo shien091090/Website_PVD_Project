@@ -1,6 +1,6 @@
 import { json, readJson, HttpError, nowOf } from '../lib/http.js';
 import { currentRound, phaseOf, roundOptions } from '../lib/rounds.js';
-import { castVote } from '../lib/votes.js';
+import { castVote, cancelVote } from '../lib/votes.js';
 import { verifyTurnstile } from '../lib/turnstile.js';
 
 export async function onRequestPost(ctx) {
@@ -10,6 +10,8 @@ export async function onRequestPost(ctx) {
   const phase = phaseOf(round, now);
   if (phase === 'none') throw new HttpError(409, 'no_round');
   if (phase === 'ended') throw new HttpError(409, 'ended');
+  // 取消投票: game 帶 null, 刪掉這位訪客這一輪的票(不用驗證, 不會增加票數)
+  if (game === null) return json({ myVote: null, changed: await cancelVote(db, { round, vid }) });
   if (!(await roundOptions(db, round.id)).some(o => o.id === game)) throw new HttpError(404, 'unknown_game');
   const verify = ctx.data.verify || (t => verifyTurnstile(t, ip, ctx.env.TURNSTILE_SECRET));
   if (!(await verify(token))) throw new HttpError(403, 'turnstile');

@@ -16,6 +16,12 @@ export async function castVote(db, { round, vid, ipHash, game, now }) {
   return { changed: false };
 }
 
+// 取消這位訪客這一輪的票; 回傳原本有沒有票
+export async function cancelVote(db, { round, vid }) {
+  const r = await db.prepare('DELETE FROM votes WHERE round_id = ? AND vid = ?').bind(round.id, vid).run();
+  return (r.meta?.changes ?? 0) > 0;
+}
+
 // 只算這一輪選票上的選項
 export async function tally(db, roundId) {
   const counts = Object.fromEntries((await roundOptions(db, roundId)).map(o => [o.id, 0]));

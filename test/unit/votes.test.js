@@ -41,6 +41,20 @@ test('進行中: 狀態不含任何票數, 可改投且只算一票', async () =
   assert.deepEqual(admin.body.rounds[0].counts, { 'bubble-tempo': 0, 'dungeon-zoo': 0, 'jelly-jinni': 1, 'soul-smith-defense': 0 });
 });
 
+test('取消投票: 刪掉自己這一輪的票, 可以再投; 截止後不能取消', async () => {
+  const s = setup();
+  await s.round(T0 - H, T0 + H);
+  await s.vote('jelly-jinni'); await s.vote('jelly-jinni', { vid: 'v2' });
+  assert.deepEqual((await s.vote(null)).body, { myVote: null, changed: true });
+  assert.deepEqual((await s.vote(null)).body, { myVote: null, changed: false }, '沒票時取消不出錯');
+  assert.equal((await s.state()).body.myVote, null);
+  const admin = await s.call(roundsApi.onRequestGet, 'GET', '/api/admin/rounds');
+  assert.equal(admin.body.rounds[0].counts['jelly-jinni'], 1, '只刪自己的票');
+  assert.equal((await s.vote('bubble-tempo')).body.myVote, 'bubble-tempo');
+  s.set(T0 + 2 * H);
+  assert.equal((await s.vote(null)).body.error.code, 'ended');
+});
+
 test('截止後投票 409 ended', async () => {
   const s = setup();
   await s.round(T0 - 2 * H, T0 - H);
