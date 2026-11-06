@@ -3,18 +3,18 @@
   --bg: #ffffff; --fg: #2d2144; --ink: #2d2144; --muted: #6c6582; --chip: #f1eff6; --line: #e2dfea; --faint: #c9c4d6;
   --red: #f5554a; --teal: #2fc9ed; --yellow: #f5e291;
   --font: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
-  --paper: #ffffff; --bar: #ffffff; --page: #fbf8f1; --hard: #2d2144; --on-ink: #ffffff; --dk: #2d2144; --hov: #f7fdff; --selbg: #ddf6fc;
+  --paper: #ffffff; --bar: #ffffff; --page: #fbf8f1; --hard: #2d2144; --on-ink: #ffffff; --dk: #2d2144; --hov: #f7fdff; --selbg: #ddf6fc; --okc: #1f9d55; --okbg: #e3f6ea;
   color-scheme: light;
 }
 /* 暗色主題 (AB 測試另一組): 深海藍, 與暗色版影片同底色 */
 :root.dark {
   --bg: #0f1d33; --fg: #eef3fb; --ink: #eef3fb; --muted: #9fb0c9; --chip: #1a2c4a; --line: #2a3d5c; --faint: #3f5578;
-  --paper: #172a48; --bar: #0b1628; --page: #0f1d33; --hard: #050b16; --on-ink: #0f1d33; --hov: #1b3152; --selbg: #173d5a;
+  --paper: #172a48; --bar: #0b1628; --page: #0f1d33; --hard: #050b16; --on-ink: #0f1d33; --hov: #1b3152; --selbg: #173d5a; --okc: #4cc983; --okbg: #1c3326;
   color-scheme: dark;
 }
 /* 暗色的內容區 (首頁介紹 + 子頁) 用炭灰; 首頁舞台維持與暗色影片一致 */
 :root.dark :is(.page, .intro) { --fg: #d3dae6; --ink: #b9c4d8; --muted: #8b98b0; --hard: #04070d; color: var(--fg); }
-:root.dark :is(.page, .intro) { --bar: #0f1d33; --page: #18181d; --paper: #222128; --chip: #2a2931; --line: #34333c; --faint: #4a4855; --hov: #27262e; --selbg: #1d3640; --on-ink: #18181d; --fg: #eeece8; --ink: #77737f; --muted: #a8a5ae; }
+:root.dark :is(.page, .intro) { --bar: #0f1d33; --page: #18181d; --paper: #222128; --chip: #2a2931; --line: #34333c; --faint: #4a4855; --hov: #27262e; --selbg: #1d3640; --okc: #4cc983; --okbg: #1c3326; --on-ink: #18181d; --fg: #eeece8; --ink: #77737f; --muted: #a8a5ae; }
 /* 炭灰: 文字用乾淨的米白 (不帶灰), 框線退成中灰讓卡片不刺眼; 「墨色鈕」(送出、首頁 hover) 改用亮字色 */
 :root.dark :is(.page, .intro) :is(.homebtn, .back, .links a, .gotry, .cform textarea, .psheet .x) { color: var(--fg); }
 :root.dark :is(.page, .intro) :is(.cform button, .homebtn:hover, .back:hover, .links a:hover, .badge) { background: var(--fg); color: var(--on-ink); }
@@ -346,17 +346,16 @@ body[data-pg="vote"] .thm { left: auto; right: calc(12px + env(safe-area-inset-r
 .rr .vc { width: 120px; text-align: right; flex: none; }
 .rr .vc b { font: 900 30px/1 var(--font); font-variant-numeric: tabular-nums; }
 .rr .vc small { font: 700 13px/1 var(--font); color: var(--muted); }
-/* 投票狀態列: 選了就等於投票, 顯示「已完成投票」+ 那款的小圖示與名稱 */
-.vdone { flex: none; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 20px; border: 2px dashed var(--faint); border-radius: 16px; font: 700 16px/1.2 var(--font); color: var(--muted); }
-.vdone.off { display: none; }
-.vdone.ok, .vdone.wait { border: 3px solid var(--ink); background: var(--paper); color: var(--fg); }
-.vdone .ok { display: inline-flex; align-items: center; gap: 8px; font: 900 20px/1 var(--font); white-space: nowrap; }
-.vdone.ok .ok { color: #1f9d55; }
-.vdone .ok svg { width: 26px; height: 26px; background: #1f9d55; border-radius: 50%; padding: 4px; box-sizing: border-box; }
-.vdone .icon { width: 40px; height: 40px; border-radius: 11px; font-size: 22px; flex: none; }
-.vdone b { font: 900 20px/1.1 var(--font); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.vdone .tip { margin-left: auto; font-size: 14px; color: var(--muted); white-space: nowrap; }
-.vdone:not(.ok):not(.wait) .tip { margin: 0 auto; }
+/* 題目區: 沒投時是題目 + 一行說明; 投完換成綠底「已完成投票! 你投給了 (icon) 名稱」, 高度固定避免選項跳動 */
+.vhead { flex: none; min-height: 78px; display: flex; flex-direction: column; justify-content: center; gap: 6px; box-sizing: border-box; }
+.vhead h2 { margin: 0; }
+.vhead small { font: 700 15px/1.2 var(--font); color: var(--muted); }
+.vhead.done { flex-direction: row; align-items: center; justify-content: flex-start; gap: 14px; padding: 8px 20px 8px 14px; border: 3px solid var(--okc); border-radius: 18px; background: var(--okbg); animation: vdone .3s ease; }
+.vhead.done h2 { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; font-size: 26px; min-width: 0; }
+.vhead.done .icon { width: 46px; height: 46px; border-radius: 12px; border-width: 2px; }
+.vhead .okc { flex: none; width: 38px; height: 38px; border-radius: 50%; background: var(--okc); display: grid; place-items: center; }
+.vhead .okc svg { width: 22px; height: 22px; }
+@keyframes vdone { from { transform: scale(.96); opacity: 0; } to { transform: none; opacity: 1; } }
 .vmain .ended { display: none; }
 #pg-vote.end .vmain .live { display: none; }
 #pg-vote.end .vmain .ended { display: flex; }
@@ -380,12 +379,12 @@ body[data-pg="vote"] .thm { left: auto; right: calc(12px + env(safe-area-inset-r
   .cd > .lb { display: none; }
   .vright { flex: 1; gap: 10px; }
   .vright h2 { font-size: 19px; margin: 2px 0 0; }
-  .vdone { min-height: 46px; padding: 6px 12px; gap: 8px; flex-wrap: wrap; font-size: 14px; }
-  .vdone .ok, .vdone b { font-size: 16px; }
-  .vdone .ok svg { width: 22px; height: 22px; }
-  .vdone .icon { width: 30px; height: 30px; border-radius: 8px; font-size: 17px; }
-  .vdone .tip { font-size: 12px; }
-  .vdone.ok .tip, .vdone.wait .tip { flex-basis: 100%; margin: 0; }
+  .vhead { min-height: 50px; gap: 3px; }
+  .vhead small { font-size: 12px; }
+  .vhead.done { gap: 8px; padding: 6px 10px 6px 8px; border-width: 2px; border-radius: 14px; }
+  .vhead.done h2 { font-size: 16px; gap: 2px 6px; }
+  .vhead.done .icon { width: 28px; height: 28px; border-radius: 8px; }
+  .vhead .okc { width: 26px; height: 26px; } .vhead .okc svg { width: 15px; height: 15px; }
   .vr { gap: 12px; padding: 8px 12px 8px 10px; border-radius: 16px; }
   .vr .rd { width: 36px; height: 36px; border-width: 2px; }
   .vr .rd svg { width: 19px; height: 19px; }
