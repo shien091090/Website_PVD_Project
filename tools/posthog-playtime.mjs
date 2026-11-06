@@ -99,6 +99,21 @@ FROM (
   GROUP BY person_id
 ) GROUP BY theme ORDER BY theme`);
 
+// 首頁影片: 進首頁 → 按播放 → 看完(中途關掉不算看完); 同一人當天內完成才算
+{
+  const name = '漏斗: 進首頁 → 播放影片 → 看完影片';
+  const step = (event, props) => ({ kind: 'EventsNode', event, math: 'total', ...(props ? { properties: props } : {}) });
+  const query = { kind: 'InsightVizNode', source: { kind: 'FunnelsQuery',
+    series: [step('$pageview', [{ key: 'page', value: ['home'], operator: 'exact', type: 'event' }]), step('video_play'), step('video_complete')],
+    dateRange: { date_from: SINCE_UTC, date_to: null, explicitDate: true },
+    funnelsFilter: { funnelWindowInterval: 1, funnelWindowIntervalUnit: 'day', funnelVizType: 'steps' } } };
+  query.source.series[0].custom_name = '進首頁'; query.source.series[1].custom_name = '播放影片'; query.source.series[2].custom_name = '看完影片';
+  const description = '進首頁的人裡有幾成按播放、按播放的人裡有幾成看完; 一天內完成才算';
+  const old = existing.find(i => i.name === name);
+  if (old) { await ph(`/insights/${old.id}/`, { description, query }, 'PATCH'); console.log(`已更新: ${name}`); }
+  else { await ph('/insights/', { name, description, dashboards: [dash?.id], query }); console.log(`已新增: ${name}`); }
+}
+
 // 趨勢與漏斗圖(第一次設定建的)沒有查詢語法可改, 直接把日期範圍設成從起算時間開始
 for (const name of ['各來源人數與裝置', '漏斗: 進站 → 開始玩 → 投票', '漏斗: 進站 → 開始玩 → 留言']) {
   const i = existing.find(x => x.name === name);
