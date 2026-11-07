@@ -1274,6 +1274,95 @@
     ctx.restore();
   }
 
+  // ---------- 全破畫面「接力衝線」演出(drawEnding 專用; 依 s.t 推進, t 倒退就重播) ----------
+  var END_FH = 28, END_START = [0, 0.35, 0.7], END_DUR = 1.6, END_X = [-40, -12, 18], END_ARRIVE = 2.3;
+  var END_CONF = ['#ffd23f', '#a8c4ff', '#ffffff', '#ff8fb1', '#36d6e7'];
+  var END = { t: -1, conf: [], sparks: [], ring: null, hit: false, flash: 0, shake: 0, rain: 0 };
+  function endEase(x) { return 1 - Math.pow(1 - x, 3); }
+  function endProg(t, a, d) { var p = (t - a) / d; return p < 0 ? 0 : p > 1 ? 1 : p; }
+  function endJump(t, i) { if (t < 0) return 0; var p = (((t - i * 0.14) % 0.85) + 0.85) % 0.85 / 0.85; return p < 0.62 ? Math.sin(p / 0.62 * Math.PI) * 17 : 0; }
+  function endRunX(i, t) { var p = endProg(t, END_START[i], END_DUR); return -290 + (END_X[i] + 290) * (1 - Math.pow(1 - p, 2)); }
+  function endConf(x, y, vx, vy, rain) {
+    END.conf.push({ x: x, y: y, vx: vx, vy: vy, g: rain ? 60 : 420, drag: rain ? 0.99 : 0.972, term: rain ? 90 + Math.random() * 40 : 120,
+      age: 0, life: rain ? 10 : 7, size: 9 + Math.random() * 7, ar: Math.random() < 0.2 ? 2.6 : 0.5, rot: Math.random() * 6.28,
+      vr: (Math.random() - 0.5) * 10, flip: 4 + Math.random() * 8, ph: Math.random() * 6.28, wa: 30 + Math.random() * 40,
+      wf: 2 + Math.random() * 3, color: END_CONF[(Math.random() * END_CONF.length) | 0] });
+  }
+  function endReset() { END.t = 0; END.conf = []; END.sparks = []; END.ring = null; END.hit = false; END.flash = 0; END.shake = 0; END.rain = 0; }
+  function endStep(t, dt, v) {
+    var i, keep;
+    if (!END.hit && t >= END_ARRIVE) {
+      END.hit = true; END.flash = 1; END.shake = 0.5;
+      for (i = 0; i < 150; i++) {
+        var a = -Math.PI / 2 + 0.35 + (Math.random() - 0.5) * 0.6, s = 750 + Math.random() * 650;
+        endConf(v.x - 10, v.y + v.h + 10, Math.cos(a) * s, Math.sin(a) * s, false);
+        var b = -Math.PI / 2 - 0.35 + (Math.random() - 0.5) * 0.6, u = 750 + Math.random() * 650;
+        endConf(v.x + v.w + 10, v.y + v.h + 10, Math.cos(b) * u, Math.sin(b) * u, false);
+      }
+      var fx = CX + 52 * 2.6, fy = 318 + 4 * 2.6;
+      for (i = 0; i < 90; i++) {
+        var c = i / 90 * Math.PI * 2, sp = 360 * (0.5 + Math.random() * 0.5);
+        END.sparks.push({ x: fx, y: fy, vx: Math.cos(c) * sp, vy: Math.sin(c) * sp, age: 0, life: 1 + Math.random() * 0.8, size: 2.4 + Math.random() * 1.8, color: Math.random() < 0.25 ? '#ffffff' : C.goal });
+      }
+      END.ring = { x: fx, y: fy, age: 0 };
+    }
+    if (t > END_ARRIVE + 0.9) {
+      END.rain += 14 * dt;
+      while (END.rain >= 1) { END.rain -= 1; endConf(v.x + Math.random() * v.w, v.y - 20, 0, 40 + Math.random() * 60, true); }
+    }
+    keep = [];
+    for (i = 0; i < END.conf.length; i++) {
+      var p = END.conf[i], d = Math.pow(p.drag, dt * 60);
+      p.age += dt; p.vx *= d; p.vy *= d; p.vy += p.g * dt; if (p.vy > p.term) p.vy = p.term;
+      p.x += p.vx * dt + Math.sin(p.age * p.wf + p.ph) * p.wa * dt; p.y += p.vy * dt; p.rot += p.vr * dt;
+      if (p.age < p.life && p.y < v.y + v.h + 80) keep.push(p);
+    }
+    END.conf = keep;
+    keep = [];
+    for (i = 0; i < END.sparks.length; i++) {
+      var q = END.sparks[i], e = Math.pow(0.962, dt * 60);
+      q.age += dt; q.vx *= e; q.vy *= e; q.vy += 150 * dt; q.x += q.vx * dt; q.y += q.vy * dt;
+      if (q.age < q.life) keep.push(q);
+    }
+    END.sparks = keep;
+    if (END.ring) { END.ring.age += dt; if (END.ring.age > 0.45) END.ring = null; }
+    END.flash = Math.max(0, END.flash - dt * 2.2); END.shake = Math.max(0, END.shake - dt);
+  }
+  function endDrawConf(ctx) {
+    for (var i = 0; i < END.conf.length; i++) {
+      var p = END.conf[i], k = 1 - p.age / p.life;
+      ctx.save(); ctx.globalAlpha = Math.min(1, k * 4); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.scale(1, Math.cos(p.age * p.flip + p.ph));
+      ctx.fillStyle = p.color; ctx.fillRect(-p.size / 2, -p.size * p.ar / 2, p.size, p.size * p.ar); ctx.restore();
+    }
+  }
+  function endDrawSparks(ctx) {
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+    for (var i = 0; i < END.sparks.length; i++) {
+      var p = END.sparks[i], k = 1 - p.age / p.life;
+      ctx.globalAlpha = Math.min(1, k * 1.6); ctx.strokeStyle = p.color; ctx.lineWidth = p.size * (0.4 + 0.6 * k);
+      ctx.beginPath(); ctx.moveTo(p.x - p.vx * 0.035, p.y - p.vy * 0.035); ctx.lineTo(p.x, p.y); ctx.stroke();
+    }
+    ctx.restore();
+    if (END.ring) {
+      var r = END.ring, q = endEase(r.age / 0.45);
+      ctx.save(); ctx.globalAlpha = 1 - r.age / 0.45; ctx.strokeStyle = C.goal; ctx.lineWidth = 5 * (1 - r.age / 0.45);
+      ctx.beginPath(); ctx.arc(r.x, r.y, 6 + 156 * q, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+    }
+  }
+  // 金色大標題(漸層字 + 光暈); scale / rot 做蓋章落下
+  function endTitle(ctx, x, y, size, scale, rot) {
+    var s = '全部通關!';
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.scale(scale, scale);
+    ctx.font = '900 ' + size + 'px ' + FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+    ctx.shadowColor = 'rgba(255,190,40,0.6)'; ctx.shadowBlur = 30; ctx.fillStyle = C.goal; ctx.fillText(s, 0, 0); ctx.shadowBlur = 0;
+    ctx.lineWidth = size / 4.2; ctx.strokeStyle = '#2b1600'; ctx.strokeText(s, 0, 4);
+    ctx.lineWidth = size / 5.5; ctx.strokeStyle = '#120c04'; ctx.strokeText(s, 0, 0);
+    var g = ctx.createLinearGradient(0, -size / 2, 0, size / 2);
+    g.addColorStop(0, '#fff8d6'); g.addColorStop(0.45, C.goal); g.addColorStop(1, '#f08c12');
+    ctx.fillStyle = g; ctx.fillText(s, 0, 0);
+    ctx.restore();
+  }
+
   var Art = {
     canvas: { width: VW, height: H },
     palette: C,
@@ -2138,36 +2227,57 @@
     },
 
     drawEnding: function (ctx, s) {
+      // 「接力衝線」: 三代依序跑進終點 → 碰旗閃白、震動、左右下角彩帶炮 → 標題蓋章落下 → 持續慶祝
+      // s.t: 進入全破畫面後的秒數(沒傳就直接畫演出完的定格, 不含彩帶)
       s = s || {};
-      var A = Art;
-      ctx.save();
-      bgFill(ctx, view(s));
-      // 靜態彩紙(金 / 白 / 淡藍)
-      var conf = [[300, 250, C.goal], [380, 300, C.ghost], [460, 236, '#ffffff'], [820, 246, C.goal], [900, 296, C.ghost], [980, 240, '#ffffff'],
-        [340, 380, '#ffffff'], [940, 390, C.goal], [250, 330, C.ghost], [1030, 330, '#ffffff'], [560, 228, C.ghost], [720, 222, C.goal]];
-      for (var i = 0; i < conf.length; i++) {
-        ctx.save();
-        ctx.translate(conf[i][0], conf[i][1]);
-        ctx.rotate(i * 0.7);
-        ctx.fillStyle = conf[i][2];
-        ctx.fillRect(-5, -2.5, 10, 5);
-        ctx.restore();
+      var A = Art, v = view(s), animated = typeof s.t === 'number' && isFinite(s.t);
+      var t = animated ? Math.max(0, s.t) : 99, i;
+      if (animated) {
+        if (END.t < 0 || t < END.t) endReset();
+        var left = Math.min(t - END.t, 2);
+        END.t = t - left;
+        while (left > 1e-6) { var dt = Math.min(1 / 60, left); END.t += dt; endStep(END.t, dt, v); left -= dt; }
       }
-      text(ctx, '全部通關!', CX, 120, 60, C.goal);
-      text(ctx, '你和前兩代的自己, 一起走到了', CX, 182, 20, C.text);
-      // 慶祝圖: 1、2 號幽靈(遊戲內幽靈畫法)+ 實心的你(3 號), 一起跳起來, 旁邊是終點旗
+      ctx.save();
+      if (animated && END.shake > 0) ctx.translate((Math.random() - 0.5) * 22 * END.shake, (Math.random() - 0.5) * 22 * END.shake);
+      var lit = endEase(endProg(t, END_ARRIVE, 0.6));
+      bgFill(ctx, v);
+      var fg = ctx.createRadialGradient(CX + 150, 380, 0, CX + 150, 380, 420);
+      fg.addColorStop(0, 'rgba(255,214,90,' + (0.12 + 0.3 * lit) + ')'); fg.addColorStop(1, 'rgba(255,214,90,0)');
+      ctx.fillStyle = fg; ctx.fillRect(v.x, v.y, v.w, v.h);
       ctx.save();
       ctx.translate(CX, 318);
       ctx.scale(2.6, 2.6);
-      A.drawPlatform(ctx, { x: -80, y: 40, w: 160, h: 12, solid: false });
-      A.drawGoal(ctx, { x: 50, y: 0 });
-      A.drawGhost(ctx, { x: -70, y: 6, facing: 1, state: 'air', gen: 1, hookable: false, hookAir: true });
-      A.drawGhost(ctx, { x: -42, y: -2, facing: 1, state: 'air', gen: 2, hookable: false, hookAir: true });
-      A.drawPlayer(ctx, { x: -10, y: 2, facing: 1, state: 'air', gen: 3 });
+      A.drawPlatform(ctx, { x: -260, y: 40, w: 520, h: 12, solid: false });
+      A.drawGoal(ctx, { x: 46, y: 0 });
+      for (i = 0; i < 3; i++) {
+        var x = endRunX(i, t), running = t < END_START[i] + END_DUR, y, st;
+        if (i < 2) {   // 幽靈身後的藍色軌跡
+          ctx.save(); ctx.fillStyle = C.ghost;
+          for (var d = x - 6; d > Math.max(-262, x - 150); d -= 7) {
+            ctx.globalAlpha = 0.55 * (1 - (x - d) / 150);
+            ctx.beginPath(); ctx.arc(d, 40 - END_FH / 2 + Math.sin(d * 0.3) * 2, 1.6, 0, Math.PI * 2); ctx.fill();
+          }
+          ctx.restore();
+        }
+        if (running) { y = 40 - END_FH - Math.abs(Math.sin(t * 13 + i)) * 3; st = 'run'; }
+        else { var j = endJump(t - END_ARRIVE - 0.3, i); y = 40 - END_FH - j; st = j > 0.5 ? 'air' : 'idle'; }
+        if (i < 2) A.drawGhost(ctx, { x: x, y: y, facing: 1, state: st, gen: i + 1, hookable: false, hookAir: true });
+        else A.drawPlayer(ctx, { x: x, y: y, facing: 1, state: st, gen: 3 });
+      }
       ctx.restore();
-      keyPrompt(ctx, '從第 1 關再玩', CX, 580, 28, 24);
+      if (t < END_ARRIVE) { ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(v.x, v.y, v.w, v.h); }
+      if (animated) endDrawSparks(ctx);
+      if (t >= END_ARRIVE + 0.1) {
+        var sp = endEase(endProg(t, END_ARRIVE + 0.1, 0.22));
+        endTitle(ctx, CX, 130, 96, 1 + 2.2 * (1 - sp), -0.04 * (1 - sp));
+      }
+      if (animated) endDrawConf(ctx);
+      ctx.restore();
+      if (animated && END.flash > 0) { ctx.fillStyle = 'rgba(255,255,255,' + END.flash * 0.7 + ')'; ctx.fillRect(v.x, v.y, v.w, v.h); }
+      var pa = endProg(t, END_ARRIVE + 1.5, 0.5);
+      if (pa > 0) { ctx.save(); ctx.globalAlpha = pa; keyPrompt(ctx, '從第 1 關再玩', CX, 580, 28, 24); ctx.restore(); }
       credits(ctx);
-      ctx.restore();
     }
   };
 

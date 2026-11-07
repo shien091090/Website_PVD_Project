@@ -77,7 +77,7 @@
   // ===== 全域狀態 =====
   var S = {
     screen: 'title',     // title | play | unlock | ending
-    titleT: 0, banner: -1,
+    titleT: 0, endT: 0, banner: -1,
     level: 1,
     unlockAbility: null,
     shown: { hook: false },
@@ -1029,7 +1029,7 @@
     try {
       if (S.screen === 'title') Art.drawTitle(ctx, { t: S.titleT, vx: vr.vx, vy: vr.vy, vw: vr.vw, vh: vr.vh });
       else if (S.screen === 'unlock') Art.drawUnlockPage(ctx, { ability: S.unlockAbility, vx: vr.vx, vy: vr.vy, vw: vr.vw, vh: vr.vh });
-      else if (S.screen === 'ending') Art.drawEnding(ctx, { vx: vr.vx, vy: vr.vy, vw: vr.vw, vh: vr.vh });
+      else if (S.screen === 'ending') Art.drawEnding(ctx, { t: S.endT, vx: vr.vx, vy: vr.vy, vw: vr.vw, vh: vr.vh });
       else if (S.screen === 'play') {
         if (S.phase === 'win' && S.replay) drawReplay(ctx); else drawPlay(ctx);
       }
@@ -1054,7 +1054,7 @@
         if (lv === 1 && !S.shown.hook) { S.shown.hook = true; showUnlock('hook'); }
         else if (lv === LEVEL_COUNT) {
           snd('uiPage');
-          setScreen('ending'); music('ending');
+          setScreen('ending'); S.endT = 0; music('ending');
           if (window.PVDX) PVDX.gameClear();
         } else { snd('uiPage'); S.level++; startLevel('first'); }
       } else if (S.phase === 'lose') {
@@ -1185,6 +1185,7 @@
       if (dt < 0) dt = 0;
       if (!(window.PVDX && PVDX.paused)) {
         if (S.screen === 'title') S.titleT += dt;
+        if (S.screen === 'ending') S.endT += dt;
         acc += dt;
         var n = 0;
         while (acc >= DT && n < 4) { step(); acc -= DT; n++; }
