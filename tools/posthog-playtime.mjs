@@ -49,7 +49,7 @@ async function upsert(name, description, query) {
 const oldFinish = existing.find(i => i.name === '各遊戲通關時間');
 if (oldFinish && !existing.some(i => i.name === '各遊戲全局通關時間')) { oldFinish.name = '各遊戲全局通關時間'; if (!DRY) await ph(`/insights/${oldFinish.id}/`, { name: oldFinish.name }, 'PATCH'); }
 
-await upsert('各遊戲全局通關時間', '全部關卡過完、最後結算畫面出現時, 這位玩家累計的實際遊玩時間(可能分好幾次玩; 暫停、分頁切走不算)。Bubble Tempo 是生存制, 每次死掉結算算一次', `
+await upsert('各遊戲全局通關時間', '全部關卡過完、最後結算畫面出現時, 這位玩家累計的實際遊玩時間(可能分好幾次玩; 暫停、分頁切走不算)', `
 SELECT toString(properties.game) AS 遊戲, count() AS 通關次數, count(DISTINCT person_id) AS 人數,
   round(avg(toFloat(properties.play_seconds)) / 60, 1) AS 平均分鐘,
   round(median(toFloat(properties.play_seconds)) / 60, 1) AS 中位數分鐘
