@@ -296,7 +296,10 @@
     snd('levelClear');
     // 批次尾端: gen_end → 教學收尾 → 通知網站單關通關
     tOnWin();
-    if (window.PVDX) PVDX.levelClear(S.level);
+    if (window.PVDX) {
+      PVDX.levelClear(S.level);
+      if (S.level === LEVEL_COUNT) PVDX.gameClear();   // 最後一關碰旗就算全局通關(先單關再全局)
+    }
     S.banner = -1;
     var recs = S.recs.slice(0, S.gen);
     S.replay = { recs: recs, G: S.gen, f: 0, prev: [], W: newWorld(S.level), L: recs[S.gen - 1].length };
@@ -1055,7 +1058,6 @@
         else if (lv === LEVEL_COUNT) {
           snd('uiPage');
           setScreen('ending'); S.endT = 0; music('ending');
-          if (window.PVDX) PVDX.gameClear();
         } else { snd('uiPage'); S.level++; startLevel('first'); }
       } else if (S.phase === 'lose') {
         snd('uiPage');
