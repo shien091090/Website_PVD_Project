@@ -22,7 +22,7 @@ canvas{display:block;width:min(100vw,calc(100vh * var(--cw,1280) / 720));height:
 <script>
 // 載入進度條(由 game-studio-lab 發布流程產生, 改了遊戲檔要重新產生): FILES = [路徑, 未壓縮位元組]
 (function () {
-  var FILES = [["art/art.js", 234742], ["audio/sound.js", 733124], ["game.js", 150993], ["touch.js", 22609]];
+  var FILES = [["art/art.js", 248414], ["audio/sound.js", 855775], ["game.js", 148393], ["touch.js", 23064]];
   var total = 0, got = [], last = -1, i;
   for (i = 0; i < FILES.length; i++) { total += FILES[i][1]; got.push(0); }
   function post(msg) { try { if (window.parent && window.parent !== window) window.parent.postMessage(msg, location.origin); } catch (e) { /* file:// 開啟時略過 */ } }

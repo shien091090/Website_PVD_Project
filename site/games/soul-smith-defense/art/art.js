@@ -1,4 +1,5 @@
-// 魂匠守衛者(打磨第 13 輪) — 美術(Canvas 2D 幾何繪製, 無外部資源)
+// 魂匠守衛者(打磨第 14 輪) — 美術(Canvas 2D 幾何繪製, 無外部資源)
+// 第 14 輪: 不評星(關卡卡片改「已通關」小牌、結算拿掉星星), 新增 drawAllClear(恭喜過關 + 勳章授予演出)。
 // 全域物件 window.Art; 每個函式自己 save/restore。
 // 第 13 輪: 畫布 1280×720(16:9, 發布加寬上限 1680), 所有函式照設計座標 1024×576 畫(RD 每幀先整體放大 1.25 倍), 不自己乘 1.25。
 // 全畫面底 / 壓暗層畫滿 x −160~1184(FX0 ~ FX0+FW), 發布兩側加寬時不斷掉; 內容都在 0~1024。
@@ -332,19 +333,6 @@
       if (i) ctx.lineTo(cx + Math.cos(a) * rad, cy + Math.sin(a) * rad); else ctx.moveTo(cx + Math.cos(a) * rad, cy + Math.sin(a) * rad);
     }
     ctx.closePath();
-  }
-  function bigStar(ctx, cx, cy, R, lit) {
-    ctx.save();
-    if (lit) {
-      ctx.fillStyle = '#7a5200'; starPath(ctx, cx, cy, R, R * 0.45); ctx.fill();
-      ctx.fillStyle = C.gold; starPath(ctx, cx, cy, R * 0.86, R * 0.39); ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,0.55)'; starPath(ctx, cx - R * 0.12, cy - R * 0.14, R * 0.3, R * 0.14); ctx.fill();
-    } else {
-      ctx.fillStyle = 'rgba(0,0,0,0.45)'; starPath(ctx, cx, cy, R, R * 0.45); ctx.fill();
-      ctx.strokeStyle = 'rgba(200,205,220,0.45)'; ctx.lineWidth = Math.max(1, R * 0.08); ctx.lineJoin = 'round';
-      starPath(ctx, cx, cy, R * 0.92, R * 0.41); ctx.stroke();
-    }
-    ctx.restore();
   }
   // 喇叭圖示, 外接框 size × size(第 13 輪: 只由 drawMuteIcon 使用)
   // 底板用 HUD 深色 0.85 + 淡亮邊: 壓在草地、路面、開始畫面背景上都讀得到(P10), 一看就是 HUD 的一部分
@@ -2891,41 +2879,275 @@
   }
   function drawResult(ctx, s) {
     s = s || {};
-    var win = bool(s.win), all = win && bool(s.allClear);
+    var win = bool(s.win);
     ctx.save();
     // 第 13 輪: 面板 680×440 中心 (512,288)(x 172~852、y 68~508); 半透明底畫滿 x −160~1184
     ctx.fillStyle = 'rgba(8,10,18,0.72)'; ctx.fillRect(FX0, 0, FW, H);
     ctx.fillStyle = C.panel; rr(ctx, CX - 340, 68, 680, 440, 18); ctx.fill();
     ctx.strokeStyle = win ? C.gold : '#ff5a5a'; ctx.lineWidth = 3; rr(ctx, CX - 338.5, 69.5, 677, 437, 17); ctx.stroke();
-    var title = all ? '全部通關!' : win ? '勝利' : '主堡被攻陷';
+    // 第 14 輪: 不評星; 第 4 關勝利改由 drawAllClear 畫, 這裡的勝利一律寫「勝利」
+    var title = win ? '勝利' : '主堡被攻陷';
     txt(ctx, title, CX, 118, { size: 44, color: win ? C.gold : '#ff6a6a', stroke: '#000', sw: 4 });
     var lv = clamp(Math.floor(num(s.level, 1)), 1, 4);
     txt(ctx, '第 ' + lv + ' 關  ' + str(s.levelName), CX, 163, { size: 20, color: C.textDim, maxW: 600 });
-    var stars = win ? clamp(Math.floor(num(s.stars, 0)), 0, 3) : 0;
-    var sd = num(s.starDuration, 1.2) || 1.2, sa = num(s.starAge, sd);
-    for (var k = 0; k < 3; k++) {
-      var cx = CX - 80 + 80 * k;
-      var lit = k < stars && sa >= 0.4 * k;
-      var sc = 1;
-      if (lit && sa < sd) {
-        var q = (sa - 0.4 * k) / 0.3;
-        if (q < 1) sc = q < 0.5 ? 1 + 0.6 * q : 1.3 - 0.6 * (q - 0.5);
-      }
-      ctx.save(); ctx.translate(cx, 228); ctx.scale(sc, sc);
-      bigStar(ctx, 0, 0, 27, lit);
-      ctx.restore();
-    }
+    // 分隔線 y 200(寬 540, 淡金)
+    ctx.strokeStyle = win ? 'rgba(255,210,74,0.35)' : 'rgba(255,106,106,0.35)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(CX - 270, 200); ctx.lineTo(CX + 270, 200); ctx.stroke();
+    // 數據兩行上移到 250 / 300(補星星的空位), 24px
     var w = Math.max(0, Math.floor(num(s.wave, 0))), tw = Math.max(1, Math.floor(num(s.totalWaves, 4)));
     var hp = Math.max(0, Math.ceil(num(s.castleHp, 0))), mhp = Math.max(1, Math.floor(num(s.castleMaxHp, 20)));
-    txt(ctx, '第 ' + w + ' / ' + tw + ' 波     主堡 ' + hp + ' / ' + mhp, CX, 298, { size: 22, maxW: 620 });
+    txt(ctx, '第 ' + w + ' / ' + tw + ' 波     主堡 ' + hp + ' / ' + mhp, CX, 250, { size: 24, maxW: 620 });
     var cc = clamp(Math.floor(num(s.comboCount, 0)), 0, 10);
-    txt(ctx, '發現組合 ' + cc + ' / 10', CX, 333, { size: 22, color: '#ffd28a' });
+    txt(ctx, '發現組合 ' + cc + ' / 10', CX, 300, { size: 24, color: '#ffd28a' });
     var opts = arr(s.options).slice(0, 3).map(str);
     if (!opts.length) opts = win ? ['繼續', '重玩'] : ['重來', '關卡預覽'];
     var cur = Math.floor(num(s.cursorIndex, 0));
     var bx0 = CX - ((opts.length - 1) * 190) / 2;
     for (var i = 0; i < opts.length; i++) button(ctx, bx0 + 190 * i, 428, 170, 50, opts[i], i === cur);
     hintRow(ctx, [{ keys: ['left', 'right'], label: '選' }, { keys: ['z'], label: '確定' }], CX, 478, { align: 'center', size: 15, gap: 18 });
+    ctx.restore();
+  }
+
+  // ---------- 恭喜過關(第 14 輪, 第 4 關勝利) + 勳章授予演出 ----------
+  // 全部只看 age(真實秒數): 同一個 age 畫出同一個樣子, 跳過時 age 直接設成 4.4 也能畫出完整結束狀態
+  function easeOut(p) { p = clamp(p, 0, 1); return 1 - (1 - p) * (1 - p) * (1 - p); }
+  function easeInOut(p) { p = clamp(p, 0, 1); return p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2; }
+  var AC_MEDAL_Y0 = 260, AC_MEDAL_Y1 = 74, AC_R0 = 70, AC_R1 = 38.5;
+  var AC_CELLS = [[372, 246], [652, 246], [372, 302], [652, 302], [512, 358]];
+  var AC_LABELS = ['總遊玩時間', '挑戰次數', '擊倒敵人', '發現組合', '最後一戰主堡'];
+  // 四角小十字閃光(中心 x, y, 半臂長 r)
+  function sparkle(ctx, x, y, r) {
+    var t = r * 0.18;
+    ctx.beginPath();
+    ctx.moveTo(x, y - r);
+    ctx.quadraticCurveTo(x + t, y - t, x + r, y);
+    ctx.quadraticCurveTo(x + t, y + t, x, y + r);
+    ctx.quadraticCurveTo(x - t, y + t, x - r, y);
+    ctx.quadraticCurveTo(x - t, y - t, x, y - r);
+    ctx.closePath(); ctx.fill();
+  }
+  function thousands(n) {
+    var s = String(Math.max(0, Math.floor(n)));
+    return s.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  }
+  // 勳章: 中心 (0,0), 半徑 R; face = 水平縮放(負 = 背面); sheen = 反光進度 0~1(−1 不畫); ribbonA = 緞帶不透明度
+  function medal(ctx, R, face, sheen, ribbonA) {
+    var sx = Math.max(0.04, Math.abs(face)), back = face < 0;
+    ctx.save(); ctx.scale(sx, 1);
+    if (ribbonA > 0) {
+      // 藍(左)、紅(右)兩條緞帶, 從勳章底往外下垂到 y + 1.85R
+      ctx.save(); ctx.globalAlpha *= ribbonA;
+      var rw = R * 0.42, bot = R * 1.85;
+      var rib = [[-1, C.ally, C.allyDark], [1, '#d8433f', '#7e1a22']];
+      for (var k = 0; k < 2; k++) {
+        var d = rib[k][0];
+        ctx.fillStyle = rib[k][2];
+        ctx.beginPath();
+        ctx.moveTo(d * R * 0.05, R * 0.55); ctx.lineTo(d * (R * 0.05 + rw), R * 0.45);
+        ctx.lineTo(d * (R * 0.32 + rw), bot); ctx.lineTo(d * (R * 0.32 + rw * 0.5), bot - R * 0.22); ctx.lineTo(d * R * 0.32, bot);
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle = rib[k][1];
+        ctx.beginPath();
+        ctx.moveTo(d * R * 0.1, R * 0.55); ctx.lineTo(d * (R * 0.05 + rw * 0.85), R * 0.47);
+        ctx.lineTo(d * (R * 0.32 + rw * 0.85), bot - R * 0.06); ctx.lineTo(d * (R * 0.32 + rw * 0.5), bot - R * 0.28); ctx.lineTo(d * R * 0.37, bot - R * 0.06);
+        ctx.closePath(); ctx.fill();
+      }
+      ctx.restore();
+    }
+    // 外圈深金 + 內盤
+    ctx.fillStyle = back ? '#6a4400' : '#8a5a00'; ctx.beginPath(); ctx.arc(0, 0, R, 0, TAU); ctx.fill();
+    if (back) {
+      ctx.fillStyle = '#b8862a'; ctx.beginPath(); ctx.arc(0, 0, R * 0.88, 0, TAU); ctx.fill();
+      ctx.strokeStyle = '#7a5210'; ctx.lineWidth = Math.max(1, R * 0.03); ctx.beginPath(); ctx.arc(0, 0, R * 0.74, 0, TAU); ctx.stroke();
+      ctx.restore();
+      return;
+    }
+    var g = ctx.createLinearGradient(-R * 0.6, -R * 0.8, R * 0.6, R * 0.8);
+    g.addColorStop(0, '#fff2a8'); g.addColorStop(0.5, '#ffd24a'); g.addColorStop(1, '#d99a18');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, R * 0.88, 0, TAU); ctx.fill();
+    ctx.strokeStyle = '#8a5a00'; ctx.lineWidth = Math.max(1, R * 0.03); ctx.beginPath(); ctx.arc(0, 0, R * 0.74, 0, TAU); ctx.stroke();
+    // 中央城堡剪影(城垛)+ 拱門 + 城頂小旗
+    var u = R / 70;
+    ctx.save(); ctx.scale(u, u);
+    ctx.fillStyle = '#7a4e00';
+    ctx.fillRect(-30, -6, 60, 34);                      // 城牆
+    ctx.fillRect(-36, -22, 18, 50); ctx.fillRect(18, -22, 18, 50);   // 左右塔
+    ctx.fillRect(-9, -30, 18, 24);                      // 中塔
+    for (var c = 0; c < 3; c++) {                        // 城垛
+      ctx.fillRect(-36 + c * 6.5, -28, 4.5, 6); ctx.fillRect(18 + c * 6.5, -28, 4.5, 6);
+    }
+    ctx.fillRect(-9, -36, 4.5, 6); ctx.fillRect(-2.25, -36, 4.5, 6); ctx.fillRect(4.5, -36, 4.5, 6);
+    ctx.fillStyle = '#ffe58a';                          // 拱門(盤面亮金挖出)
+    ctx.beginPath(); ctx.moveTo(-8, 28); ctx.lineTo(-8, 14); ctx.arc(0, 14, 8, PI, 0); ctx.lineTo(8, 28); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#7a4e00'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(0, -36); ctx.lineTo(0, -52); ctx.stroke();   // 旗桿
+    ctx.fillStyle = '#d8433f';
+    ctx.beginPath(); ctx.moveTo(1, -52); ctx.lineTo(15, -47.5); ctx.lineTo(1, -43); ctx.closePath(); ctx.fill();
+    ctx.restore();
+    // 反光: 一道白色斜帶從左上掃到右下, 裁在內盤內
+    if (sheen >= 0 && sheen < 1) {
+      ctx.save();
+      ctx.beginPath(); ctx.arc(0, 0, R * 0.88, 0, TAU); ctx.clip();
+      ctx.rotate(-0.6);
+      var bx = -1.5 * R + 3 * R * easeInOut(sheen), bw = R * 0.36;
+      var sg = ctx.createLinearGradient(bx - bw, 0, bx + bw, 0);
+      sg.addColorStop(0, 'rgba(255,255,255,0)'); sg.addColorStop(0.5, 'rgba(255,255,255,0.75)'); sg.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = sg; ctx.fillRect(bx - bw, -R, bw * 2, R * 2);
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+  function drawAllClear(ctx, s) {
+    s = s || {};
+    // age 缺漏時當成結束狀態(看得到完整畫面, 不會卡在全黑)
+    var age = Math.max(0, num(s.age, 4.4));
+    var st = s.stats && typeof s.stats === 'object' ? s.stats : {};
+    ctx.save();
+    // 0~0.4 壓暗 0 → 0.75(黑藍), 不受震動影響
+    ctx.fillStyle = 'rgba(6,10,26,' + (0.75 * clamp(age / 0.4, 0, 1)) + ')'; ctx.fillRect(FX0, 0, FW, H);
+    ctx.save();
+    ctx.beginPath(); ctx.rect(FX0, 0, FW, H); ctx.clip();
+    // 1.1 落定的震動(9px, 0.3 秒線性衰減)
+    if (age >= 1.1 && age < 1.4) {
+      var amp = 9 * (1 - (age - 1.1) / 0.3), f = Math.floor(age * 60);
+      ctx.translate((hash(f, 1, 7) * 2 - 1) * amp, (hash(f, 2, 7) * 2 - 1) * amp);
+    }
+    // 勳章位置與大小
+    var my = AC_MEDAL_Y0, R = AC_R0, face = 1;
+    if (age < 1.1) {
+      var e0 = easeOut(age / 1.1);
+      R = AC_R0 * (0.25 + 0.75 * e0); face = Math.cos((1 - e0) * 7 * PI);
+    } else if (age < 2.25) {
+      var m = easeInOut((age - 1.7) / 0.55);
+      my = AC_MEDAL_Y0 + (AC_MEDAL_Y1 - AC_MEDAL_Y0) * m; R = AC_R0 * (1 - 0.45 * m);
+    } else { my = AC_MEDAL_Y1; R = AC_R1; }
+    // 背後金色光芒: 0.6 起 0.5 秒淡入到 0.35, 1.7 起隨勳章上移淡掉, 2.25 消失
+    if (age >= 0.6 && age < 2.25) {
+      var ra = 0.35 * clamp((age - 0.6) / 0.5, 0, 1) * (age > 1.7 ? 1 - (age - 1.7) / 0.55 : 1);
+      if (ra > 0) {
+        ctx.save(); ctx.translate(CX, my); ctx.rotate(-0.3 * age);
+        ctx.fillStyle = 'rgba(255,210,74,' + ra + ')';
+        for (var i = 0; i < 14; i++) {
+          var a = i * TAU / 14;
+          ctx.beginPath(); ctx.moveTo(0, 0);
+          ctx.lineTo(Math.cos(a - 0.07) * 420, Math.sin(a - 0.07) * 420); ctx.lineTo(Math.cos(a + 0.07) * 420, Math.sin(a + 0.07) * 420);
+          ctx.closePath(); ctx.fill();
+        }
+        ctx.restore();
+      }
+    }
+    // 面板: 1.85~2.3 以上緣 y 68 為軸縱向展開(和 drawResult 同一款: 深底 + 3px 金框畫在邊內側)
+    if (age >= 1.85) {
+      var pq = easeOut((age - 1.85) / 0.45);
+      if (pq > 0.001) {
+        ctx.save(); ctx.translate(0, 68); ctx.scale(1, pq); ctx.translate(0, -68);
+        ctx.fillStyle = C.panel; rr(ctx, CX - 340, 68, 680, 440, 18); ctx.fill();
+        ctx.strokeStyle = C.gold; ctx.lineWidth = 3; rr(ctx, CX - 338.5, 69.5, 677, 437, 17); ctx.stroke();
+        ctx.restore();
+      }
+    }
+    // 標題 2.25~2.6 淡入, y 160 → 150
+    if (age >= 2.25) {
+      var tq = clamp((age - 2.25) / 0.35, 0, 1);
+      ctx.save(); ctx.globalAlpha = tq;
+      ctx.shadowColor = 'rgba(255,210,74,0.8)'; ctx.shadowBlur = 18;
+      txt(ctx, '恭喜過關', CX, 160 - 10 * easeOut(tq), { size: 48, color: C.gold, stroke: '#000', sw: 5 });
+      ctx.restore();
+    }
+    // 分隔線 2.45~2.85 從中心往兩邊拉開到 540
+    if (age >= 2.45) {
+      var hw = 270 * easeOut((age - 2.45) / 0.4);
+      ctx.strokeStyle = 'rgba(255,210,74,0.45)'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(CX - hw, 200); ctx.lineTo(CX + hw, 200); ctx.stroke();
+    }
+    // 五格統計: 第 i 格 2.6 + 0.22i 起 0.3 秒淡入上浮 12; 數字 +0.1 起 0.8 秒從 0 跳到最終值
+    var playSec = Math.max(0, Math.floor(num(st.playSec, 0)));
+    var attempts = Math.max(0, Math.floor(num(st.attempts, 0))), fails = Math.max(0, Math.floor(num(st.fails, 0)));
+    var kills = Math.max(0, Math.floor(num(st.kills, 0)));
+    var combo = clamp(Math.floor(num(st.comboCount, 0)), 0, 10);
+    var chp = Math.max(0, Math.floor(num(st.castleHp, 0))), cmhp = Math.max(1, Math.floor(num(st.castleMaxHp, 20)));
+    var finals = [playSec, attempts, kills, combo, chp];
+    for (var ci = 0; ci < 5; ci++) {
+      var t0 = 2.6 + 0.22 * ci;
+      if (age < t0) continue;
+      var aq = clamp((age - t0) / 0.3, 0, 1), nq = clamp((age - t0 - 0.1) / 0.8, 0, 1);
+      var rolling = nq > 0 && nq < 1;
+      var v = nq >= 1 ? finals[ci] : Math.round(finals[ci] * easeOut(nq));
+      var vs;
+      if (ci === 0) { var ss = v % 60; vs = Math.floor(v / 60) + ' 分 ' + (ss < 10 ? '0' : '') + ss + ' 秒'; }
+      else if (ci === 1) vs = v + ' 次(失敗 ' + fails + ')';
+      else if (ci === 2) vs = thousands(v);
+      else if (ci === 3) vs = v + ' / 10';
+      else vs = v + ' / ' + cmhp;
+      var cx = AC_CELLS[ci][0], cy = AC_CELLS[ci][1] + 12 * (1 - easeOut(aq));
+      ctx.save(); ctx.globalAlpha = aq;
+      ctx.fillStyle = 'rgba(255,255,255,0.06)'; rr(ctx, cx - 130, cy - 23, 260, 46, 10); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,210,74,0.28)'; ctx.lineWidth = 1; rr(ctx, cx - 129.5, cy - 22.5, 259, 45, 9.5); ctx.stroke();
+      txt(ctx, AC_LABELS[ci], cx - 114, cy + 0.5, { size: 18, align: 'left', color: C.textDim, weight: 'normal' });
+      // 數值右對齊在格右緣 −16, 寬至多 140(且不碰標籤); 放不下就降字級, 不換行
+      var lw = textW(ctx, AC_LABELS[ci], 18, 'normal');
+      var maxW = Math.min(140, 228 - lw - 10), fs = 23;
+      while (fs > 12 && textW(ctx, vs, fs, 'bold') > maxW) fs--;
+      txt(ctx, vs, cx + 114, cy + 0.5, { size: fs, align: 'right', color: rolling ? '#ffffff' : '#ffd28a', maxW: maxW });
+      ctx.restore();
+    }
+    // 按鈕與按鍵提示: 4.0~4.35 淡入、從下方 10px 上浮
+    if (age >= 4.0) {
+      var bq = clamp((age - 4.0) / 0.35, 0, 1), bdy = 10 * (1 - easeOut(bq));
+      var opts = arr(s.options).slice(0, 2).map(str);
+      if (opts.length !== 2) opts = ['繼續', '重玩'];
+      var cur = Math.floor(num(s.cursorIndex, 0));
+      ctx.save(); ctx.globalAlpha = bq;
+      button(ctx, 417, 428 + bdy, 170, 50, opts[0], cur === 0);
+      button(ctx, 607, 428 + bdy, 170, 50, opts[1], cur === 1);
+      hintRow(ctx, [{ keys: ['left', 'right'], label: '選' }, { keys: ['z'], label: '確定' }], CX, 478 + bdy, { align: 'center', size: 15, gap: 18 });
+      ctx.restore();
+    }
+    // 勳章(畫在面板之上); 緞帶 1.7~2.0 淡出
+    var ribA = age < 1.7 ? 1 : age < 2.0 ? 1 - (age - 1.7) / 0.3 : 0;
+    var sheen = -1;
+    if (age >= 1.1 && age < 1.7) sheen = (age - 1.1) / 0.6;
+    else if (age >= 2.4) { var sl = (age - 2.4) % 3; if (sl < 0.7) sheen = sl / 0.7; }
+    ctx.save(); ctx.translate(CX, my); medal(ctx, R, face, sheen, ribA); ctx.restore();
+    // 落定的金色衝擊環: 半徑(中線)70 → 330, 線寬 7 → 1, 0.5 秒
+    if (age >= 1.1 && age < 1.6) {
+      var wq = (age - 1.1) / 0.5, wr = 70 + 260 * easeOut(wq);
+      ctx.strokeStyle = 'rgba(255,214,90,' + (0.9 * (1 - wq)) + ')'; ctx.lineWidth = 7 - 6 * wq;
+      ctx.beginPath(); ctx.arc(CX, AC_MEDAL_Y0, wr, 0, TAU); ctx.stroke();
+    }
+    // 金粉 110 顆: 從勳章周圍 60 處往外炸(速度 120~460, 阻尼 + 微重力, 壽命 0.9~1.7 秒, 越來越小)
+    if (age >= 1.1 && age < 2.8) {
+      var pt = age - 1.1;
+      for (var pi = 0; pi < 110; pi++) {
+        var life = 0.9 + 0.8 * hash(pi, 3, 11);
+        if (pt >= life) continue;
+        var an = hash(pi, 1, 11) * TAU, sp = 120 + 340 * hash(pi, 2, 11), k = 2.4;
+        var dist = 60 + sp * (1 - Math.exp(-k * pt)) / k;
+        var px = CX + Math.cos(an) * dist, py = AC_MEDAL_Y0 + Math.sin(an) * dist + 0.5 * 150 * pt * pt;
+        var ps = (1.6 + 1.8 * hash(pi, 4, 11)) * (1 - pt / life);
+        ctx.fillStyle = hash(pi, 5, 11) < 0.35 ? '#fff6d0' : C.gold;
+        if (pi % 3 === 0) sparkle(ctx, px, py, ps * 2.2);
+        else { ctx.beginPath(); ctx.arc(px, py, ps, 0, TAU); ctx.fill(); }
+      }
+    }
+    // 2.4 起勳章周圍持續冒小閃光(每秒約 5 個, 壽命 0.6~1.1 秒, 橢圓環 水平 44~70 / 垂直 30~56)
+    if (age >= 2.4) {
+      var jHi = Math.floor((age - 2.4) / 0.2), jLo = Math.max(0, jHi - 6);
+      for (var j = jLo; j <= jHi; j++) {
+        var sl2 = 0.6 + 0.5 * hash(j, 1, 23), lt = age - (2.4 + 0.2 * j);
+        if (lt < 0 || lt >= sl2) continue;
+        var sa = hash(j, 2, 23) * TAU, rq = hash(j, 3, 23);
+        var sx2 = CX + Math.cos(sa) * (44 + 26 * rq), sy2 = AC_MEDAL_Y1 + Math.sin(sa) * (30 + 26 * rq);
+        ctx.save(); ctx.globalAlpha = Math.sin(PI * lt / sl2);
+        ctx.fillStyle = '#fff3c0'; sparkle(ctx, sx2, sy2, 3 + 3 * hash(j, 4, 23));
+        ctx.restore();
+      }
+    }
+    ctx.restore();
+    // 1.1 落定的全畫面白閃(0.6 → 0, 0.3 秒), 不受震動影響
+    if (age >= 1.1 && age < 1.4) {
+      ctx.fillStyle = 'rgba(255,255,255,' + (0.6 * (1 - (age - 1.1) / 0.3)) + ')'; ctx.fillRect(FX0, 0, FW, H);
+    }
     ctx.restore();
   }
 
@@ -2947,6 +3169,18 @@
     ctx.fillStyle = '#7ee08a';
     ctx.beginPath(); ctx.moveTo(0, -1); ctx.quadraticCurveTo(-9, -2, -9, -9); ctx.quadraticCurveTo(-2, -9, 0, -1); ctx.fill();
     ctx.beginPath(); ctx.moveTo(0, -2); ctx.quadraticCurveTo(8, -4, 8, -11); ctx.quadraticCurveTo(1, -10, 0, -2); ctx.fill();
+    ctx.restore();
+  }
+  // 「已通關」金色小牌 110×26(中心 cx, cy): 深金底 + 金框 + 勾 + 三個字(第 14 輪, 取代 3 顆星)
+  function clearedBadge(ctx, cx, cy) {
+    ctx.save(); ctx.translate(cx, cy);
+    ctx.fillStyle = '#3a2a08'; rr(ctx, -55, -13, 110, 26, 13); ctx.fill();
+    ctx.strokeStyle = C.gold; ctx.lineWidth = 2; rr(ctx, -54, -12, 108, 24, 12); ctx.stroke();
+    // 勾: 圓底 + 深墨勾
+    ctx.fillStyle = C.gold; ctx.beginPath(); ctx.arc(-35, 0, 8, 0, TAU); ctx.fill();
+    ctx.strokeStyle = '#3a2a08'; ctx.lineWidth = 2.4; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.beginPath(); ctx.moveTo(-39, 0.5); ctx.lineTo(-36, 3.5); ctx.lineTo(-31, -3); ctx.stroke();
+    txt(ctx, '已通關', 9, 0.5, { size: 16, color: '#ffe7a0', maxW: 64 });
     ctx.restore();
   }
   // unlockP: 開鎖動畫進度 0~1(沒在播 = −1)
@@ -2974,8 +3208,8 @@
     var name = str(lv.name);
     if (unlocked) {
       txt(ctx, name, 0, -8, { size: name.length > 5 ? 25 : 30, color: openSel ? '#ffffff' : '#dfe4ee', maxW: 180 });
-      var bs = clamp(Math.floor(num(lv.bestStars, 0)), 0, 3);
-      for (var k = 0; k < 3; k++) bigStar(ctx, -36 + 36 * k, 42, 14, k < bs);
+      // 第 14 輪: 星等拿掉, cleared === true 時卡片下方 (0,+45) 畫「已通關」金色小牌 110×26; false 留空
+      if (lv.cleared === true) clearedBadge(ctx, 0, 45);
     } else {
       lockGlyph(ctx, 0, -6, 44, selected ? '#aab1c2' : undefined);
       txt(ctx, name, 0, 44, { size: 15, color: selected ? '#6a7184' : '#4a5060', maxW: 180 });
@@ -4048,6 +4282,7 @@
     drawBossIntro: drawBossIntro,
     drawCodex: drawCodex,
     drawPause: drawPause,
-    drawResult: drawResult
+    drawResult: drawResult,
+    drawAllClear: drawAllClear
   };
 })();

@@ -1,5 +1,6 @@
 'use strict';
-/* 觸控層 + 網站訊息(PVD計畫網站)。發布階段由 RD 從 game-studio-lab 的 references/touch-template.js 複製, 只改下面的 CONFIG。
+/* 觸控層 + 網站訊息(PVD計畫網站)。發布階段由 RD 從 game-studio-lab 的 references/touch-template.js 複製, 新加時只改下面的 CONFIG;
+   已有舊版觸控層要更新版面時, 照發布任務(prompts/release-game.md)的說明換掉版面段落。
    傳統 script, 在 game.js 之後載入。網站版與打磨版共用同一份。
    - 觸控模式(手機 / 網址帶 ?touch=1):
      鍵盤遊戲 → 畫面上層畫虛擬按鈕, 輸入走遊戲的 inputDown / inputUp(和鍵盤同一條路徑), 鍵帽字換成手機版;
@@ -22,10 +23,12 @@
     // 鍵名照 game.js 的 inputDown: L R U D Z X S(空白鍵)
     // d: 圖鑑鈕(C), 畫在遊玩區右上角(電腦版聲音開關圖示的位置)
     keys: { up: 'U', down: 'D', left: 'L', right: 'R', a: 'Z', b: 'X', c: 'S', d: 'C' },
+    // B(X)與第三鍵(空白鍵)永遠不會同時有用 → 共用同一格, 由 visible() 決定這格現在顯示哪個
+    shareBC: true,
     // 遊戲裡畫的鍵帽字 → 手機版: Z → A、X → B、空白 → 第三鍵圖示
     keycaps: { 'Z': 'A', 'X': 'B', '空白': 'icon' },
     // 哪些按鈕要顯示: 會疊在畫面上要按鍵才關得掉的東西(引導卡、合成演出、圖鑑、彈窗)先判斷, 再判斷整組不畫的場景
-    // b(X)與 c(空白鍵)共用同一個位置: 兩者不會同時有用(X 只在詢問 / 彈窗 / 圖鑑, 空白鍵只在自由走動且靠近主堡)
+    // b(X)與 c(空白鍵)共用同一格(shareBC): X 只在詢問 / 彈窗 / 圖鑑, 空白鍵只在自由走動且靠近主堡
     visible: function () {
       var none = { dpad: false, a: false, b: false, c: false, d: false };
       try {
@@ -68,8 +71,8 @@
       }
       ctx.restore();
     },
-    // 圖鑑鈕圖示: 打開的書(左右兩頁 + 中線)
-    drawCodexIcon: function (ctx, x, y, s, color) {
+    // 圖鑑鈕圖示(功能鍵 d): 打開的書(左右兩頁 + 中線)
+    drawIconD: function (ctx, x, y, s, color) {
       ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = Math.max(1.6, s * 0.09); ctx.lineJoin = 'round';
       var w = s * 0.4, h = s * 0.3;
       ctx.beginPath();
@@ -93,23 +96,21 @@
     },
   };
 
-  // ───────── 版面: 觸控時遊戲畫面上下貼邊、不縮小(縮小後 HUD 字太小), 兩側塗黑, 按鈕靠兩側擺, 寬度不夠時壓到遊戲畫面邊緣 ─────────
+  // ───────── 版面: 設計區 1280×720 置中、上下貼邊不縮小(縮小後 HUD 字太小); 兩側多出來的寬度塗黑, 按鈕靠兩側擺 ─────────
+  // 黑塊夠寬時按鈕置中在黑塊裡, 不夠寬(一般手機、1280 寬平板)就貼著畫面外緣, 壓到設計區邊緣一點
   var CW = (window.Art && Art.canvas && Art.canvas.width) || 1280, CH = (window.Art && Art.canvas && Art.canvas.height) || 720;
-  var VK = 1;
-  var VIEW = { k: VK, x: (CW - 1280 * VK) / 2, y: (CH - 720 * VK) / 2 };   // 遊戲畫面在畫布上的縮放與左上角
-  // 按鈕中心: 黑塊夠寬就置中在黑塊裡, 不夠寬就貼著畫面外緣(離邊 16)
-  var SW = VIEW.x, RO = 124, BR = 72;
+  var SW = (CW - 1280) / 2, RO = 124, BR = 72;   // SW: 一側黑塊寬; RO: 方向鍵外圈半徑; BR: A 鈕半徑
   var DX = Math.max(SW / 2, RO + 16), AX = CW - Math.max(SW / 2, BR + 20);
   var LAYOUT = {
     // 圓弧方向鍵: 中心 (x, y), 外圈半徑 Ro、內圈半徑 Ri, 四段相連不留縫(gap 0, 方便斜按時同時壓到兩段; 要留縫才調大); 可按範圍半徑 R(比外圈大, 手指偏出去也算), 中心 dead 內不算
     dpad: { x: DX, y: CH - RO - 80, Ro: RO, Ri: RO * 0.36, gap: 0, R: RO + 24, dead: 20 },
     a: { x: AX, y: CH - BR - 80, r: BR, hit: BR + 16 },
-    // b 與 c 同一位置(不會同時出現)
     b: { x: AX, y: CH - BR * 3 - 104, r: BR * 0.8, hit: BR * 0.8 + 16 },
-    c: { x: AX, y: CH - BR * 3 - 104, r: BR * 0.8, hit: BR * 0.8 + 16 },
-    // 圖鑑鈕: 遊玩區右上角(設計座標 (992, 74), 電腦版聲音開關圖示的位置)
-    d: { x: VIEW.x + 992 * 1.25 * VK, y: VIEW.y + 74 * 1.25 * VK, r: 30, hit: 44 },
+    c: { x: AX, y: CH - BR * 5 - 128, r: BR * 0.8, hit: BR * 0.8 + 16 },
+    // 功能鍵: 設計區右上角(設計座標約 (1240, 92), 頂端資訊列下方)
+    d: { x: SW + 1240, y: 92, r: 30, hit: 44 },
   };
+  if (CONFIG.shareBC) LAYOUT.c = LAYOUT.b;
 
   // ───────── 是不是觸控模式 ─────────
   var forced = /[?&]touch=1(&|$)/.test(location.search);
@@ -121,7 +122,6 @@
   var KEYS = CONFIG.mode === 'keys';
 
   var PVDX = { on: ON, paused: false, held: {}, draw: function () { }, levelClear: function () { }, gameClear: function () { } };
-  if (ON && KEYS) PVDX.view = VIEW;   // game.js 照它縮放遊戲畫面
   window.PVDX = PVDX;
   function call(fn, arg) { try { fn(arg); } catch (e) { console.error(e); } }
 
@@ -163,7 +163,7 @@
           ctx.font = 'bold ' + btns[i][2] + 'px "Microsoft JhengHei","PingFang TC","Noto Sans TC",sans-serif';
           ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = fg;
           origFill.call(ctx, btns[i][1], b.x, b.y + 2);
-        } else if (id === 'd') call(function () { CONFIG.drawCodexIcon(ctx, b.x, b.y, b.r * 1.5, fg); });
+        } else if (id === 'd') call(function () { CONFIG.drawIconD(ctx, b.x, b.y, b.r * 1.5, fg); });
         else call(function () { CONFIG.drawIcon(ctx, b.x, b.y, b.r * 1.15, fg); });
       }
       ctx.restore();
@@ -360,6 +360,8 @@
   // 每幀畫在遊戲畫面上層
   PVDX.draw = function (ctx) {
     checkOrient();
+    // 兩側黑塊(只有鍵盤遊戲): 遊戲畫到設計區外的背景、壓暗、HUD 延伸一律蓋掉, 手機兩側只有黑底與按鈕; 滑鼠遊戲沒有按鈕, 兩側留給遊戲往外延伸的背景
+    if (SW > 0 && CONFIG.mode === 'keys') { ctx.save(); ctx.fillStyle = '#000'; ctx.fillRect(0, 0, SW, CH); ctx.fillRect(CW - SW, 0, SW, CH); ctx.restore(); }
     if (!KEYS) return;
     for (var id in touches) { recompute(); break; }   // 場景換了(按鈕顯示變了)而手指還按著: 重新判定
     Pad.draw(ctx, held, CONFIG.visible());

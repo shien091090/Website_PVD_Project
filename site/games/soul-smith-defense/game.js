@@ -185,11 +185,13 @@ let curSrc = null; // 目前正在出手的我方單位(階段 30 判斷「步�
 
 // 這次開網頁期間的狀態(重新整理才重置)
 const S = {
-  unlocked: [true, false, false, false], best: [0, 0, 0, 0], attempts: [0, 0, 0, 0], fails: [0, 0, 0, 0],
+  unlocked: [true, false, false, false], attempts: [0, 0, 0, 0], fails: [0, 0, 0, 0],
+  // 第 14 輪: 這次開網頁的累計(恭喜過關畫面的統計): play = 每局(durationSec − hiddenSec)加總, attempts = level_start 次數, fails = 失敗結算局數, kills = 擊倒加總
+  sess: { play: 0, attempts: 0, fails: 0, kills: 0 },
   combos: zeros(NCOMBO).map(() => false), recipes: zeros(11).map(() => false), golemUnlocked: false, pillarUnlocked: false, muted: false,
   won: [false, false, false, false], tutMode: null, pendingUnlock: -1, tutClearShown: false, tutClearSt: null,
   tut: { done: [], shownSt: [], doneSt: [], pressed: {}, fx: null, cur: 0, view: null, lastView: null },
-  menuBlocks: 0, menuLockedTries: 0, menuEvents: [] // 關卡預覽頁按 Z 進不去的卡: 次數與事件, 記進下一局的檔案
+  menuBlocks: 0, menuLockedTries: 0 // 關卡預覽頁按 Z 進不去的卡次數
 };
 const G = {
   screen: 'title', cursor: 0, titleT: 0, tt: { clear: null, adv: null }, sq: [], music: null, inited: false, level: 1, popup: null, steal: null, hand: null, flag: null,
@@ -206,13 +208,11 @@ function openTutChoice() {
   G.tc = { cursor: 0, age: 0, picked: -1, pickAge: 0.35, moves: 0 };
   zNeedRelease = true; // 開視窗的那一下 Z 要先放開
   snd('guide_card');
-  S.menuEvents.push({ type: 'tutorial_choice', t: null, st: r1(RT), action: 'open', choice: null, sec: null, moves: null });
 }
 function confirmTutChoice() {
   const c = G.tc;
   c.picked = c.cursor; c.pickAge = 0;
   snd('ui_confirm');
-  S.menuEvents.push({ type: 'tutorial_choice', t: null, st: r1(RT), action: 'pick', choice: c.cursor === 0 ? 'full' : 'brief', sec: r1(c.age), moves: c.moves });
 }
 function applyTutChoice(cur) {
   S.tutMode = cur === 0 ? 'full' : 'brief';
@@ -253,14 +253,8 @@ function prepLevel(n) {
   LV = Object.assign({}, base, { n, lanes: base.paths.map(mkPath) });
 }
 
-// ───────── 埋點 ─────────
+// ───────── 工具 ─────────
 function r1(v) { return Math.round(v * 10) / 10; }
-function ev(type, extra) {
-  if (!G.log) return;
-  const o = { type, t: r1(RT - G.log.t0), st: r1(RT) };
-  if (extra) for (const k in extra) o[k] = extra[k];
-  G.log.events.push(o);
-}
 function newStat() {
   return {
     gameSec: 0, slowMoSec: 0, hiddenSec: 0, leaks: 0, leaksByWave: [], leaksBySpawn: {}, kills: 0, playerKills: 0, playerHits: 0,
@@ -315,13 +309,13 @@ function applyMute() {
 function muffle(on) { try { if (typeof Sound !== 'undefined' && Sound.setSlowMo) Sound.setSlowMo(on); } catch (err) { console.error(err); } }
 function toggleMute() {
   S.muted = !S.muted; applyMute();
-  if (G.screen === 'play') ev('mute', { muted: S.muted });
 }
 
 // ───────── 開局 / 結算 ─────────
 function startLevel(n) {
   G.level = n; prepLevel(n);
-  S.attempts[n - 1]++;
+  S.attempts[n - 1]++; S.sess.attempts++;
+  G.ac = null;
   G.screen = 'play';
   const T = S.tut;
   G.time = 0; G.clock = 0; G.gold = LV.gold; G.castleHp = 20; G.wave = 0; G.waveStarted = 0;
@@ -357,10 +351,8 @@ function startLevel(n) {
   G.stat.leaksByWave = LV.waves.map(() => 0);
   G.stat.menuBlocks = S.menuBlocks; S.menuBlocks = 0;
   G.stat.menuLockedTries = S.menuLockedTries; S.menuLockedTries = 0;
-  G.log = { t0: RT, events: S.menuEvents.map(o => Object.assign({}, o)) }; // 關卡預覽頁被擋的事件排在最前面(t = null)
-  S.menuEvents = [];
+  G.t0 = RT; // 本局開始的真實秒數(結算算遊玩時間用)
   T.fx = null; T.view = null; T.lastView = null; T.cur = 0; T.pressed = {};
-  ev('level_start', { level: n, attempt: S.attempts[n - 1] });
   zNeedRelease = true;
   setMusic('battle');
 }
@@ -388,26 +380,31 @@ function toTitle(failIdx) {
 }
 function endLevel(win) {
   const hp = Math.max(0, G.castleHp);
-  const stars = win ? 1 + (hp >= 10 ? 1 : 0) + (hp === 20 ? 1 : 0) : 0;
-  G.screen = 'result'; G.win = win; G.resultT = 0; G.stars = stars; G.starsPlayed = 0; G.resultCursor = 0;
+  const allClear = win && G.level === 4; // 第 14 輪: 第 4 關勝利出「恭喜過關」
+  G.screen = 'result'; G.win = win; G.resultT = 0; G.resultCursor = 0;
+  G.ac = allClear ? { age: 0, sec: 0, skipped: false, skipAt: null, cursor: 0, landed: false, pinned: false, cleared: false, ticks: 0, glints: 0, stats: null } : null;
   // 第 1 關勝利、而這次開網頁還沒在第 2 關勝利過: 只有 [繼續](「重玩」會繞過關卡預覽頁的第 1 關教學鎖)
   G.options = win ? ((G.level === 1 && !S.won[1]) ? ['繼續'] : ['繼續', '重玩']) : ['重來', '關卡預覽'];
   G.popup = null; G.steal = null; G.guide = null; G.reveal = null; G.revealQ = []; G.paused = false; G.codex = false; muffle(false);
-  G.bossIntro = null; // 同一幀剛開始演出就結算: 演出不留到結算畫面
+  const bi = G.bossIntro; G.bossIntro = null; // 同一幀剛開始演出就結算: 演出不留到結算畫面
   G.sq = G.sq.filter(n => n !== 'castle_hit');
   if (win) {
     S.won[G.level - 1] = true;
-    S.best[G.level - 1] = Math.max(S.best[G.level - 1], stars);
     if (G.level < 4 && !S.unlocked[G.level]) S.pendingUnlock = G.level; // 解鎖與推進動畫延到回關卡預覽頁才播
   } else S.fails[G.level - 1]++;
   const T = S.tut; T.fx = null; T.view = null; T.lastView = null;
-  ev('level_end', { result: win ? 'win' : 'lose', wave: G.wave, castleHp: hp, stars });
+  const st = G.stat;
+  const durSec = r1(RT - G.t0), hidSec = r1(st.hiddenSec);
+  S.sess.play += durSec - hidSec; if (!win) S.sess.fails++; S.sess.kills += st.kills;
+  const sess = { playSec: Math.round(S.sess.play), attempts: S.sess.attempts, fails: S.sess.fails, kills: S.sess.kills };
+  if (G.ac) G.ac.stats = { playSec: sess.playSec, attempts: sess.attempts, fails: sess.fails, kills: sess.kills, comboCount: S.combos.filter(Boolean).length, castleHp: hp, castleMaxHp: 20 };
   if (window.PVDX && win) { // 通知網站: 單關通關, 最後一關再送全局通關(失敗不送)
     PVDX.levelClear(G.level);
     if (G.level === 4) PVDX.gameClear();
   }
   setMusic(null);
-  snd(win ? 'level_win' : 'level_lose');
+  if (allClear) snd('medal_spin'); // 第 4 關勝利不播 level_win, 由 all_clear 當凱旋
+  else snd(win ? 'level_win' : 'level_lose');
 }
 
 // ───────── 單位分類 ─────────
@@ -459,7 +456,7 @@ function popName(u, ci, plain) {
   const isNew = !S.combos[ci];
   if (!isNew && G.time - u.comboLast[ci] < 4) return 0;
   u.comboLast[ci] = G.time;
-  if (isNew) { S.combos[ci] = true; G.stat.combosNew.push(COMBO_NAME[ci]); ev('combo_new', { name: COMBO_NAME[ci], unit: u.cat === 'player' ? 'player' : unitKind(u) }); }
+  if (isNew) { S.combos[ci] = true; G.stat.combosNew.push(COMBO_NAME[ci]); }
   G.names.push({ unit: u, name: COMBO_NAME[ci], isNew: isNew && !plain, age: 0 });
   return plain ? 0 : (isNew ? 2 : 1);
 }
@@ -477,7 +474,6 @@ function afterSlotsChange(t) {
   for (const f of fs) {
     const nm = COMBO_NAME[f.ci];
     G.stat.fuses[nm] = (G.stat.fuses[nm] || 0) + 1;
-    ev('fuse', { item: COMBO_KIND[f.ci], unit: unitKind(t), materials: f.mats });
     const ri = recipeIndexOf(f);
     if (ri >= 0 && !S.recipes[ri]) { // 某條配方這次開網頁第一次真的合成: 排進演出, 不播 fuse / combo_new / combo
       S.recipes[ri] = true;
@@ -600,7 +596,6 @@ function unitDown(t) {
   if (G.rq.length === 1) G.rqT = 0;
   G.stat.unitDowns++; G.stat.maxRespawnQueue = Math.max(G.stat.maxRespawnQueue, G.rq.length);
   snd('unit_down');
-  ev('unit_down', { unit: t.cat, x: Math.round(t.x), y: Math.round(t.y), queueLen: G.rq.length });
 }
 // o: { src: 'player' | 'unit' | 'enemy', frost: bool }
 function hurt(t, amt, o) {
@@ -624,7 +619,7 @@ function hurt(t, amt, o) {
       t.dead = true; G.stat.kills++; snd(t.boss ? 'boss_die' : 'enemy_die');
       if (t.boss) bossEnd(t, 'killed', src === 'player' ? 'player' : 'unit');
       if (!G.firstKill && tutLvl1() && !S.tut.done[9]) G.firstKill = { x: t.x, y: t.y, t: G.time }; // 階段 9「掉金幣」引導卡的觸發點
-      if (src === 'player') { G.stat.playerKills++; ev('player_kill', { enemy: t.type }); }
+      if (src === 'player') { G.stat.playerKills++; }
       if (G.steal && G.steal.enemy === t) completeSteal('died'); // 讀條中敵人倒下: 搶奪當場完成
     } else unitDown(t);
   }
@@ -865,7 +860,6 @@ function routeMarch(u, spd, dt) {
     if (m.out <= 0.0001) {
       u.state = 'away'; u.awayT = 1.0; u.moving = false; u.charging = false;
       G.stat.marchLoops++;
-      ev('march_loop', { unit: unitKind(u), path: LV.spawns[m.lane].name });
       u.m = { phase: 'door', lane: m.lane, s: 0 };
     }
   }
@@ -891,7 +885,6 @@ function homeRefund(u) {
   if (u.flagObj) { const i = G.flags.indexOf(u.flagObj); if (i >= 0) G.flags.splice(i, 1); u.flagObj = null; }
   const kind = unitKind(u);
   G.stat.homeRefunds[kind] = (G.stat.homeRefunds[kind] || 0) + 1;
-  ev('home_refund', { unit: kind, refund: r.refund, bundledBack: r.back, parts: r.rest.slice() });
   snd('home_refund');
 }
 function allyBehavior(u, dt, standing) {
@@ -970,10 +963,9 @@ function spawnEnemy(q) {
 function startBossIntro(q) {
   const b = LV.boss, bs = G.bossStat;
   G.bossIntro = { q, type: b.type, age: 0, t0: RT, music: false };
-  bs.spawned = true; bs.spawnT = r1(RT - G.log.t0);
+  bs.spawned = true;
   snd(BOSS_INTRO.sfx[b.type]);
   setMusic(null); // battle 淡出; 演出 2.0 秒起換 boss
-  ev('boss_intro', { boss: b.type, action: 'start', spawn: LV.spawns[b.sp].name });
 }
 function updateBossIntro(dt) {
   const bi = G.bossIntro;
@@ -982,7 +974,6 @@ function updateBossIntro(dt) {
   if (bi.age < BOSS_INTRO.sec) return;
   const bs = G.bossStat, b = LV.boss, d = ENEMY_DEF[b.type];
   bs.introSec = RT - bi.t0;
-  ev('boss_intro', { boss: b.type, action: 'end', sec: r1(RT - bi.t0), spawn: LV.spawns[b.sp].name });
   G.bossIntro = null;
   const e = spawnEnemy(bi.q);
   bs.t0 = G.stat.gameSec;
@@ -995,7 +986,6 @@ function bossEnd(e, how, killer) {
   bs.hpEndPct = how === 'killed' ? 0 : e.hp / e.maxHp;
   bs.killer = killer;
   if (b) { b.hiding = true; b.hideAge = 0; }
-  if (how === 'killed') ev('boss_down', { boss: e.type, aliveGameSec: r1(bs.aliveGameSec), killer, x: Math.round(e.x), y: Math.round(e.y) });
 }
 function bossBarTick(gdt) {
   const b = G.boss;
@@ -1146,7 +1136,6 @@ function castleHit(e) {
   G.stat.leaks++; G.stat.leaksByWave[e.wave]++;
   const nm = LV.spawns[e.lane].name;
   G.stat.leaksBySpawn[nm] = (G.stat.leaksBySpawn[nm] || 0) + 1;
-  ev('leak', { wave: e.wave + 1, enemy: e.type, spawn: nm, castleHpAfter: G.castleHp });
   if (G.castleHp > 0) snd('castle_hit');
 }
 function openPopup(p) { G.popup = p; snd('popup_open'); muffle(true); }
@@ -1297,11 +1286,43 @@ function updateTitle(dt) {
   flushSnd();
 }
 
+// 第 14 輪: 恭喜過關演出的時間推進與音效觸發點(計數器式, 不用前後幀比較)
+const AC_INTRO = 4.4;
+function updateAllClear(dt) {
+  const a = G.ac;
+  a.sec += dt;
+  a.age += dt;
+  if (!a.skipped) {
+    if (!a.landed && a.age >= 1.1) { a.landed = true; snd('medal_land'); }
+    if (!a.pinned && a.age >= 1.7) { a.pinned = true; snd('medal_pin'); }
+    if (!a.cleared && a.age >= 2.25) { a.cleared = true; snd('all_clear'); }
+    while (a.ticks < 5 && a.age >= 2.6 + 0.22 * a.ticks) { snd('stat_tick'); a.ticks++; }
+  }
+  while (a.glints < 3 && a.age >= 2.4 + 3 * a.glints) { snd('medal_glint'); a.glints++; } // 只播前 3 次
+}
+function allClearZ() {
+  const a = G.ac;
+  if (a.age < 0.5) return; // 0.5 秒內的 Z 不算
+  if (a.age < AC_INTRO) { // 演出中: 跳到結束狀態, 這一下不算選按鈕
+    a.skipped = true; a.skipAt = Math.round(a.age * 10) / 10;
+    if (!a.cleared) { a.cleared = true; snd('all_clear'); } // 還沒播的凱旋跳過時立刻播
+    a.landed = a.pinned = true; a.ticks = 5; a.glints = Math.max(a.glints, 1); // 沒到的落定 / 別上 / 統計音不播; 反光下一次在 5.4
+    a.age = AC_INTRO;
+    zNeedRelease = true; // Z 要放開再按才執行按鈕
+    return;
+  }
+  if (zNeedRelease) return;
+  const replay = a.cursor === 1;
+  snd('ui_confirm');
+  G.ac = null;
+  if (replay) startLevel(4); else toTitle();
+}
+
 function update(dt) {
   if (G.screen === 'title') { updateTitle(dt); return; }
   if (G.screen === 'result') {
     G.resultT += dt;
-    while (G.starsPlayed < G.stars && G.resultT >= 0.4 * G.starsPlayed) { snd('star'); G.starsPlayed++; }
+    if (G.ac) updateAllClear(dt);
     flushSnd();
     return;
   }
@@ -1355,7 +1376,6 @@ function checkWaveClear() { // 每波第一次清空記一筆(批次尾端呼叫
   for (let k = 1; k <= LV.waves.length; k++) {
     if (G.clearedW[k] || !waveClear(k)) continue;
     G.clearedW[k] = true;
-    ev('wave_clear', { wave: k, stranded: strandedList().length });
   }
 }
 function startWave(k) {
@@ -1372,7 +1392,7 @@ function startWave(k) {
     });
   });
   G.queue.sort((a, b) => a.t - b.t);
-  snd('wave_start'); ev('wave_start', { wave: k + 1 });
+  snd('wave_start'); 
   const lastW = k + 1 === LV.waves.length;
   G.banner = { wave: k + 1, last: lastW, boss: lastW && !!LV.boss, age: 0 };
 }
@@ -1395,7 +1415,7 @@ function waveUpdate(gdt) {
   const k = G.waveStarted;
   if (k < LV.waves.length && G.waveAt[k] !== null) {
     const rem = G.waveAt[k] - G.clock;
-    if (rem <= 6 && rem > 0 && !G.warned[k]) { G.warned[k] = true; snd('wave_warning'); ev('wave_warning', { wave: k + 1, reason: G.tutDriven ? 'tutorial' : 'timer' }); }
+    if (rem <= 6 && rem > 0 && !G.warned[k]) { G.warned[k] = true; snd('wave_warning'); }
   }
   if (G.banner) {
     G.banner.age += gdt;
@@ -1407,7 +1427,6 @@ function respLane() { const w = LV.waves[Math.max(0, G.waveStarted - 1)]; return
 function spawnTutEnemy(type, lane) {
   const stage = S.tut.view ? S.tut.view.stage : (S.tut.cur || null);
   G.stat.tutorialSpawns++;
-  ev('tutorial_spawn', { enemy: type, spawn: LV.spawns[lane].name, stage });
   spawnEnemy({ type, sp: lane, wave: Math.max(0, G.waveStarted - 1) });
 }
 // 教學重出: 任務沒完成就重出同樣的怪, 條件成立後 1.2 秒出 1 隻
@@ -1500,7 +1519,6 @@ function normalUpdate(dt) {
       const u = G.rq.shift(); G.rqT = 0;
       u.state = 'returning'; u.x = CASTLE_DOOR.x; u.y = CASTLE_DOOR.y; u.hp = u.maxHp; u.slowT = 0; u.m = null;
       snd('unit_return');
-      ev('unit_respawn', { unit: u.cat, waitSec: r1(G.time - u.downAt) });
     }
   }
   G.flags.forEach(f => { if (f.plantAge < 0.3) f.plantAge = Math.min(0.3, f.plantAge + gdt); });
@@ -1534,7 +1552,7 @@ function normalUpdate(dt) {
         G.parts.push(mkPart(it, 772 + 32 * k, 482, 0));
         k++;
       }
-      G.stat.recruits++; snd('recruit'); ev('recruit');
+      G.stat.recruits++; snd('recruit'); 
     }
     G.golems = G.golems.filter(g => !g.recruited);
     S.golemUnlocked = true;
@@ -1600,7 +1618,7 @@ function normalUpdate(dt) {
       p.life -= gdt;
       if (p.life <= 0) {
         p.removed = true; G.stat.groundExpired++;
-        ev('ground_expire', { item: p.item }); snd('ground_expire');
+        snd('ground_expire');
       }
     }
   }
@@ -1671,7 +1689,6 @@ function startReveal() {
   G.reveal = Object.assign({ age: 0, closing: false, closeAge: 0.3, t0: RT }, r);
   G.stat.reveals++;
   snd('combo_reveal');
-  ev('combo_reveal', { name: r.name, materials: [r.a, r.b], action: 'show' });
 }
 function updateReveal(dt) {
   const r = G.reveal;
@@ -1679,7 +1696,6 @@ function updateReveal(dt) {
   else {
     r.closeAge = Math.min(0.3, r.closeAge + dt);
     if (r.closeAge >= 0.3) {
-      ev('combo_reveal', { name: r.name, materials: [r.a, r.b], action: 'close', readSec: r1(RT - r.t0) });
       G.reveal = null;
       if (G.revealQ.length) startReveal();
     }
@@ -1690,11 +1706,11 @@ function revealZ() {
   if (!r || r.closing || r.age < 1.5) return;
   r.closing = true; r.closeAge = 0; snd('ui_confirm');
 }
-function openCodex() { G.codex = true; G.stat.codexOpens++; G.codexT0 = RT; snd('codex_open'); ev('codex', { open: true }); }
-function closeCodex() { G.codex = false; snd('codex_close'); ev('codex', { open: false, sec: r1(RT - G.codexT0) }); }
+function openCodex() { G.codex = true; G.stat.codexOpens++; G.codexT0 = RT; snd('codex_open'); }
+function closeCodex() { G.codex = false; snd('codex_close'); }
 function togglePause() {
-  if (!G.paused) { G.paused = true; G.stat.pauses++; snd('pause_on'); ev('pause', { on: true }); }
-  else { G.paused = false; snd('pause_off'); ev('pause', { on: false }); }
+  if (!G.paused) { G.paused = true; G.stat.pauses++; snd('pause_on'); }
+  else { G.paused = false; snd('pause_off'); }
 }
 
 // ───────── 新手教學(31 階段: 暫停式引導卡 + 新手任務泡泡; 階段 31 是階段 30 期間的插隊) ─────────
@@ -1776,7 +1792,6 @@ function tutBlock(action, item, text, dist) {
   snd('ui_invalid');
   if (text !== null) G.warn = { text: text || '教學期間不可這樣操作', age: 0 };
   const b = G.stat.tutorialBlocks; b[action] = (b[action] || 0) + 1;
-  ev('tutorial_block', { action, stage: S.tut.view ? S.tut.view.stage : null, item: item || null, dist: dist === undefined ? null : dist, wave: G.wave });
 }
 // 離「放這裡」指定位置的距離(整數): 只有第 1 關階段 7 的蓋箭塔、階段 14 的插旗有值
 function placeDist() {
@@ -1862,7 +1877,6 @@ function buildCard(k) {
 function startGuide(stages) {
   if (G.popup) closePopup();
   G.guide = { stages: stages.slice(), cards: stages.map(buildCard), idx: 0, phase: 'intro', phaseAge: 0, cardAge: 0.3, readAge: 0, from: null, trans: 0.3, t0: RT };
-  ev('guide_start', { stages: stages.slice() });
   snd('guide_pause');
 }
 function showCard(g) {
@@ -1870,7 +1884,7 @@ function showCard(g) {
   g.cardAge = 0; g.readAge = 0;
   snd('guide_card');
   G.tapp[k] = true;
-  if (T.shownSt[k] === undefined) { T.shownSt[k] = r1(RT); ev('tutorial_show', { stage: k, kind: 'card' }); }
+  if (T.shownSt[k] === undefined) { T.shownSt[k] = r1(RT); }
 }
 function updateGuide(dt) {
   const g = G.guide;
@@ -1884,7 +1898,6 @@ function updateGuide(dt) {
   } else {
     g.phaseAge += dt;
     if (g.phaseAge >= 0.3) {
-      ev('guide_end', { stages: g.stages.slice(), sec: r1(RT - g.t0) });
       G.guide = null;
     }
   }
@@ -1892,7 +1905,6 @@ function updateGuide(dt) {
 function completeCard(k) {
   const T = S.tut;
   T.done[k] = true; T.doneSt[k] = r1(RT);
-  ev('tutorial_done', { stage: k, kind: 'card' });
   if (k === 9) releaseHold9();
   if (k === 29) G.strandedHit = false; // 階段 30 只算這之後的命中
 }
@@ -2011,7 +2023,6 @@ function arrow16(X) { // 算箭頭的座標; 終點 = 離起點最近的目的�
   const key = ITEMS16[X.i][0] + '|' + X.src;
   if (G.arrowKey !== key) { // 換一件、或起點種類改變: 新箭頭從起點長出來, 並記埋點
     G.arrowKey = key; G.arrowT0 = G.time;
-    ev('tutorial_arrow', { item: ITEMS16[X.i][0], from: X.from, to: toKind });
   }
   return { fromX: X.fx, fromY: X.fy, fromR: X.fr, toX: tx, toY: ty, ctrlX: (X.fx + tx) / 2, ctrlY: cy, item: ITEMS16[X.i][0] };
 }
@@ -2205,8 +2216,7 @@ function qDone(k) {
 function completeQuest(k, view) {
   const T = S.tut;
   T.done[k] = true; T.doneSt[k] = r1(RT);
-  if (T.shownSt[k] === undefined) { T.shownSt[k] = T.doneSt[k]; ev('tutorial_show', { stage: k, kind: 'quest' }); }
-  ev('tutorial_done', { stage: k, kind: 'quest' });
+  if (T.shownSt[k] === undefined) { T.shownSt[k] = T.doneSt[k]; }
   snd('tutorial_done');
   const v = (T.lastView && T.lastView.stage === k) ? T.lastView : (view || qView(k, true));
   T.fx = v ? { stage: k, view: v, t: 0 } : null;
@@ -2242,13 +2252,11 @@ function updateTutorial(dt) {
   if (k === 22 && view && !recruited22() && !G.waitLogged) { // 等待提示第一次出現
     G.waitLogged = true;
     const g = G.golems.find(q => q.team === 'neutral' && !q.removed && q.slots.indexOf('march') >= 0);
-    ev('tutorial_wait', { waitedSec: r1(g ? (g.marchT || 0) : 0) });
   }
   if (k === 16 && G.popup && G.popup.type === 'soul') { // 彈窗小泡泡第一次畫出 / 改指另一格
     const tp = tip16(G.popup);
     if (G.popup.tipSlot === undefined || G.popup.tipSlot !== tp.slot) {
       G.popup.tipSlot = tp.slot;
-      ev('tutorial_slot_tip', { mode: tp.mode, unit: tp.unit, item: tp.item, slot: tp.slot });
     }
   }
   if (qDone(k)) { completeQuest(k, view); return; }
@@ -2265,7 +2273,7 @@ function updateTutorial(dt) {
     T.view = view; T.lastView = view;
     if (!G.vshown[k]) {
       G.vshown[k] = true; snd('quest_new');
-      if (T.shownSt[k] === undefined) { T.shownSt[k] = r1(RT); ev('tutorial_show', { stage: k, kind: 'quest' }); }
+      if (T.shownSt[k] === undefined) { T.shownSt[k] = r1(RT); }
     }
     if (k === 23) G.q23seen = true;
   }
@@ -2273,7 +2281,6 @@ function updateTutorial(dt) {
 function tutGold(stage, amount) { // 教學補金幣: 不算 goldEarned
   G.gold += amount; G.stat.tutorialGold += amount;
   snd('coin_pickup');
-  ev('tutorial_gold', { stage, amount, goldAfter: G.gold });
 }
 
 // ───────── 輸入動作 ─────────
@@ -2281,7 +2288,6 @@ function cancelSteal(reason) {
   const s = G.steal; if (!s) return;
   G.steal = null;
   G.stat.steals.canceled++; snd('steal_cancel');
-  ev('steal_cancel', { enemy: s.enemy.type, item: s.enemy.slots[s.index], reason });
   endStealLock(s, 'leak');
 }
 function completeSteal(via) {
@@ -2290,17 +2296,14 @@ function completeSteal(via) {
   G.hand = item; e.slots[s.index] = null; G.steal = null;
   G.stat.steals.done++; if (via === 'died') G.stat.steals.diedDone++;
   snd('steal_done');
-  ev('steal_done', { enemy: e.type, item, via: via === 'died' ? 'died' : 'bar' });
   endStealLock(s, via === 'died' ? 'died' : 'bar');
 }
 function endStealLock(s, result) { // 第一次搶奪鎖解鎖: 拔下 / 取消的同一幀
   if (!s.locked) return;
   const L = s.lock, sl = G.stat.stealLock, sec = r1(RT - L.t0);
   sl.lockedSec += RT - L.t0;
-  ev('steal_lock', { action: 'end', enemy: s.enemy.type, result, sec, ignoredZ: L.z, ignoredMove: L.m, ignoredOther: L.o });
 }
 function doInstall(t, mode, item, swappedOut) {
-  ev('install', { item, to: unitKind(t), mode, swappedOut: swappedOut || null });
   G.stat.installs[mode]++;
   afterSlotsChange(t);
 }
@@ -2322,7 +2325,6 @@ function demolish(t) {
   G.towers = G.towers.filter(u => !u.removed);
   G.pillars = G.pillars.filter(u => !u.removed);
   G.stat.demolishes++;
-  ev('demolish', { unit: unitKind(t), refund: r.refund, bundledBack: r.back, x: Math.round(t.x), y: Math.round(t.y), parts: items.slice() });
   snd('demolish');
 }
 function popupZ() {
@@ -2341,7 +2343,6 @@ function popupZ() {
     G.gold -= price; G.stat.goldSpent += price;
     G.stat.purchases[nm] = (G.stat.purchases[nm] || 0) + 1;
     if (isUnit) G.flag = { reason: 'purchase', kind: nm, unit: null }; else G.hand = kit;
-    ev('purchase', { item: nm, price, goldAfter: G.gold });
     snd('purchase');
     closePopup();
     return;
@@ -2354,7 +2355,6 @@ function popupZ() {
       const cell = t.slots[i];
       G.hand = cell; t.slots[i] = null;
       if (t.cat === 'pillar') t.changeAge = 0;
-      ev('take', { item: cell, from: unitKind(t) });
       snd('take_part');
       closePopup();
     } else if (c.type === 'demolish') {
@@ -2383,7 +2383,6 @@ function tryPlace() {
   let bundled = [];
   if (k === 'crossbowKit') { const u = mkTower(info.x, info.y); u.slots[0] = 'ranged'; bundled = ['ranged']; G.towers.push(u); G.run.placedTower = true; }
   else { G.pillars.push(mkPillar(info.x, info.y)); G.stat.pillarsMax = Math.max(G.stat.pillarsMax, G.pillars.length); G.run.placedPillar = true; }
-  ev('place', { kind: info.kind, x: Math.round(info.x), y: Math.round(info.y), bundled });
   G.hand = null;
   snd('place_unit');
 }
@@ -2410,7 +2409,6 @@ function plantFlag() {
   u.home = { x: fo.x, y: fo.y }; u.flagObj = fo;
   G.flags.push(fo);
   G.stat.flags[f.reason === 'purchase' ? 'purchase' : 'rally']++;
-  ev('flag_plant', { reason: f.reason, unit: u.cat, x: Math.round(fo.x), y: Math.round(fo.y) });
   snd('flag_plant');
 }
 function zPress() {
@@ -2423,12 +2421,12 @@ function zPress() {
     const t = findInstallTarget();
     if (!t) {
       G.parts.push(mkPart(G.hand, P.x, P.y, 0.6));
-      ev('drop', { item: G.hand }); G.stat.drops++; G.hand = null; snd('drop_part');
+      G.stat.drops++; G.hand = null; snd('drop_part');
       return;
     }
     if (t.cat === 'part') {
       const h = G.hand; G.hand = t.item; t.item = h; t.life = 10; t.permanent = h === 'shop';
-      ev('ground_swap', { item: h, got: G.hand }); snd('swap_part');
+      snd('swap_part');
       return;
     }
     if (installBlocked(t, G.hand)) { tutBlock('install', G.hand); return; }
@@ -2452,13 +2450,12 @@ function zPress() {
     if (b) {
       snd('ui_invalid');
       if (G.bossStat) G.bossStat.stealBlocks++;
-      ev('steal_block', { enemy: b.type, wave: G.wave });
     }
     return;
   }
   if (t.cat === 'part') {
     G.hand = t.item; t.removed = true; G.parts = G.parts.filter(p => !p.removed);
-    ev('take', { item: G.hand, from: 'ground' }); snd('take_part');
+    snd('take_part');
     return;
   }
   if (t.cat === 'enemy') {
@@ -2470,8 +2467,7 @@ function zPress() {
     const lock = tutLvl1() && period(11); // 第 1 關階段 11 期間開始的搶奪上「第一次搶奪鎖」
     G.steal = { enemy: t, index, t: 0, locked: lock, lock: lock ? { t0: RT, z: 0, m: 0, o: 0 } : null };
     G.stat.steals.started++; snd('steal_start');
-    ev('steal_start', { enemy: t.type, item: t.slots[index], locked: lock });
-    if (lock) { G.stat.stealLock.locks++; ev('steal_lock', { action: 'start', enemy: t.type, result: null, sec: null, ignoredZ: null, ignoredMove: null, ignoredOther: null }); }
+    if (lock) { G.stat.stealLock.locks++; }
     return;
   }
   const cells = menuCells(t);
@@ -2542,7 +2538,6 @@ function onKey(k) {
       } else if (k === 'Z') { if (zNeedRelease) return; confirmTutChoice(); }
       else if (k === 'X') {
         snd('ui_move');
-        S.menuEvents.push({ type: 'tutorial_choice', t: null, st: r1(RT), action: 'cancel', choice: null, sec: r1(c.age), moves: c.moves });
         G.tc = null;
       }
       return;
@@ -2556,19 +2551,25 @@ function onKey(k) {
         snd('ui_invalid');
         G.tWarn = { age: 0, x: 152 + 240 * ci, text: '尚未解鎖' };
         S.menuLockedTries++;
-        S.menuEvents.push({ type: 'menu_block', t: null, st: r1(RT), level: ci + 1, reason: 'locked' });
         return;
       }
       if (ci === 0 && tutLock1()) { // 教學鎖住的第 1 關: 不進入, 跳「教學期間不可這樣操作」
         snd('ui_invalid');
         G.tWarn = { age: 0, x: 152, text: '教學期間不可這樣操作' };
         S.menuBlocks++;
-        S.menuEvents.push({ type: 'menu_block', t: null, st: r1(RT), level: 1, reason: 'tutorial' });
         return;
       }
       if (ci === 0 && S.tutMode === null && !S.tut.done[16]) { openTutChoice(); return; }
       snd('ui_confirm'); startLevel(ci + 1);
     }
+    return;
+  }
+  if (G.screen === 'result' && G.ac) {
+    const a = G.ac;
+    if (a.age >= AC_INTRO && (k === 'L' || k === 'R')) { // 演出中 ← → 無效、不播音效
+      const c = clamp(a.cursor + (k === 'R' ? 1 : -1), 0, 1);
+      a.cursor = c; snd('ui_move'); // 和一般結算相同: 到頭也播
+    } else if (k === 'Z') allClearZ();
     return;
   }
   if (G.screen === 'result') {
@@ -2669,7 +2670,7 @@ function titleState() {
   let maxU = 0; for (let i = 0; i < 4; i++) if (S.unlocked[i]) maxU = i;
   const unlocking = !!(adv && adv.unlocked);
   return {
-    levels: LEVELS.map((l, i) => ({ name: l.name, unlocked: S.unlocked[i], bestStars: S.unlocked[i] ? S.best[i] : 0, tutorial: i < 2, tutorialLocked: i === 0 && S.unlocked[0] && tutLock1() })),
+    levels: LEVELS.map((l, i) => ({ name: l.name, unlocked: S.unlocked[i], cleared: !!(S.unlocked[i] && S.won[i]), tutorial: i < 2, tutorialLocked: i === 0 && S.unlocked[0] && tutLock1() })),
     cursorIndex: (adv || G.tt.clear) ? -1 : G.cursor, // 大提示與推進動畫播完之前不畫游標
     blinkTime: G.titleT,
     tokenIndex: adv ? adv.to : maxU, tokenFrom: adv ? adv.from : maxU, tokenAge: adv ? Math.min(0.8, adv.age) : 0.8, tokenDuration: 0.8,
@@ -2681,19 +2682,10 @@ function touchOn() { return !!(window.PVDX && window.PVDX.on); }
 function touchText(s) { return touchOn() && s ? s.replace(/按 Z/g, '按 A').replace(/按 X/g, '按 B').replace(/空白鍵/g, '購買鈕') : s; }
 function render() {
   ctx.save();
-  const v = touchOn() && window.PVDX.view;
-  if (v) {
-    // 觸控模式: 設計區縮小置中(比例與位置由 touch.js 算), 兩側整塊塗黑留給觸控按鈕, 遊戲畫面剪在設計區內
-    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, CW, CH);
-    ctx.setTransform(DPR * SC * v.k, 0, 0, DPR * SC * v.k, DPR * v.x, DPR * v.y);
-    ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.clip();
-  } else {
-    // 每幀開頭: 實際像素 = DPR, 再整體放大 1.25 倍(設計座標 1024×576 → 邏輯畫布 1280×720)
-    // 畫面比 1280 寬時, 1024×576 設計區置中(最外層平移一次); 畫滿整面的東西由美術畫到 x −160~1184
-    ctx.setTransform(DPR * SC, 0, 0, DPR * SC, DPR * OX, 0);
-    ctx.clearRect(-OX / SC - 4, -4, CW / SC + 8, H + 8);
-  }
+  // 每幀開頭: 實際像素 = DPR, 再整體放大 1.25 倍(設計座標 1024×576 → 邏輯畫布 1280×720)
+  // 畫面比 1280 寬時, 1280×720 設計區置中(最外層平移一次 OX); 兩側由 touch.js 塗黑放按鈕
+  ctx.setTransform(DPR * SC, 0, 0, DPR * SC, DPR * OX, 0);
+  ctx.clearRect(-OX / SC - 4, -4, CW / SC + 8, H + 8);
   try { renderScene(); } finally { ctx.restore(); }
 }
 function renderScene() {
@@ -2940,11 +2932,13 @@ function drawScene() {
   }
   if (G.codex) Art.drawCodex(ctx, codexState());
   else if (G.paused) Art.drawPause(ctx, {});
-  if (G.screen === 'result') {
+  if (G.screen === 'result' && G.ac) {
+    Art.drawAllClear(ctx, { age: G.ac.age, introDuration: AC_INTRO, stats: Object.assign({}, G.ac.stats), options: ['繼續', '重玩'], cursorIndex: G.ac.cursor });
+  } else if (G.screen === 'result') {
     const hpShow = Math.max(0, G.castleHp);
     Art.drawResult(ctx, {
-      win: G.win, allClear: G.win && G.level === 4, level: G.level, levelName: LV.name, wave: G.wave, totalWaves: LV.waves.length,
-      castleHp: hpShow, castleMaxHp: 20, stars: G.stars, starAge: Math.min(1.2, G.resultT), starDuration: 1.2,
+      win: G.win, level: G.level, levelName: LV.name, wave: G.wave, totalWaves: LV.waves.length,
+      castleHp: hpShow, castleMaxHp: 20,
       comboCount: S.combos.filter(Boolean).length, options: G.options.slice(), cursorIndex: G.resultCursor
     });
   }
