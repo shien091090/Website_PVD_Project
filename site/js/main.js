@@ -90,7 +90,8 @@ function route() {
     document.querySelector('#pg-game .back').href = `#play/${arg}`;
     if (playing !== arg) { enterGame(arg); playing = arg; track('game_start', { game: arg }); }
   }
-  if (routed && prev !== page) engage.flush(); // 換頁: 先送上一頁的前景時間, 各頁分開算
+  const first = !routed; // 進站第一頁: 首頁的頁面標記一開始就是首頁, 不能靠「換頁」判斷
+  if (!first && prev !== page) engage.flush(); // 換頁: 先送上一頁的前景時間, 各頁分開算
   routed = true;
   document.body.dataset.pg = page;
   // 遊玩中鎖住縮放, 手機快速點兩下不會把網頁放大; 其他頁照常可以雙指放大
@@ -99,7 +100,7 @@ function route() {
   else if (page === 'vote') { setState({ ...getState(), now: undefined }); loadState(); }
   else if (page === 'develop') renderDevelop();
   else fit();
-  if (prev !== page) { scrollTo(0, 0); pageView(page); }
+  if (first || prev !== page) { scrollTo(0, 0); pageView(page); }
 }
 // 玩到一半關分頁: 用 sendBeacon 送離開事件; 從返回快取回來時重新計時, 之後離開再記一次
 addEventListener('pagehide', () => { if (playing) track('game_leave', { game: playing, seconds: lapGame() }, { transport: 'sendBeacon' }); });

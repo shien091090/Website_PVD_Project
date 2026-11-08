@@ -232,3 +232,12 @@ test('換頁時送出上一頁的 engaged 前景時間, 各頁分開算', async 
   assert.equal(all[1][2].page, 'vote');
   await ctx.close();
 });
+
+test('直接開首頁(網址沒有 # 開頭的頁名)也要送首頁的頁面瀏覽', async () => {
+  const { ctx, page, calls } = await open('dark', '');
+  await page.waitForFunction(() => window.posthog?.calls.some(c => c[0] === 'register'));
+  await page.waitForTimeout(300);
+  const pv = events(await calls()).filter(c => c[1] === '$pageview');
+  assert.deepEqual(pv.map(c => c[2].page), ['home']);
+  await ctx.close();
+});
