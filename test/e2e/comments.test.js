@@ -36,13 +36,14 @@ test('送出留言後出現在最上面, 別的瀏覽器也看得到, 連送被�
 });
 
 test('鎖住的遊戲沒有輸入框, 只顯示一行說明', async () => {
-  srv.sql("INSERT INTO locks (game, locked) VALUES ('dungeon-zoo', 1)");
+  srv.sql("INSERT INTO locks (game, locked) VALUES ('bubble-tempo', 1)");
   const ctx = await browser.newContext(PC);
   const page = await ctx.newPage();
-  await page.goto(srv.url + '#play/dungeon-zoo');
+  await page.goto(srv.url + '#play/bubble-tempo');
   await page.locator('.board .clock:has-text("留言功能暫時無法使用")').waitFor();
   assert.equal(await page.locator('.board .cform').count(), 0);
   await ctx.close();
+  srv.sql('DELETE FROM locks'); // 解鎖, 後面的測試還要在這款留言
 });
 
 test('伺服器錯誤時顯示失敗且保留文字', async () => {
@@ -194,7 +195,7 @@ test('點進留言框就先做驗證, 按送出時不用再等驗證', async () 
   const ctx = await browser.newContext(PC);
   const page = await ctx.newPage();
   await page.route('**/turnstile/v0/api.js*', r => r.fulfill({ contentType: 'text/javascript', body: SLOW_TS }));
-  await page.goto(srv.url + '#play/soul-smith-defense'); // 前面的測試鎖了 dungeon-zoo
+  await page.goto(srv.url + '#play/soul-smith-defense');
   await page.locator('.board .cms').waitFor();
   await page.click('.board .cform textarea');
   await page.waitForFunction(() => window.__ex === 1);

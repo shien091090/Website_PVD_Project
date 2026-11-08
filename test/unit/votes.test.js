@@ -152,7 +152,9 @@ test('同 IP 第 31 個新訪客 429', async () => {
 test('後台新增與修改輪次, 結束時間要晚於開始', async () => {
   const s = setup();
   assert.equal((await s.call(roundsApi.onRequestPost, 'POST', '/api/admin/rounds', { startsAt: T0, endsAt: T0 - 1 })).status, 400);
-  const ALL = ['bubble-tempo', 'dungeon-zoo', 'jelly-jinni', 'soul-smith-defense'];
+  const ALL = ['bubble-tempo', 'jelly-jinni', 'soul-smith-defense'];
+  // 暫時下架的遊戲不能當候選
+  assert.equal((await s.call(roundsApi.onRequestPost, 'POST', '/api/admin/rounds', { startsAt: T0 - H, endsAt: T0 + H, options: ['bubble-tempo', 'dungeon-zoo'] })).body.error.code, 'unknown_option');
   assert.equal((await s.call(roundsApi.onRequestPost, 'POST', '/api/admin/rounds', { startsAt: T0 - H, endsAt: T0 + H })).body.error.code, 'too_few_options');
   assert.equal((await s.call(roundsApi.onRequestPost, 'POST', '/api/admin/rounds', { startsAt: T0 - H, endsAt: T0 + H, options: ['bubble-tempo', 'nope'] })).body.error.code, 'unknown_option');
   assert.equal((await s.call(roundsApi.onRequestPost, 'POST', '/api/admin/rounds', { startsAt: T0 - H, endsAt: T0 + H, options: ALL })).status, 201);

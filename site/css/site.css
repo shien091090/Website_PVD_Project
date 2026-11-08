@@ -267,7 +267,7 @@ body.vend .pmain { --vn: 60px; }
   .pmain { display: flex; flex-direction: column; padding: 0 16px calc(20px + env(safe-area-inset-bottom, 0px)); gap: 0; }
   .detail { display: none; }
   .glist { flex: 1; gap: 12px; padding: 0; margin: 0; }
-  .gi { flex: 1; min-height: 0; }
+  .gi { flex: 1; min-height: 0; max-height: calc((100vw - 32px) * 9 / 21); } /* 款數少時不撐高, 維持橫幅比例 */
   .gh.bn { flex: 1; aspect-ratio: auto; }
   .gh:hover { transform: none; }
   /* 展開一款: 它撐滿剩餘高度, 其他收成矮條 */

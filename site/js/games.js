@@ -1,4 +1,4 @@
-// 4 款遊戲資料(前端與 API 共用)。名稱、介紹、時長、主色為暫定值, 等素材清單交來再換
+// 遊戲資料(前端與 API 共用)。名稱、介紹、時長、主色由各遊戲發布版同步過來
 // code: 網址用代號, 上線後不改; icon: 圖示路徑, null 時用 letter 畫色塊; fg: 主色上的字色
 // 依時長由短到長: 先比下限, 再比上限
 export const byTime = (a, b) => {
@@ -6,7 +6,8 @@ export const byTime = (a, b) => {
   return a1 - b1 || a2 - b2;
 };
 
-export const GAMES = [
+// 所有已同步的遊戲; 網站上實際出現的是扣掉 HIDDEN 之後的 GAMES
+export const ALL_GAMES = [
   { code: 'bubble-tempo', name: 'Bubble Tempo', letter: 'B', time: '2–5 分鐘', bg: '#aaefd5', fg: '#2d2144', icon: 'media/games/bubble-tempo.png', banner: 'media/games/bubble-tempo-banner.png', pattern: 'media/games/bubble-tempo-pattern.png',
     intro: '指尖拖著節奏泡泡，染色、瞄準、對上拍子！在風格各異的關卡裡跟上越來越快的音樂，挑戰你的反應力與節奏感！' },
   { code: 'dungeon-zoo', name: '來馬戲團看一點大場面', letter: '來', time: '12–22 分鐘', bg: '#f29cac', fg: '#2d2144', icon: 'media/games/dungeon-zoo.png', banner: 'media/games/dungeon-zoo-banner.png', pattern: 'media/games/dungeon-zoo-pattern.png',
@@ -16,5 +17,9 @@ export const GAMES = [
   { code: 'soul-smith-defense', name: '魂匠守衛者', letter: '魂', time: '10–20 分鐘', bg: '#a8cf9c', fg: '#2d2144', icon: 'media/games/soul-smith-defense.png', banner: 'media/games/soul-smith-defense-banner.png', pattern: 'media/games/soul-smith-defense-pattern.png',
     intro: '會衝上前砍怪的箭塔？拔敵人的攻擊招式來用？一款所有能力都能自由拼裝的塔防，發揮想像力守住主堡！' },
 ].sort(byTime);
+// 暫時下架: 遊戲檔與資料留著, 試玩頁、遊玩網址、後台候選都不出現; 要恢復就從這裡拿掉
+export const HIDDEN = ['dungeon-zoo'];
+export const GAMES = ALL_GAMES.filter(g => !HIDDEN.includes(g.code));
 export const GAME_CODES = GAMES.map(g => g.code);
-export const byCode = code => GAMES.find(g => g.code === code) || null;
+export const ALL_GAME_CODES = ALL_GAMES.map(g => g.code); // 同步發布版用, 含暫時下架的
+export const byCode = code => ALL_GAMES.find(g => g.code === code) || null; // 含暫時下架的: 舊輪次的投票結果照樣有圖示

@@ -173,7 +173,8 @@ test('後台開新一輪只勾 2 款候選, 投票頁只出現這 2 款', async 
   };
   assert.equal(await page.locator('.nstart select').first().locator('option').count(), 24);
   await setDt('nstart', Date.now() - 3600000); await setDt('nend', Date.now() + 3600000);
-  await page.uncheck('.nopt[value="dungeon-zoo"]'); await page.uncheck('.nopt[value="soul-smith-defense"]');
+  assert.equal(await page.locator('.nopt[value="dungeon-zoo"]').count(), 0, '暫時下架的遊戲不在候選裡');
+  await page.uncheck('.nopt[value="soul-smith-defense"]');
   await page.click('#nadd');
   await page.locator('.card[data-id="1"]').waitFor();
   await page.goto(srv.url + '#vote');

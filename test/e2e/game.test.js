@@ -86,7 +86,7 @@ test('遊戲收到暫停訊息', async () => {
 
 test('遊戲圖示塞滿圓角框, 不會撐出框外', async () => {
   // 手機清單改用橫幅, 圖示改看抽屜裡的
-  for (const [opts, hash] of [[PC, '#play'], [PHONE, '#play/dungeon-zoo']]) {
+  for (const [opts, hash] of [[PC, '#play'], [PHONE, '#play/soul-smith-defense']]) {
     const ctx = await browser.newContext(opts);
     const page = await ctx.newPage();
     await page.goto(srv.url + hash);
@@ -245,9 +245,9 @@ test('遊戲清單電腦手機都用橫幅當按鈕, 沒橫幅的用主色暫代
     await dropJellyBanner(page);
     await page.goto(srv.url + '#play');
     await page.locator('#glist .gh').first().waitFor();
-    const zoo = page.locator('.gh:has-text("來馬戲團看一點大場面")');
-    assert.match(await zoo.locator('img.cv').getAttribute('src'), /dungeon-zoo-banner\.png$/, w);
-    assert.equal(await zoo.locator('.chip').textContent(), byCode('dungeon-zoo').time);
+    const zoo = page.locator('.gh:has-text("魂匠守衛者")');
+    assert.match(await zoo.locator('img.cv').getAttribute('src'), /soul-smith-defense-banner\.png$/, w);
+    assert.equal(await zoo.locator('.chip').textContent(), byCode('soul-smith-defense').time);
     await page.waitForFunction(() => [...document.querySelectorAll('#glist img.cv')].every(i => i.complete));
     const box = await zoo.boundingBox();
     assert.ok(Math.abs(box.width / box.height - 21 / 9) < 0.35, `${w} 格子 ${box.width}x${box.height}`);
@@ -316,13 +316,13 @@ test('遊戲有回報載入進度時, 載入畫面顯示百分比, 等遊戲說�
   const page = await ctx.newPage();
   let release;
   const gate = new Promise(r => { release = r; });
-  await page.route(/\/games\/dungeon-zoo\/audio\/sound\.js/, async route => { await gate; await route.continue(); });
+  await page.route(/\/games\/soul-smith-defense\/audio\/sound\.js/, async route => { await gate; await route.continue(); });
   // 遊戲回報進度可能比測試讀文字快, 改記下載入畫面剛出現時的文字
   await page.addInitScript(() => new MutationObserver((_, ob) => {
     const el = document.querySelector('#pg-game .gload');
     if (el) { window.firstLoad = el.textContent; ob.disconnect(); }
   }).observe(document, { childList: true, subtree: true }));
-  await page.goto(srv.url + '#game/dungeon-zoo', { waitUntil: 'commit' });
+  await page.goto(srv.url + '#game/soul-smith-defense', { waitUntil: 'commit' });
   const ld = page.locator('#pg-game .gload');
   await ld.waitFor({ state: 'visible' });
   assert.match(await page.evaluate(() => window.firstLoad), /遊戲載入中 0%/);

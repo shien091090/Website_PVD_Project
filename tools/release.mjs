@@ -1,7 +1,7 @@
 // 檢查遊戲專案的 release/ 資料夾, 並把它的遊戲資料套進 games.js。格式見 docs/遊戲發布格式.md
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
-import { GAME_CODES } from '../site/js/games.js';
+import { ALL_GAME_CODES as GAME_CODES } from '../site/js/games.js';
 
 const LIMIT = 25 * 1024 * 1024; // Cloudflare Pages 單檔上限
 const DOWNLOAD = /\bcreateObjectURL\b|\bdownload\s*=/;

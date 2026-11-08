@@ -42,7 +42,7 @@ test('鎖留言開關: 鎖住後前台不能留言, 解鎖後可以', async () =
   const put = locked => run(adminLocks.onRequestPut, ctxOf(db, 'PUT', '/api/admin/locks', { game: 'jelly-jinni', locked }));
   assert.equal((await put(true)).status, 200);
   const list = await run(adminLocks.onRequestGet, ctxOf(db, 'GET', '/api/admin/locks'));
-  assert.deepEqual(list.body, { 'bubble-tempo': false, 'dungeon-zoo': false, 'jelly-jinni': true, 'soul-smith-defense': false });
+  assert.deepEqual(list.body, { 'bubble-tempo': false, 'jelly-jinni': true, 'soul-smith-defense': false });
   const post = () => run(pub.onRequestPost, ctxOf(db, 'POST', '/api/comments', { game: 'jelly-jinni', avatar: 0, body: 'x', token: 't' }));
   assert.equal((await post()).body.error.code, 'locked');
   await put(false);
