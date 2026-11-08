@@ -15,7 +15,6 @@ const START_GOLD = 40;                     // 第 1 天開局 / 重來開局的�
 const WAIT_SECS = 5;                       // 暗號「過 5 秒」
 const GUIDE_SHOW_AT = 4.0;                 // 見習表演暫停式引導開演後幾秒暫停
 const SHOW_SECS = 30;                     // 正式表演秒數
-const STAR_AT = [1050, 2100, 3150];        // 評星門檻
 const SHELF_FAME = [200, 500, 1000];           // 商店上架名聲門檻(0 一開始就上架)
 const ROWS = 4;                            // 暗號節目單列數
 const TIERS = ['quiet', 'clap', 'cheer', 'frenzy'];
@@ -2736,10 +2735,11 @@ function updateProgram(dt) {
   S.curWait += dt;   // 這列從輪到(冷卻結束)起已等的秒數
   if (S.curWait > S.waitMax) { S.waitMax = S.curWait; S.waitCue = row.cue; }
   if (cueTrue(row.cue)) {
+    const idx = S.cur, waited = S.curWait;
     S.cur = nextComplete(S.cur);
     S.waitT = 3.0; S.sinceFire = 0; S.curWait = 0;   // 發動後 3 秒內不檢查暗號
     S.ev = { multi3: false }; S.satSince = 0; S.fires++;
-    fireProgram(row);
+    const n = fireProgram(row);
     Snd.play('cue_fire'); tut('fired');
   }
 }
@@ -2883,7 +2883,7 @@ function sresultInput(dt) {
     return;
   }
   if (pressed.z) {
-    Snd.play('ui_confirm');
+    if (!(!SR.tutorial && G.day >= DAY_MAX)) Snd.play('ui_confirm');   // 第 4 天結算按 Z 只播 curtain_close
     if (SR.tutorial) { tutorialDone = true; beginDay(1); }
     else advanceDay();
   }
@@ -3001,15 +3001,16 @@ function shopInput(dt) {
 
 // ───────────────────────── 總結算 ─────────────────────────
 function toResult() {
-  const stars = G.rep >= STAR_AT[2] ? 3 : G.rep >= STAR_AT[1] ? 2 : G.rep >= STAR_AT[0] ? 1 : 0;
-  RS = { t: 0, stars, shown: 0 };
+  RS = { t: 0, signed: false, opened: false };   // 通關動畫計時(第 76b 條)
+  Snd.play('curtain_close');                     // 布幕開始拉上(t = 0), 不另播 ui_confirm
   setScene('result');
   if (window.PVDX) PVDX.gameClear();   // 4 天跑完 = 全局通關, 緊接在第 4 天的單關通關之後(touch.js)
 }
 function resultInput(dt) {
   RS.t += dt;
-  while (RS.shown < RS.stars && RS.t >= 0.8 + 0.6 * RS.shown) { RS.shown++; Snd.play('star'); }
-  if (pressed.z) {
+  if (!RS.signed && RS.t >= 0.66) { RS.signed = true; Snd.play('sign_land'); }
+  if (!RS.opened && RS.t >= 1.35) { RS.opened = true; Snd.play('curtain_open'); Snd.play('clear_fanfare'); }
+  if (pressed.z && RS.t >= 2.2) {   // 2.2 秒前不接受 Z、不播音效
     Snd.play('ui_confirm');
     newRun(true);
     beginDay(1);
@@ -3043,7 +3044,7 @@ function update(dt) {
   if (scene === 'dungeon' && D && (D.prompt || D.down || D.cardGet || D.floorFx)) tdt = 0;
   if (scene === 'shop' && (G.shop.buyWait || G.shop.cg)) tdt = 0;
   if (!GD) tutUpdate(tdt);   // 暫停式引導期間泡泡計時停住
-  Snd.duck(!!GD || (scene === 'dungeon' && !!D && !!(D.prompt || D.cardGet)) || (scene === 'shop' && !!G.shop.cg));
+  Snd.duck(!!GD || (scene === 'result' && !!RS && RS.t >= 1.35 && RS.t < 4.35) || (scene === 'dungeon' && !!D && !!(D.prompt || D.cardGet)) || (scene === 'shop' && !!G.shop.cg));
 }
 
 // ───────────────────────── 繪製 ─────────────────────────
@@ -3073,7 +3074,7 @@ function hudMessageBase() {
       return G.s2.row >= BTN_GO ? '[←][→] 開演/返回 [Z] 確定' : '[↑][↓] 選列 [←][→] 暗號/表演卡 [Z] 放入 [X] 清空';
     case 'show': return '表演中…';
     case 'shop': return '[←][→] 切分頁 [Z] 購買';
-    case 'result': return '[Z] 重來';
+    case 'result': return RS && RS.t >= 2.2 ? '[Z] 重來' : '';
   }
   return '';
 }
@@ -3377,6 +3378,7 @@ function render() {
 const NO_HUD_SCENES = { title: true, calendar: true, intermission: true };
 function renderSoundIcon() {
   if ((window.PVDX && PVDX.on) || GD) return;
+  if (scene === 'result' && RS && RS.t < 2.05) return;   // 布幕還在時不畫
   Art.drawSoundIcon(ctx, { muted: !!Snd.muted, hud: !NO_HUD_SCENES[scene] });
 }
 function renderScene() {
@@ -3425,11 +3427,17 @@ function renderScene() {
       break;
     case 'shop': renderShop(); break;
     case 'result': {
-      Art.drawBackground(ctx, bgState('result'));
-      const bank = SPECIES.filter(sp => G.bank.some(b => b.sp === sp)).map(sp => ({ species: sp, count: G.bank.filter(b => b.sp === sp).length }));
-      Art.drawResultPanel(ctx, { rep: G.rep, goldEarned: G.goldEarned, bestChain: G.bestChain, days: G.log.slice(), bank,
-        cards: G.cardsGot, cardsMax: CARD_TOTAL, boosts: G.boostsGot, boostsMax: BOOST_TOTAL, stars: RS.shown });
+      if (RS.t < 0.55) {   // 布幕還沒合起: 底下仍是第 4 天表演結算(數字已跳完)
+        Art.drawBackground(ctx, bgState('sresult'));
+        Art.drawShowResult(ctx, { sat: SR.sat, gold: SR.gold, fameGain: SR.fameGain, tallyT: SR.tallyDur, tallyDur: SR.tallyDur, bestChain: SR.bestChain, loose: SR.loose, timeLeft: SR.timeLeft, tutorial: SR.tutorial });
+      } else {
+        Art.drawBackground(ctx, bgState('result'));
+        const bank = SPECIES.filter(sp => G.bank.some(b => b.sp === sp)).map(sp => ({ species: sp, count: G.bank.filter(b => b.sp === sp).length }));
+        Art.drawResultPanel(ctx, { rep: G.rep, goldEarned: G.goldEarned, bestChain: G.bestChain, days: G.log.slice(), bank,
+          cards: G.cardsGot, cardsMax: CARD_TOTAL, boosts: G.boostsGot, boostsMax: BOOST_TOTAL, t: RS.t });
+      }
       Art.drawHud(ctx, hudState());
+      if (Art.drawFinale) Art.drawFinale(ctx, { t: RS.t });   // 美術尚未交付時不報錯
       break;
     }
   }

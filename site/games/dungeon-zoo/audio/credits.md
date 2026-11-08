@@ -1,6 +1,10 @@
 # 音效 / 音樂素材來源
 
-授權統計: CC0 92 項(Kenney 62 檔 + OpenGameArt 9 檔 + 內嵌 21 段, 內嵌段的來源為 OpenGameArt、BigSoundBank 與本表已登記的 CC0 檔)、CC BY 4.0 8 項(背景音樂 5 檔 + 觀眾歡呼 2 檔 + 卡通馬蹄 1 檔; 馬蹄原錄音是 CC0, 但轉製者的整包頁面標 CC BY 4.0, 保守起見照 CC BY 署名)。另有 1 個程式產生的音效(heat_warn, 無外部素材, 不列)。
+授權統計: CC0 95 項(Kenney 61 檔 + OpenGameArt 9 檔 + 內嵌 25 段, 內嵌段的來源為 OpenGameArt、BigSoundBank 與本表已登記的 CC0 檔)、CC BY 4.0 8 項(背景音樂 5 檔 + 觀眾歡呼 2 檔 + 卡通馬蹄 1 檔; 馬蹄原錄音是 CC0, 但轉製者的整包頁面標 CC BY 4.0, 保守起見照 CC BY 署名)。另有 1 個程式產生的音效(heat_warn, 無外部素材, 不列)。
+
+打磨第 13 輪異動: 刪除 sfx_star.ogg(評星拿掉, star 不再用)。新增 4 段內嵌(curtain_close、sign_land、curtain_open、clear_fanfare), 新來源全是 BigSoundBank 的 CC0 錄音(11 筆), 另沿用本表已登記的 sfx_intermission.ogg(號角)、sfx_sparkle.ogg(叮)與 guide_finale 的小鼓來源; assets/ 沒有新增檔案。
+
+打磨第 12 輪異動: 新增 sfx_gold_splash.ogg(gold_get); stairs_up 沿用 stairs_down 的腳步檔。
 
 打磨第 11 輪異動: 新增 2 段內嵌(enter_pop: OpenGameArt EZduzziteh「pop sounds」的 pop9.wav, CC0; intermission_cheer: 本表已登記的 sfx_cheer.ogg 與 show_end 掌聲重新混音); assets/ 檔案不動。
 
@@ -111,7 +115,6 @@ Licensed under CC BY 4.0 — https://creativecommons.org/licenses/by/4.0/
 | sfx_buy.ogg | buy | https://kenney.nl/assets/rpg-audio (handleCoins.ogg) | Kenney | CC0 | 無 |
 | sfx_unlock.ogg | unlock | https://kenney.nl/assets/music-jingles (jingles_STEEL04.ogg) | Kenney | CC0 | 無 |
 | sfx_tutorial_done.ogg | tutorial_done | https://kenney.nl/assets/interface-sounds (maximize_001.ogg) | Kenney | CC0 | 無 |
-| sfx_star.ogg | star | https://kenney.nl/assets/interface-sounds (glass_001.ogg) | Kenney | CC0 | 無(播放時依第幾顆升調) |
 | sfx_monster_windup.ogg | monster_windup | https://kenney.nl/assets/digital-audio (highUp.ogg) | Kenney | CC0 | 無(播放時跳過開頭 0.14 秒靜音、速度 1.2) |
 | sfx_player_down_hit.ogg | player_down(重擊層) | https://kenney.nl/assets/impact-sounds (impactPunch_heavy_002.ogg) | Kenney | CC0 | 無 |
 | sfx_player_down_fall.ogg | player_down(倒地層) | https://kenney.nl/assets/impact-sounds (impactSoft_heavy_003.ogg) | Kenney | CC0 | 無(播放時速度 0.85) |
@@ -170,7 +173,11 @@ Licensed under CC BY 4.0 — https://creativecommons.org/licenses/by/4.0/
 | guide_finale | guide_finale | 號角: https://opengameart.org/content/just-a-random-fanfare (fanfare.ogg); 小鼓: https://opengameart.org/content/an-interesting-snare-drum-sound (best_snare.wav); 煙火: https://opengameart.org/content/25-cc0-bang-firework-sfx (25-CC0-bang-sfx.zip 內的 fw_06.ogg、bang_09.ogg、bang_07.ogg); 歡呼: 本表的 sfx_cheer.ogg(https://opengameart.org/content/cheers-0) | 號角 Spring Spring(Julie Damsgaard, 註明「Produced by Julie Damsgaard/Spring Spring/Spring Enterprises」); 小鼓 Spring Spring; 煙火 rubberduck; 歡呼 Nocturnal_Vanguard | 全部 CC0 | 號角取第一句 0~2.4 秒(2.1~2.38 秒淡出); 小鼓單擊取 0.14 秒、每秒 28 擊輕重交替排成 0~1.95 秒由小漸大的滾奏; 三發煙火的起音對準 0.2 / 0.9 / 1.6 秒; 歡呼從 0.3 秒起; 四層混成單聲道 32 kHz、2.2~2.5 秒淡出、峰值正規化 −1 dBFS(2.5 秒) |
 | enter_pop | enter_pop | https://opengameart.org/content/pop-sounds-0 (pop9.wav) | EZduzziteh | CC0 | 從到峰值一成前 1 毫秒起剪(去掉開頭 3.7 毫秒)、剪掉尾端峰值 0.3% 以下、尾端淡出 5 毫秒, 混成單聲道 44.1 kHz 16-bit, 峰值正規化 −1 dBFS(0.085 秒); 播放時依第幾隻升調 |
 | intermission_cheer | intermission_cheer | 歡呼: 本表的 sfx_cheer.ogg(https://opengameart.org/content/cheers-0); 掌聲: 本表內嵌段 show_end 的來源(https://opengameart.org/content/applause-in-a-large-hall-or-church, applause-clapping-church-crowd-immersive.wav) | 歡呼 Nocturnal_Vanguard; 掌聲 eXpl0it3r | 兩者 CC0 | 歡呼跳過開頭 0.12 秒、48 kHz 以視窗化 sinc 降為 22.05 kHz、延後 0.02 秒; 掌聲取 show_end 內嵌段 0.35 秒起、比歡呼低約 7 dB; 兩層相加後二階低通 5 kHz、0.75~1.05 秒淡出, 單聲道 22.05 kHz, 峰值正規化 −1 dBFS(1.05 秒) |
+| curtain_close | curtain_close(打磨第 13 輪新增) | 布料: https://bigsoundbank.com/tent-or-curtain-shower-s0399.html (0399.wav); 風聲: https://bigsoundbank.com/whoosh-4-s1796.html (1796.wav); 合攏: https://bigsoundbank.com/flag-2-s1788.html (1788.wav) | Joseph Sardin(BigSoundBank) | 全部 CC0(頁面標 CC0 / public domain, 免登入下載) | 布料取 0.36~0.70 秒(浴簾摩擦一筆), 視窗化 sinc 放慢 0.8 倍、響度重塑成開頭約 −9 dB 起一路變大、一階低通 5 kHz; 風聲取 0.12~0.75 秒放慢 0.85 倍、低 9 dB 墊底; 旗子取 0.18~0.55 秒放慢 0.7 倍、低通 2.5 kHz、低 4 dB, 0.37 秒起; 三層混成單聲道 22.05 kHz、0.62~0.8 秒淡出、峰值正規化 −1 dBFS(0.8 秒) |
+| sign_land | sign_land(打磨第 13 輪新增) | 咚: https://bigsoundbank.com/3-blows-at-the-theater-s1025.html (1025.wav); 繩子: https://bigsoundbank.com/rope-1-s3420.html (3420.wav); 叮: 本表的 sfx_sparkle.ogg(https://kenney.nl/assets/interface-sounds) | Joseph Sardin(BigSoundBank); 叮 Kenney | 全部 CC0 | 劇場三擊取第二擊 0.395~0.72 秒、放慢 0.9 倍; 繩子取 0.28~0.46 秒、放慢 0.85 倍、低 14 dB、0.03 秒起; 玻璃叮四聲(速度 1.8 / 2.0 / 2.25 / 2.4)排在 0.15 / 0.23 / 0.31 / 0.39 秒、一聲比一聲大 1 dB; 混成單聲道 22.05 kHz、0.6~0.75 秒淡出、峰值正規化 −1 dBFS(0.75 秒) |
+| curtain_open | curtain_open(打磨第 13 輪新增) | 布料: https://bigsoundbank.com/tent-or-curtain-shower-s0399.html (0399.wav); 咻: https://bigsoundbank.com/whoosh-5-s1797.html (1797.wav); 一抖: https://bigsoundbank.com/flag-1-s1787.html (1787.wav) | Joseph Sardin(BigSoundBank) | 全部 CC0 | 布料取 2.42~2.90 秒(另一筆), 放慢 0.95 倍、響度重塑成一開始最大往後低 10 dB、低通 6 kHz; 咻(長木棍揮過)取 0.12~0.5 秒加速 1.15 倍、低 10 dB; 旗子取 0.55~0.9 秒加速 1.1 倍、低通 3.5 kHz、低 9 dB、0.38 秒起; 混成單聲道 22.05 kHz、0.62~0.85 秒淡出、峰值正規化 −1 dBFS(0.85 秒) |
+| clear_fanfare | clear_fanfare(打磨第 13 輪新增) | 號角: 本表的 sfx_intermission.ogg(https://opengameart.org/content/classic-fanfare-lick, fanfare.ogg); 小鼓: https://opengameart.org/content/an-interesting-snare-drum-sound (best_snare_0.wav); 大鼓: https://bigsoundbank.com/bass-tom-1-s2338.html (2338.wav); 鈸: https://bigsoundbank.com/cymbale-16-1-s2311.html (2311.wav); 觀眾: https://bigsoundbank.com/shouts-and-applauses-of-teens-1-s0236.html (0236.wav); 口哨: https://bigsoundbank.com/whistling-in-the-mouth-s1173.html (1173.wav) | 號角 fvcalderan; 小鼓 Spring Spring; 其餘 Joseph Sardin(BigSoundBank) | 全部 CC0 | 號角取 0.995~1.17 秒(sol 拾音, 低 7 dB)+ 1.17 秒起的長音 DO, 穩定段 1.25~1.95 秒以 80 毫秒交叉淡化延長再接原收尾, 另以視窗化 sinc 降五度(0.75 倍)、降八度(0.5 倍)各疊一層(低 5 / 8 dB), 長音在 0.25 秒最響、0.8 秒內退 5 dB; 小鼓取 0.12 秒、每秒 30 擊排成 0~0.22 秒由小漸大的滾奏; 大鼓放慢 0.62 倍、提前 0.075 秒讓最重點落在 0.25 秒; 鈸 0.25 秒起、低 4 dB; 觀眾取 0~2.75 秒、0.4 秒起淡入、低 3 dB; 口哨取 0.08~0.62 秒(加速 1.6 倍, 0.65 秒)與 1.66~2.2 秒(加速 1.85 倍, 1.35 秒), 低 15 / 17 dB; 混成單聲道 32 kHz、2.55~3.0 秒淡出、峰值正規化 −1 dBFS(3.0 秒) |
 
 ## 核對
 
-assets/ 共 80 個檔 = 背景音樂 5 列 + 觀眾歡呼 2 列 + 卡通馬蹄 1 列 + 短音效 72 列(打磨第 12 輪新增 sfx_gold_splash.ogg); 另 21 段內嵌於 sound.js(heat_warn 為程式產生, 不在此表)。沒有未登記的檔。
+assets/ 共 79 個檔 = 背景音樂 5 列 + 觀眾歡呼 2 列 + 卡通馬蹄 1 列 + 短音效 71 列(打磨第 13 輪刪除 sfx_star.ogg); 另 25 段內嵌於 sound.js(打磨第 13 輪新增 4 段; heat_warn 為程式產生, 不在此表)。沒有未登記的檔。

@@ -1,4 +1,4 @@
-// 來馬戲團看一點大場面(打磨版第 10 輪)— 美術(Canvas 2D 幾何繪製, 無外部資源)
+// 來馬戲團看一點大場面(打磨版第 13 輪)— 美術(Canvas 2D 幾何繪製, 無外部資源)
 // 契約見 style.md / interface.json。全域物件 window.Art, 不用 ES module。
 (function () {
   'use strict';
@@ -3425,12 +3425,11 @@
     panelZoom(ctx, true);
     ctx.translate(640, 390);
     resultPanel(ctx, 800, 560);
-    T(ctx, '總結算', 0, -246, { size: 32 });
-    var stars = clamp(Math.floor(N(s.stars, 0)), 0, 3);
-    for (var i = 0; i < 3; i++) {
-      starPath(ctx, -90 + i * 90, -194, 26);
-      ctx.fillStyle = i < stars ? P.select : '#2c3446'; ctx.fill(); ctx.strokeStyle = i < stars ? '#fff2b0' : '#465372'; ctx.lineWidth = 3; ctx.stroke();
-    }
+    // 第 13 輪: 不畫「總結算」標題(y −246 那格留給 drawFinale 的「恭喜過關」招牌)、不畫星星;
+    // 星星那列改畫副標題, t 2.0 起 0.3 秒淡入; t 沒傳 = 動畫已播完(副標題與按 Z 都畫)
+    var ft = (typeof s.t === 'number' && isFinite(s.t)) ? s.t : 99;
+    var sa = clamp((ft - 2.0) / 0.3, 0, 1);
+    if (sa > 0) { ctx.save(); ctx.globalAlpha *= sa; T(ctx, '4 天的表演全部演完了!', 0, -178, { size: 19, color: P.textDim }); ctx.restore(); }
     var cards = Math.max(0, Math.floor(N(s.cards, 0))), cm = Math.max(0, Math.floor(N(s.cardsMax, 13)));
     var bo = Math.max(0, Math.floor(N(s.boosts, 0))), bm = Math.max(0, Math.floor(N(s.boostsMax, 9)));
     var rows = [['總名聲', String(Math.floor(N(s.rep, 0))), P.rep], ['累計賺得金幣', String(Math.floor(N(s.goldEarned, 0))), P.gold], ['最長連鎖', Math.floor(N(s.bestChain, 0)) + ' 段', '#9ff0ff'],
@@ -3462,7 +3461,176 @@
       T(ctx, '×' + Math.max(0, Math.floor(N(b.count, 0))), cx, 198, { size: 20 });
     }
     if (n === 0) T(ctx, '—', 0, 156, { size: 20, color: P.textDim });
-    pressZ(ctx, '按 [Z] 重來', 0, 248);
+    if (ft >= 2.2) pressZ(ctx, '按 [Z] 重來', 0, 248);
+  }
+
+  // ───────────── 通關動畫「帳篷大謝幕」(第 13 輪新增, spec 第 76b 條) ─────────────
+  // 一個函式畫四層(下 → 上): 聚光燈 → 紙花 → 布幕與垂幔 → 招牌。全部只由 t 決定(封閉解, 不存狀態)。
+  // 座標以 1280 設計區為準; 布幕、垂幔、聚光燈光源貼齊實際畫面兩側(VX ~ VX + VW), 招牌與紙花以 x 640 為中心
+  var FIN = {
+    curtA: '#c82a38', curtB: '#8e1622', drape: '#7a1019', fringe: '#e8b33a', frame: '#ffd84a',
+    bulbOn: '#fff6d8', bulbOff: '#7a5a1c', beam: '255,238,196'
+  };
+  function finHash(i, k) { var v = Math.sin(i * 127.1 + k * 311.7) * 43758.5453; return v - Math.floor(v); }
+  function easeOutBack(q, c1) { q = clamp(q, 0, 1); var c3 = c1 + 1, u = q - 1; return 1 + c3 * u * u * u + c1 * u * u; }
+  // 布幕拉合程度 0~1
+  function finAmt(t) { return t < 1.35 ? easeOut(t / 0.55) : 1 - easeOut((t - 1.35) / 0.7); }
+  // 招牌姿態: 中心 y、縮放、晃動角度(以吊繩頂 (640, cy − 400 × 縮放) 為軸)
+  function finSign(t) {
+    var dt = t - 0.45, u = easeOut((t - 1.35) / 0.7);
+    var cy = -120 + 420 * easeOutBack(dt / 0.6, 1.9);
+    cy = cy + (116 - cy) * u;
+    var sc = 1 - 0.25 * u;
+    var ang = Math.sin(dt * 7) * 0.05 * Math.exp(-1.5 * Math.max(0, dt)) * (1 - u);
+    return { cy: cy, sc: sc, ang: ang };
+  }
+  function finCurtain(ctx, amt, side) {
+    var half = 640 - VX + 20, w = half * amt;
+    if (w <= 0.5) return;
+    var outer = side < 0 ? VX : VX + VW, inner = outer - side * w;   // side −1 = 左片(外緣在左), +1 = 右片
+    var flare = 22 * Math.sin(Math.PI * clamp(amt, 0, 1));          // 移動中內緣下襬往外飄, 合起 / 收起時歸零(合起時不露縫)
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(outer, 0); ctx.lineTo(inner, 0);
+    ctx.bezierCurveTo(inner, 380, inner + side * flare * 0.2, 560, inner + side * flare, 720);
+    ctx.lineTo(outer, 720); ctx.closePath();
+    ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.55)'; ctx.shadowBlur = 24; ctx.fillStyle = FIN.curtB; ctx.fill(); ctx.restore();
+    ctx.clip();
+    // 直條皺褶: 每片 10 條, 深淺紅交替, 每條自己有一道中間亮、兩側暗的橫向漸層(絨布感)
+    var sw = w / 10;
+    for (var i = 0; i < 10; i++) {
+      var x0 = outer - side * (i + 1) * sw, x1 = x0 + sw;
+      if (side < 0) { x0 = outer + i * sw; x1 = x0 + sw; }
+      var base = i % 2 === 0 ? FIN.curtA : FIN.curtB;
+      var lx = Math.min(x0, x1), g = ctx.createLinearGradient(lx, 0, lx + sw, 0);
+      g.addColorStop(0, 'rgba(40,0,6,0.55)'); g.addColorStop(0.45, base); g.addColorStop(0.6, base); g.addColorStop(1, 'rgba(40,0,6,0.55)');
+      ctx.fillStyle = base; ctx.fillRect(lx, 0, sw + 1, 720);
+      ctx.fillStyle = g; ctx.fillRect(lx, 0, sw + 1, 720);
+    }
+    // 內緣一道暗邊, 讓兩片合起時中間看得出接縫
+    ctx.strokeStyle = 'rgba(30,0,4,0.7)'; ctx.lineWidth = 6;
+    ctx.beginPath(); ctx.moveTo(inner, 0); ctx.bezierCurveTo(inner, 380, inner + side * flare * 0.2, 560, inner + side * flare, 720); ctx.stroke();
+    // 底部 20 高金色流蘇
+    var fx0 = Math.min(outer, inner + side * flare), fx1 = Math.max(outer, inner + side * flare);
+    ctx.fillStyle = FIN.fringe; ctx.fillRect(fx0, 700, fx1 - fx0, 6);
+    ctx.strokeStyle = FIN.fringe; ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    for (var fx = fx0 + 3; fx < fx1; fx += 7) { ctx.moveTo(fx, 705); ctx.lineTo(fx, 720); }
+    ctx.stroke();
+    ctx.restore();
+  }
+  function finValance(ctx, amt) {
+    var dy = -58 * (1 - clamp(amt * 1.6, 0, 1));   // 跟著布幕一起降下 / 收回
+    ctx.save(); ctx.translate(0, dy);
+    ctx.fillStyle = FIN.drape; ctx.fillRect(VX, 0, VW, 46);
+    // 一排半圓垂褶(半徑 32, 間距 64), 從畫面左緣排滿到右緣(1280 寬時 20 個)
+    var n = Math.ceil(VW / 64);
+    for (var i = 0; i < n; i++) {
+      var cx = VX + 32 + i * 64;
+      ctx.beginPath(); ctx.arc(cx, 46, 32, 0, Math.PI); ctx.closePath();
+      ctx.fillStyle = FIN.drape; ctx.fill();
+      ctx.strokeStyle = FIN.fringe; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(cx, 46, 30.5, 0.08, Math.PI - 0.08); ctx.stroke();
+    }
+    ctx.fillStyle = FIN.fringe; ctx.fillRect(VX, 44, VW, 6);   // 金邊 y 44~50
+    ctx.restore();
+  }
+  function finSpots(ctx, t) {
+    var tp = t - 1.6; if (tp < 0) return;
+    var fade = clamp(tp / 0.5, 0, 1), base = 0.62;
+    var srcs = [{ x: VX + 120, s: 1, ph: 0 }, { x: VX + VW - 120, s: -1, ph: 1.7 }];
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    for (var k = 0; k < 2; k++) {
+      var L = srcs[k], swing = function (q) { return base + Math.sin(q * 1.4 + L.ph) * 0.42; };
+      // 前 1.2 秒從外側(往畫面外斜)掃向中間, 之後來回擺; 兩段在 1.2 秒接上
+      var a = tp < 1.2 ? (-0.35) + (swing(1.2) + 0.35) * easeOut(tp / 1.2) : swing(tp);
+      var dir = L.s * a, sx = L.x, sy = -40;   // dir: 0 = 正下方, 正 = 往右
+      for (var layer = 0; layer < 2; layer++) {
+        var hw = layer === 0 ? 0.18 : 0.13, al = (layer === 0 ? 0.12 : 0.38) * fade;
+        var g = ctx.createRadialGradient(sx, sy, 0, sx, sy, 900);
+        g.addColorStop(0, 'rgba(' + FIN.beam + ',' + al.toFixed(3) + ')'); g.addColorStop(1, 'rgba(' + FIN.beam + ',0)');
+        ctx.beginPath(); ctx.moveTo(sx, sy);
+        ctx.arc(sx, sy, 900, Math.PI / 2 - dir - hw, Math.PI / 2 - dir + hw);
+        ctx.closePath(); ctx.fillStyle = g; ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+  function finConfetti(ctx, t) {
+    var tc = t - 1.6; if (tc < 0 || tc >= 6) return;
+    var fade = tc > 4.8 ? 1 - (tc - 4.8) / 1.2 : 1;
+    var K = 2.2, VT = 120, e = 1 - Math.exp(-K * tc);
+    ctx.save(); ctx.globalAlpha *= clamp(fade, 0, 1);
+    for (var i = 0; i < 100; i++) {
+      var left = i < 50, ox = left ? 380 : 900, oy = 128;
+      var ang = (left ? -2.0 : -1.15) + (finHash(i, 1) - 0.5) * 1.0, sp = 300 + 350 * finHash(i, 2);
+      var vx = Math.cos(ang) * sp, vy = Math.sin(ang) * sp;
+      // 有空氣阻力(K)、終端落速 VT 的封閉解; 外加隨時間長大的左右擺
+      var swAmp = 10 + 14 * finHash(i, 3), swF = 2.6 + 2.4 * finHash(i, 4), swP = finHash(i, 5) * TAU;
+      var x = ox + vx / K * e + Math.sin(tc * swF + swP) * swAmp * e;
+      var y = oy + VT * tc + (vy - VT) / K * e;
+      if (y > 760 || y < -80) continue;
+      var rot = finHash(i, 6) * TAU + tc * (3 + 5 * finHash(i, 7)) * (finHash(i, 8) < 0.5 ? -1 : 1);
+      var flip = Math.cos(tc * (5 + 6 * finHash(i, 9)) + swP);
+      ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.scale(1, Math.max(0.15, Math.abs(flip)));
+      var col = CONF_COL[i % CONF_COL.length];
+      if (i % 4 === 0) { ctx.strokeStyle = col; ctx.lineWidth = 3.5; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(-9, 0); ctx.quadraticCurveTo(-4, -6, 0, 0); ctx.quadraticCurveTo(4, 6, 9, 0); ctx.stroke(); }
+      else { ctx.fillStyle = col; ctx.fillRect(-6, -3.5, 12, 7); }
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+  // 招牌 560×132(以原點為中心): 深紅圓角底 + 一圈跑馬燈燈泡 + 內圈 6 寬金框 + 「恭喜過關」
+  function finSignBoard(ctx, t) {
+    var W = 560, H = 132;
+    // 吊繩: 從招牌上緣兩點往上斜收到吊點(畫面外)
+    ctx.strokeStyle = FIN.fringe; ctx.lineWidth = 4; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-200, -H / 2 + 4); ctx.lineTo(-70, -400); ctx.moveTo(200, -H / 2 + 4); ctx.lineTo(70, -400); ctx.stroke();
+    ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 22; ctx.shadowOffsetY = 6;
+    rr(ctx, -W / 2, -H / 2, W, H, 22); ctx.fillStyle = FIN.drape; ctx.fill(); ctx.restore();
+    rr(ctx, -W / 2, -H / 2, W, H, 22); ctx.strokeStyle = '#3a060c'; ctx.lineWidth = 3; ctx.stroke();
+    // 吊環
+    for (var h = -1; h <= 1; h += 2) { circle(ctx, h * 200, -H / 2 + 2, 7); ctx.strokeStyle = FIN.frame; ctx.lineWidth = 3; ctx.stroke(); }
+    // 燈泡: 沿內縮 13 的矩形一圈, 間距約 28; 跑馬燈每 1/12 秒前進一格, 每 3 顆亮 1 顆
+    var bw = W - 26, bh = H - 26, per = 2 * (bw + bh), nb = Math.round(per / 28), step = Math.floor(Math.max(0, t) * 12);
+    for (var i = 0; i < nb; i++) {
+      var d = i * per / nb, bx, by;
+      if (d < bw) { bx = -bw / 2 + d; by = -bh / 2; }
+      else if (d < bw + bh) { bx = bw / 2; by = -bh / 2 + (d - bw); }
+      else if (d < 2 * bw + bh) { bx = bw / 2 - (d - bw - bh); by = bh / 2; }
+      else { bx = -bw / 2; by = bh / 2 - (d - 2 * bw - bh); }
+      var lit = ((i - step) % 3 + 3) % 3 === 0;
+      if (lit) {
+        var g = ctx.createRadialGradient(bx, by, 0, bx, by, 13);
+        g.addColorStop(0, 'rgba(255,240,190,0.85)'); g.addColorStop(1, 'rgba(255,200,90,0)');
+        circle(ctx, bx, by, 13); ctx.fillStyle = g; ctx.fill();
+      }
+      circle(ctx, bx, by, 6); ctx.fillStyle = lit ? FIN.bulbOn : FIN.bulbOff; ctx.fill();
+      ctx.strokeStyle = '#3a060c'; ctx.lineWidth = 1.2; ctx.stroke();
+    }
+    rr(ctx, -W / 2 + 27, -H / 2 + 27, W - 54, H - 54, 10); ctx.strokeStyle = FIN.frame; ctx.lineWidth = 6; ctx.stroke();
+    ctx.save(); ctx.shadowColor = 'rgba(255,210,74,0.85)'; ctx.shadowBlur = 18;
+    T(ctx, '恭喜過關', 0, 2, { size: 60, color: FIN.frame, strokeColor: '#2a0408', strokeW: 9, noMin: true });
+    ctx.restore();
+  }
+  function drawFinale(ctx, s) {
+    var t = Math.max(0, Math.min(1e5, N(s.t, 0)));
+    finSpots(ctx, t);
+    finConfetti(ctx, t);
+    var amt = clamp(finAmt(t), 0, 1);
+    if (amt > 0.001) {
+      finCurtain(ctx, amt, -1);
+      finCurtain(ctx, amt, 1);
+      finValance(ctx, amt);
+    }
+    if (t >= 0.45) {
+      var sg = finSign(t);
+      ctx.save();
+      var px = 640, py = sg.cy - 400 * sg.sc;
+      ctx.translate(px, py); ctx.rotate(sg.ang); ctx.translate(-px, -py);
+      ctx.translate(640, sg.cy); ctx.scale(sg.sc, sg.sc);
+      finSignBoard(ctx, t);
+      ctx.restore();
+    }
   }
 
   // ───────────── HUD ─────────────
@@ -4847,6 +5015,7 @@
     drawButton: wrap(drawButton),
     drawFloatText: wrap(drawFloatText),
     drawResultPanel: wrap(drawResultPanel),
+    drawFinale: wrap(drawFinale),
     drawHud: wrap(drawHud),
     hudH: hudH, tutBox: tutBox, hudPt: hudPt, hudRect: hudRect, showPt: showPt, showRect: showRect,
     drawQuestBanner: wrap(drawQuestBanner),

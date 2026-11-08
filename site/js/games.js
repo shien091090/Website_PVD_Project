@@ -9,7 +9,7 @@ export const byTime = (a, b) => {
 export const GAMES = [
   { code: 'bubble-tempo', name: 'Bubble Tempo', letter: 'B', time: '2–5 分鐘', bg: '#aaefd5', fg: '#2d2144', icon: 'media/games/bubble-tempo.png', banner: 'media/games/bubble-tempo-banner.png', pattern: 'media/games/bubble-tempo-pattern.png',
     intro: '指尖拖著節奏泡泡，染色、瞄準、對上拍子！在風格各異的關卡裡跟上越來越快的音樂，挑戰你的反應力與節奏感！' },
-  { code: 'dungeon-zoo', name: '來馬戲團看一點大場面', letter: '來', time: '15–25 分鐘', bg: '#f29cac', fg: '#2d2144', icon: 'media/games/dungeon-zoo.png', banner: 'media/games/dungeon-zoo-banner.png', pattern: 'media/games/dungeon-zoo-pattern.png',
+  { code: 'dungeon-zoo', name: '來馬戲團看一點大場面', letter: '來', time: '12–22 分鐘', bg: '#f29cac', fg: '#2d2144', icon: 'media/games/dungeon-zoo.png', banner: 'media/games/dungeon-zoo-banner.png', pattern: 'media/games/dungeon-zoo-pattern.png',
     intro: '深入地下城戰鬥、捕捉怪物，再送牠們上馬戲團舞台賺取掌聲和收益。攻略越深，陣容越熱鬧，一起炒熱全場氣氛吧！' },
   { code: 'jelly-jinni', name: '接力吉尼(Jelly Jinni)', letter: '接', time: '5–10 分鐘', bg: '#4776c3', fg: '#ffffff', icon: 'media/games/jelly-jinni.png', banner: 'media/games/jelly-jinni-banner.png', pattern: 'media/games/jelly-jinni-pattern.png',
     intro: '死掉不是結束！和上一代的自己攜手，接力跳躍、破解機關，共同抵達終點吧!' },
