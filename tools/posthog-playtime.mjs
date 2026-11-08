@@ -49,13 +49,30 @@ async function upsert(name, description, query) {
 const oldFinish = existing.find(i => i.name === '各遊戲通關時間');
 if (oldFinish && !existing.some(i => i.name === '各遊戲全局通關時間')) { oldFinish.name = '各遊戲全局通關時間'; if (!DRY) await ph(`/insights/${oldFinish.id}/`, { name: oldFinish.name }, 'PATCH'); }
 
-await upsert('各遊戲全局通關時間', '全部關卡過完、最後結算畫面出現時, 這位玩家累計的實際遊玩時間(可能分好幾次玩; 暫停、分頁切走不算)', `
-SELECT toString(properties.game) AS 遊戲, count() AS 通關次數, count(DISTINCT person_id) AS 人數,
-  round(avg(toFloat(properties.play_seconds)) / 60, 1) AS 平均分鐘,
-  round(median(toFloat(properties.play_seconds)) / 60, 1) AS 中位數分鐘
-FROM events
-WHERE event = 'game_clear' AND properties.play_seconds IS NOT NULL AND ${SINCE_SQL}
-GROUP BY 遊戲 ORDER BY 通關次數 DESC`);
+await upsert('各遊戲全局通關時間', '和最後一關的單關通關同時送出, 記錄這位玩家累計的實際遊玩時間(可能分好幾次玩; 暫停、分頁切走不算); 同一人重玩再破關只算第一次', `
+SELECT g AS 遊戲, count() AS 破關人數,
+  round(avg(s) / 60, 1) AS 平均分鐘,
+  round(median(s) / 60, 1) AS 中位數分鐘
+FROM (SELECT toString(properties.game) AS g, person_id, argMin(toFloat(properties.play_seconds), timestamp) AS s FROM events
+  WHERE event = 'game_clear' AND properties.play_seconds IS NOT NULL AND ${SINCE_SQL}
+  GROUP BY g, person_id)
+GROUP BY 遊戲 ORDER BY 破關人數 DESC`);
+
+// 原本是趨勢表(只算有頁面瀏覽的人、欄位英文), 改成查詢表: 每人只算一次, 來源與裝置取這個人第一筆紀錄
+await upsert('各來源人數與裝置', '起算時間後在網站留下任何紀錄的人, 每人只算一次; 來源、活動、貼文代號、裝置取這個人第一次進站時的值。瀏覽器擋掉數據的人算不到', `
+SELECT multiIf(src != '', multiIf(src = 'threads', 'Threads', src = 'facebook', 'Facebook', src = 'bahamut', '巴哈姆特', src = 'discord', 'Discord', src = 'instagram', 'Instagram', src),
+    code != '', '不指定平台', '直接進站') AS 來源平台,
+  camp AS 活動, post AS 貼文代號,
+  multiIf(dev = 'Mobile', '手機', dev = 'Desktop', '電腦', dev = 'Tablet', '平板', dev = '', '不明', dev) AS 裝置,
+  count() AS 人數
+FROM (SELECT person_id,
+    argMin(ifNull(toString(properties.utm_source), ''), timestamp) AS src,
+    argMin(ifNull(toString(properties.link_code), ''), timestamp) AS code,
+    argMin(ifNull(toString(properties.utm_campaign), ''), timestamp) AS camp,
+    argMin(ifNull(toString(properties.utm_content), ''), timestamp) AS post,
+    argMin(ifNull(toString(properties.$device_type), ''), timestamp) AS dev
+  FROM events WHERE ${SINCE_SQL} GROUP BY person_id)
+GROUP BY 來源平台, 活動, 貼文代號, 裝置 ORDER BY 人數 DESC`);
 
 await upsert('各遊戲各關通關時間', '真的過關才算(失敗、重試不算), 時間含這一關失敗重試的時間; 馬戲團一天算一關', `
 SELECT toString(properties.game) AS 遊戲, toInt(properties.level) AS 關卡, count() AS 通關次數, count(DISTINCT person_id) AS 人數,
@@ -115,7 +132,7 @@ FROM (
 }
 
 // 趨勢與漏斗圖(第一次設定建的)沒有查詢語法可改, 直接把日期範圍設成從起算時間開始
-for (const name of ['各來源人數與裝置', '漏斗: 進站 → 開始玩 → 投票', '漏斗: 進站 → 開始玩 → 留言']) {
+for (const name of ['漏斗: 進站 → 開始玩 → 投票', '漏斗: 進站 → 開始玩 → 留言']) {
   const i = existing.find(x => x.name === name);
   if (!i?.query) { console.log(`找不到: ${name}`); continue; }
   const q = structuredClone(i.query), src = q.source || q;
