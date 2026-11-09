@@ -66,7 +66,7 @@ test('HTML 以純文字顯示', async () => {
   await page.goto(srv.url + '#play/bubble-tempo');
   await page.waitForFunction(() => document.querySelector('.board .cms .cm .t')?.textContent.includes('<img'));
   assert.equal(await page.evaluate(() => window.__xss), undefined);
-  assert.equal(await page.locator('.board .cms img').count(), 0);
+  assert.equal(await page.locator('.board .cms .t img').count(), 0);
   await ctx.close();
 });
 

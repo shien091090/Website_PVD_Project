@@ -108,8 +108,8 @@ function initAvatarPop() {
     avpop.classList.add('on');
     const r = btn.getBoundingClientRect(), w = avpop.offsetWidth;
     const left = Math.max(8, Math.min(r.left - 6, innerWidth - w - 8));
-    avpop.style.left = left + 'px';
-    avpop.style.bottom = innerHeight - r.top + 12 + 'px';
+    avpop.style.left = Math.round(left) + 'px';
+    avpop.style.bottom = Math.round(innerHeight - r.top + 12) + 'px';
     avpop.style.setProperty('--ax', r.left + r.width / 2 - left - 8 + 'px');
     avpop.querySelector('.cur').focus();
   };

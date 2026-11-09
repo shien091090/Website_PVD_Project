@@ -15,3 +15,24 @@ export const avHtml = i => {
   const a = AV[i] || AV[0];
   return `<span class="av" style="--c:${a.bg}"><img src="${a.src}" alt="" width="26" height="26"></span>`;
 };
+
+// 像素對齊: 每張頭像圖對齊到螢幕點, 一格固定佔整數個螢幕點(125%、150% 這類非整數縮放就用 1 點/格, 圖會略小但不糊)
+function snapAll() {
+  const d = window.devicePixelRatio || 1, k = Math.max(1, Math.floor(d + 0.01)), size = 26 * k / d;
+  document.querySelectorAll('.av img').forEach(img => {
+    const box = img.parentElement.getBoundingClientRect();
+    if (!box.width) return;
+    Object.assign(img.style, { width: size + 'px', height: size + 'px', margin: '0', left: '0', top: '0', transform: 'none' });
+    const r = img.getBoundingClientRect(), s = r.width / size || 1; // s: 祖先有縮放(滑過放大)時的比例
+    const x = Math.round((box.left + (box.width - size * s) / 2) * d) / d, y = Math.round((box.top + (box.height - size * s) / 2) * d) / d;
+    img.style.transform = `translate(${(x - r.left) / s}px,${(y - r.top) / s}px)`;
+  });
+}
+let queued = false;
+const later = () => { if (!queued) { queued = true; queueMicrotask(() => { queued = false; snapAll(); }); } };
+if (typeof document !== 'undefined') {
+  new MutationObserver(ms => { if (ms.some(m => !(m.type === 'attributes' && m.target.matches?.('.av img')))) later(); }).observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style', 'hidden'] });
+  ['resize', 'transitionend', 'animationend', 'load', 'pointerover', 'pointerout'].forEach(e => addEventListener(e, later, true));
+  document.fonts?.ready.then(later);
+  later();
+}
