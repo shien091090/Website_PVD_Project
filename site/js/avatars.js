@@ -16,10 +16,12 @@ export const avHtml = i => {
   return `<span class="av" style="--c:${a.bg}"><img src="${a.src}" alt="" width="26" height="26"></span>`;
 };
 
-// 像素對齊: 每張頭像圖對齊到螢幕點, 一格固定佔整數個螢幕點(125%、150% 這類非整數縮放就用 1 點/格, 圖會略小但不糊)
+// 像素對齊: 每張頭像圖對齊到螢幕點, 外框依圖的實際大小貼合, 一格固定佔整數個螢幕點(125%、150% 這類非整數縮放就用 1 點/格, 圖會略小但不糊)
 function snapAll() {
   const d = window.devicePixelRatio || 1, k = Math.max(1, Math.floor(d + 0.01)), size = 26 * k / d;
+  const frame = Math.round((size + 6) * d) / d + 'px'; // 外框 = 圖 + 兩側各 1px 空隙 + 2px 邊, 框貼著圖
   document.querySelectorAll('.av img').forEach(img => {
+    Object.assign(img.parentElement.style, { width: frame, height: frame });
     const box = img.parentElement.getBoundingClientRect();
     if (!box.width) return;
     Object.assign(img.style, { width: size + 'px', height: size + 'px', margin: '0', left: '0', top: '0', transform: 'none' });
@@ -31,7 +33,7 @@ function snapAll() {
 let queued = false;
 const later = () => { if (!queued) { queued = true; queueMicrotask(() => { queued = false; snapAll(); }); } };
 if (typeof document !== 'undefined') {
-  new MutationObserver(ms => { if (ms.some(m => !(m.type === 'attributes' && m.target.matches?.('.av img')))) later(); }).observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style', 'hidden'] });
+  new MutationObserver(ms => { if (ms.some(m => !(m.type === 'attributes' && m.target.matches?.('.av, .av img')))) later(); }).observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style', 'hidden'] });
   ['resize', 'transitionend', 'animationend', 'load', 'pointerover', 'pointerout'].forEach(e => addEventListener(e, later, true));
   document.fonts?.ready.then(later);
   later();

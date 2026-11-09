@@ -160,11 +160,11 @@ body.vend .vnote { display: flex; }
 .avpop.on { display: grid; gap: 10px; }
 .avpop::after { content: ""; position: absolute; left: var(--ax, 18px); bottom: -8px; width: 12px; height: 12px; background: var(--paper); border-right: 2px solid var(--ink); border-bottom: 2px solid var(--ink); transform: rotate(45deg); }
 .avpop small { font: 700 12px/1 var(--font); color: var(--muted); }
-.avgrid { display: grid; grid-template-columns: repeat(4, 40px); gap: 10px; }
-.avgrid button { width: 40px; height: 40px; padding: 0; border: 0; background: none; border-radius: 28%; cursor: pointer; }
-.avgrid .av { width: 100%; height: 100%; transition: transform .12s; }
+.avgrid { display: grid; grid-template-columns: repeat(4, max-content); gap: 10px; }
+.avgrid button { padding: 4px; border: 0; background: none; border-radius: 28%; cursor: pointer; display: grid; place-items: center; }
+.avgrid .av { transition: transform .12s; }
 .avgrid button:hover .av { transform: scale(1.1); }
-.avgrid button.cur { box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--ink); }
+.avgrid button.cur .av { box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--ink); }
 .avgrid button:focus-visible { outline: 3px solid var(--teal); outline-offset: 3px; }
 .cm { display: flex; gap: 10px; align-items: flex-start; }
 .cm .t { background: var(--paper); border-radius: 4px 14px 14px 14px; padding: 9px 13px; font-size: 15px; line-height: 1.55; overflow-wrap: anywhere; }
