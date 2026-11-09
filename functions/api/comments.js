@@ -2,6 +2,8 @@ import { json, readJson, HttpError, nowOf } from '../lib/http.js';
 import { cleanBody, listComments, countComments, isLocked, checkRate, addComment } from '../lib/comments.js';
 import { verifyTurnstile } from '../lib/turnstile.js';
 import { GAME_CODES } from '../../site/js/games.js';
+import { AV } from '../../site/js/avatars.js';
+const AVATARS = AV.length;
 
 const RATE_MSG = { too_fast: '留言太快了，請等 30 秒再試', hour_limit: '這一小時留言次數已達上限', ip_limit: '這一小時留言次數已達上限' };
 
@@ -25,7 +27,7 @@ export async function onRequestPost(ctx) {
   if (await isLocked(db, game)) throw new HttpError(403, 'locked');
   const body = cleanBody(input.body);
   if (!body) throw new HttpError(400, 'bad_body');
-  if (!Number.isInteger(input.avatar) || input.avatar < 0 || input.avatar > 7) throw new HttpError(400, 'bad_avatar');
+  if (!Number.isInteger(input.avatar) || input.avatar < 0 || input.avatar >= AVATARS) throw new HttpError(400, 'bad_avatar');
   const limited = await checkRate(db, vid, ipHash, now);
   if (limited) throw new HttpError(429, limited, RATE_MSG[limited]);
   const verify = ctx.data.verify || (t => verifyTurnstile(t, ip, ctx.env.TURNSTILE_SECRET));

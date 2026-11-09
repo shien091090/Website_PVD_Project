@@ -100,7 +100,7 @@ export function initPlay(opts = {}) {
 let avpop, avOpener = null;
 function initAvatarPop() {
   document.body.insertAdjacentHTML('beforeend', `<div class="avpop" id="avpop" role="dialog" aria-label="選擇頭像"><small>選頭像</small>
-    <div class="avgrid">${AV.map((a, i) => `<button type="button" data-a="${i}" aria-label="頭像 ${i + 1}">${avHtml(i)}</button>`).join('')}</div></div>`);
+    <div class="avgrid">${AV.map((a, i) => `<button type="button" data-a="${i}" aria-label="${a.name}" title="${a.name}">${avHtml(i)}</button>`).join('')}</div></div>`);
   avpop = document.getElementById('avpop');
   const openAv = btn => {
     avOpener = btn;

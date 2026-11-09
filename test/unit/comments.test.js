@@ -54,7 +54,7 @@ test('內容清理: 控制字元移除、換行變空白', () => {
 
 test('頭像要是 0–7', async () => {
   const s = setup();
-  const r = await s.call('POST', { body: { game: 'bubble-tempo', avatar: 8, body: 'x', token: 't' } });
+  const r = await s.call('POST', { body: { game: 'bubble-tempo', avatar: 15, body: 'x', token: 't' } });
   assert.equal(r.body.error.code, 'bad_avatar');
 });
 
