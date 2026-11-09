@@ -147,8 +147,9 @@ body.vend .vnote { display: flex; }
 .icon { flex: none; border-radius: 22px; border: 3px solid var(--ink); background: var(--c); color: var(--fc, var(--ink)); display: grid; place-items: center; font-weight: 900; line-height: 1; box-sizing: border-box; }
 .icon:has(img) { overflow: hidden; }
 .icon img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.av { width: 32px; height: 32px; flex: none; border-radius: 50%; border: 2px solid var(--ink); background: var(--c); box-sizing: border-box; display: block; overflow: hidden; }
-.av svg { display: block; width: 100%; height: 100%; }
+.av { width: 32px; height: 32px; flex: none; border-radius: 28%; border: 2px solid var(--ink); background: var(--c); box-sizing: border-box; display: block; overflow: hidden; position: relative; }
+/* 像素圖固定 26px 置中, 用最近點放大: 一格對齊一個螢幕點(高解析螢幕 2、3 個點), 不會糊 */
+.av img { position: absolute; left: 50%; top: 50%; width: 26px; height: 26px; margin: -13px 0 0 -13px; image-rendering: pixelated; }
 /* 留言框左邊的頭像鈕 → 跳出頭像選擇彈窗 */
 .cform .avbtn { flex: none; display: flex; align-items: center; gap: 2px; background: none; border: 0; padding: 0 2px 0 0; margin-left: -6px; border-radius: 999px; cursor: pointer; color: var(--muted); }
 .cform .avbtn::after { content: "▾"; font: 700 11px/1 var(--font); }
@@ -160,7 +161,7 @@ body.vend .vnote { display: flex; }
 .avpop::after { content: ""; position: absolute; left: var(--ax, 18px); bottom: -8px; width: 12px; height: 12px; background: var(--paper); border-right: 2px solid var(--ink); border-bottom: 2px solid var(--ink); transform: rotate(45deg); }
 .avpop small { font: 700 12px/1 var(--font); color: var(--muted); }
 .avgrid { display: grid; grid-template-columns: repeat(4, 40px); gap: 10px; }
-.avgrid button { width: 40px; height: 40px; padding: 0; border: 0; background: none; border-radius: 50%; cursor: pointer; }
+.avgrid button { width: 40px; height: 40px; padding: 0; border: 0; background: none; border-radius: 28%; cursor: pointer; }
 .avgrid .av { width: 100%; height: 100%; transition: transform .12s; }
 .avgrid button:hover .av { transform: scale(1.1); }
 .avgrid button.cur { box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--ink); }
@@ -280,7 +281,7 @@ body.vend .pmain { --vn: 60px; }
   .gb .rec svg { width: 15px; height: 15px; }
   .gb h3 { font-size: 14px; margin-top: 4px; }
   .gb .cms { gap: 8px; }
-  .gb .av { width: 26px; height: 26px; }
+  .gb .av { width: 30px; height: 30px; } /* 框內要放得下 26px 的圖 */
   .gb .cform .av { width: 30px; height: 30px; }
   .gb .cform .avbtn { margin-left: -10px; }
   .gb .cm { gap: 8px; }

@@ -1,32 +1,17 @@
-// 留言頭像: 26×26 像素角色; 留言只存頭像編號(順序固定, 新角色只能加在最後)
+// 留言頭像: 26×26 像素圖, 固定以 26px 顯示(一格對齊一個螢幕點, 不會糊); 留言只存頭像編號(順序固定, 新角色只能加在最後)
 const BGS = ['#aaefd5', '#f29cac', '#f5e291', '#2fc9ed', '#4776c3', '#e0c64f', '#f5554a', '#aaefd5'];
-const N = 26, PAD = 3; // 四周留空, 圓框不會切到角色
-// 每個角色: 名稱, 調色盤, 26 行 × 26 格 ('.' 透明)
 const CHARS = [
-  ['圓臉垂耳犬', { A: '#302936', B: '#ddb382', C: '#ae7a4f', D: '#fff0ce', E: '#795141' }, [
-    '..........................','........AAAAA.............','.......AABBCA.AAAAAAA.....','......AABDBCAAABBDBCA.....','......ACBDEAAACBDBCCA.....','......AEDBCCCABDBCAAA.....','......AACBCCBEBBBEAA......','.....AAAECBDBCCBCEEAA.....','.....ACECBDBCCCCCCEEAA....','....AAEECDDCCCCCCCCCEAA...','...AACCBBBBCECCCCCCCEEA...','..AAEEAEDDDCECCCECCCEEA...','.AAEBBCDDDDBBBBCECCEEEAA..','.AEEBDBDDBBDBBBCECEEEEEAA.','.AEECEAECCDDDBBCEEEEEEEEA.','.AEEECECCDDDDDDBEEEEEEEEA.','.AEEECBBBDDDBDBCEEEEEEEEA.','.AAEEEBBBBBBBBCEAEEEEEEEA.','..ACEEEECCCCEEEEEEEEEEEAA.','..AAAAEEEECCEEEEEAAAEEAA..','....AAEEEECCEEEECCCEEAA...','....ACBCCEEEEBBDBCCEEEA...','....AEBBDDDDDBDBBCCCECA...','....AEBBBBBBBBBBECCCCEA...','....AAAAAAAAAAAAAAAAAAA...','..........................']],
-  ['大鼻禿頭長老', { A: '#302936', B: '#816044', C: '#94a46e', D: '#cba15e', E: '#fff4d9', F: '#c3bca9' }, [
-    '..........................','..........................','..........................','..........................','..........................','..........AAAAAAA.........','........AAABBBBBAAA.......','......AAABBCDDDDCBAA......','...AAAAEECDFEFDCDCBA......','...ABBBFFCDFFEFCCCBAAAAAA.','...ABBBBCDCCCBFDCBBBBBBBA.','...AABFFFDCBBCCDCDDCBBBBA.','...ABFFFFFCCDDDCDCBBBBBAA.','...ABFFBBBFFDCCFDBBCCAAA..','...ABDBBBEEEFFFEDBCCBA....','...AABBFEFFEEFFEBBBBAA....','.AAAABEEEEFBBFEEFABBAA....','.AFFFEEEEFEEEEEFFBBABAAA..','.ABEEEEEEEEEEFEEBBBBBABA..','.AABFFEEEEEEEFBFBBBBAABA..','..AABEEEEEFEEFAABBAABAAA..','...ABBEFEEFFFBABBABBBBBA..','...ABBFBEEBBFABBABBBBBAA..','...ABBBAFFBABBBABBBBBBBA..','...AAAAAAAAAAAAAAAAAAAAA..','..........................']],
-  ['圓糰抱花靈', { A: '#302936', B: '#7c6b92', C: '#b6a9cb', D: '#fff2dc', E: '#d68091', F: '#bd7753', G: '#f1bd54', H: '#6e824a' }, [
-    '..........................','............AAAAAAA.......','..........AAABCBBBAAA.....','.........AABCDDDDDCBAA....','........AABDDDDDDDDCBA....','........ABDDDDDDDDDDCAA...','.......AACADDDCCDDDDDBA...','.....AAABCBDDCABDDDDDBA...','...AAAECCDCCCDDCDDDDDCA...','..AAFFEECDCBBDDCCDDDDCA...','..AFFFFECCCCDDDDDDDDDCA...','..AFEEFFEEEDDDDDDDDDDBA...','..AFEFGGFEEBHCDDDDDDDBA...','.AACFEGGGFBHBDCDDDDDCBA...','.ABCCFGGFHHHCBDDDDDDCAA...','.AABBBGFFBBACDDDDDDCCBA...','..AABHHABDDDDDDDDDDCCBAAA.','...AHHBACDDDDDDDDCDCDCCBA.','...ABAFBBCDDDDDDCDDDDDCBA.','...AAABAAABCCCCCCDCCCCCBA.','.....AAFBBBCBCCCCDCCBBBAA.','......AFBHBBCCCCCCCCBAAA..','......ABAAABBCCCCCBBAA....','......AAA.AAABBBBBBAA.....','............AAAAAAAA......','..........................']],
-  ['細頸蕈角龍', { A: '#302936', B: '#54735e', C: '#c17457', D: '#8ba68a', E: '#d0a162', F: '#698388', G: '#efd7aa' }, [
-    '..........................','..........................','............AAA..AAAA.....','...........AABAAAACBA.AAA.','..........AABBAABCCDAAABA.','........AAACBDCBCCDDBCCBA.','......AAABBBABBEECCCCCBAA.','....AAADDDBBFFDDBBBDAAAA..','.AAAAFBDDADDDDDDDDFAA.....','.AFFFDDDDFDDDDBBBBBA......','.ABDDDDDDDDDDDDBDAAA......','.AABFBFDDGGGDBABFBAAAAAA..','..AAAAAABBBDBBAAABACCCDA..','.......AAABEDDBD..CEEECA..','.........ABGGDBB..BABABA..','........AACGGDBB...DCBDA..','........AFGGDDBB.CCCDEBA..','.......AADGGDFB..BBBDBBAA.','......AABGGDDBF...EDBBCAA.','......ABGGGDDABDBBBBADDAA.','.....AABGGGDDBGBBBBBDEBAA.','.....ABEGGGDDBABFCDEGEBA..','.....AAGGGGFDBBBBCGECBAA..','.....AFGGGGDDDDFDEGDFAA...','.....AAAAAAAAAAAAAAAAA....','..........................']],
-  ['尖鰭蜂蜜虎鯨', { A: '#302936', B: '#e6a62e', C: '#66586c', D: '#474353', E: '#8d8988', F: '#efe1c6', G: '#a9b7c3' }, [
-    '..........................','..........AAAA............','.........AABBAA...........','.........ABBBBAAAA........','.......AAABBBBABBA........','.......ABABBBBAAAA........','.......ABAABBABA...AAAA...','.......AAAABBABA.AAACDA...','........ABABBAAAAACCDCA...','........ABABBA.AACCDDAA...','........AAABBAAACCDDCA....','..........ABBAACCDDDCA....','.....AAAAAABBAECDDDDAA....','....AAEECCCCCDDDDDDDEA....','...AACEEDDDDDDDDCCDDCA....','..AAEECDDCEEEEDDCCECCAA...','.AACDDDDCFFFFFGDDDCECCA...','.ACCDDDDDCFFFFEDDDDDCCAA..','.ACDDDDDDDDCCDDDDDDDDDDA..','.AAECEEGFEEDDDDDDDDDDDDAA.','..AAEFFFFFFFCDDDDDEEEDDDA.','...ACGFFFFFFFDCDDECGFGDDA.','...AAAEEFFFFFEDDDDCDGFEDA.','.....AAAACEGEECCDDDCAAAAA.','........AAAAAAAAAAAAA.....','..........................']],
-  ['圓臉圓頂帽貓', { A: '#302936', B: '#806e83', C: '#8e6c54', D: '#c3a485', E: '#ad5d4a', F: '#f4dfb8' }, [
-    '..........................','..........AAAAAAA.........','.........AABBBABAA........','.........ABBBAAAAAA.......','.....AAAAAABAAAAAAAAAA....','.....ACBBACCCCAAABAABAA...','.....ACCAACDDDECAABCCCA...','.....ACDCAAAAAAACCCDDCA...','.....ACFCBBCCBCCCCFDDCA...','....AACDDFFDDDDDCFFDDAA...','....ABCDFFDDDDDDDDFDCAA...','...AABCCFFDCACDDDDDDBAA...','..AACCDDFFDCDCCDDDDCAAA...','..AFCDFDFFFFDDDDDDCCBBA...','..ADCFDCDDFFFDDDDDDCBAA...','..ADDFFFFFFFFFDDDDDCBAA...','..AABFFFFFFFFFFFDDBBBBA...','...ACCFFFFFFFFFFFDDBAAA...','...AADBDDDFFDDDFDDCAAA....','....AACCCCCCCCCCCCBCCA....','....AABECECEECDDDDBAAAA...','....ABAECCCEECFFCCAAAAAA..','...AAACCCEDCCBDCCCCCCABA..','...ABBCBDEFFFCCCCCBBBAAA..','...AAAAAAAAAAAAAAAAAAAAA..','..........................']],
-  ['寬肩鬍子大叔', { A: '#302936', B: '#76513f', C: '#a39e95', D: '#e1b18a', E: '#b58161', F: '#f1e1c4' }, [
-    '..........................','..........................','.........AAA..............','......AAAABAAAA...........','.....AACBBBBBBAAAA........','.....ABBBBBBBBBBBAA.......','.....ABBAABBBBBBABAA......','.....ABBDDDDDDBBBBEA......','.....AEDDDEBDDBBBAAAA.....','.....AAEBAABDDDDEAAEA.....','....AADDDBDDDDCECEABA.....','...AADDDDDDDDDEEEBAAA.....','..AABBBBBBDDDEEDEEBA......','..ABBBBBBBBEDDDDDBCA......','..ABAEDBBABEDDDDEBAA......','..AAEDDDDDDDDDEEBBA.......','...AEDDDDDDDEEBEEBAA......','...ACBAAABEEEEEDDDEA......','...AAAEBBEEEDFFFFDBAAA....','...AACDCBEDDFFFFDBBBBAA...','..AABCFEEDDCDFFDBEEBBBAA..','.AACBCCDDDFDCFDBEBEFFDBAA.','.AEDEBDDDFFFFDBEDBFFFDDBA.','.ACCEEFDFFFFFFBCEEFFFDDCA.','.AAAAAAAAAAAAAAAAAAAAAAAA.','..........................']],
-  ['短髮圍巾女孩', { A: '#302936', B: '#76513f', C: '#7c6d77', D: '#b58161', E: '#e1b18a', F: '#d2a148' }, [
-    '..........................','..........................','........AAAAAAAA..........','......AAABBBBBBAAAA.......','.....AABBBBBBBBBBCAA......','....AABBBBBBBBBBBBBAA.....','...AABDDDBBBBBBBDDDBA.....','...ABBBBBBEDBDDBBBBBAA....','...ABBABBDDDBBBBBBBBBA....','...ABAADBEDEDBBAABBBBAA...','...ABAACEEBDEDAAABBBBBAA..','...ACBABEEBEEDBBDBBBBBBAA.','...AAAAEEEEEEDBBDCBBBBBCA.','..AABBBEEEEEEBBDEBBBBBBBA.','..ACBAAEEEEEDBBBBABBAADBA.','..ABCAACEEEEEBBAAABAAACAA.','..ABCAAABCBDDDDDBAAAAAAA..','..AADAABABDFFFFFFDDAAAA...','..AAACDFFFFFFFDDDDDBAA....','....AABFFFFDDFFFFDDDBA....','....AABDDDDFFFFDBAABAA....','....ABFFFFFFFBBFDBBBAAA...','...AAABFFFFBBDFFBBBBABA...','...ABBBBBBBAFFFFBBBBBAA...','...AAAAAAAAAAAAAAAAAAAA...','..........................']],
+  ['dog', '圓臉垂耳犬'],
+  ['goblin', '大鼻禿頭長老'],
+  ['ghost', '圓糰抱花靈'],
+  ['dragon', '細頸蕈角龍'],
+  ['whale', '尖鰭蜂蜜虎鯨'],
+  ['cat', '圓臉圓頂帽貓'],
+  ['man', '寬肩鬍子大叔'],
+  ['woman', '短髮圍巾女孩'],
 ];
-
-const svg = (pal, rows) => {
-  const rects = rows.map((r, y) => [...r].map((c, x) => pal[c] ? `<rect x="${x + PAD}" y="${y + PAD}" width="1.02" height="1.02" fill="${pal[c]}"/>` : '').join('')).join('');
-  return `<svg viewBox="0 0 ${N + PAD * 2} ${N + PAD * 2}" aria-hidden="true">${rects}</svg>`;
-};
-export const AV = CHARS.map(([name, pal, rows], i) => ({ name, bg: BGS[i % BGS.length], svg: svg(pal, rows) }));
+export const AV = CHARS.map(([file, name], i) => ({ name, bg: BGS[i % BGS.length], src: `media/avatars/${file}.png` }));
 export const avHtml = i => {
   const a = AV[i] || AV[0];
-  return `<span class="av" style="--c:${a.bg}">${a.svg}</span>`;
+  return `<span class="av" style="--c:${a.bg}"><img src="${a.src}" alt="" width="26" height="26"></span>`;
 };
