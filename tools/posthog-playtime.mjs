@@ -59,20 +59,24 @@ FROM (SELECT toString(properties.game) AS g, person_id, argMin(toFloat(propertie
 GROUP BY 遊戲 ORDER BY 破關人數 DESC`);
 
 // 原本是趨勢表(只算有頁面瀏覽的人、欄位英文), 改成查詢表: 每人只算一次, 來源與裝置取這個人第一筆紀錄
-await upsert('各來源人數與裝置', '起算時間後在網站留下任何紀錄的人, 每人只算一次; 來源、活動、貼文代號、裝置取這個人第一次進站時的值。瀏覽器擋掉數據的人算不到', `
+// 每人每個來源一列(來源 = 平台 + 是否從連結 + 活動 + 貼文代號); 這人最早的那個來源算不重複人數, 之後才從別的來源再進來的算重複人數
+await upsert('各來源人數與裝置', '不重複人數: 每人只算一次, 算在他第一次進站的來源。重複人數: 之前已經來過、之後又從這個來源進來的人(例如老訪客點了新貼文的連結)。裝置取這人從這個來源進來時的裝置; 瀏覽器擋掉數據的人算不到', `
 SELECT multiIf(src != '', multiIf(src = 'threads', 'Threads', src = 'facebook', 'Facebook', src = 'bahamut', '巴哈姆特', src = 'discord', 'Discord', src = 'instagram', 'Instagram', src),
-    code != '', '不指定平台', '直接進站') AS 來源平台,
+    link, '不指定平台', '直接進站') AS 來源平台,
   camp AS 活動, post AS 貼文代號,
   multiIf(dev = 'Mobile', '手機', dev = 'Desktop', '電腦', dev = 'Tablet', '平板', dev = '', '不明', dev) AS 裝置,
-  count() AS 人數
-FROM (SELECT person_id,
-    argMin(ifNull(toString(properties.utm_source), ''), timestamp) AS src,
-    argMin(ifNull(toString(properties.link_code), ''), timestamp) AS code,
-    argMin(ifNull(toString(properties.utm_campaign), ''), timestamp) AS camp,
-    argMin(ifNull(toString(properties.utm_content), ''), timestamp) AS post,
-    argMin(ifNull(toString(properties.$device_type), ''), timestamp) AS dev
-  FROM events WHERE ${SINCE_SQL} GROUP BY person_id)
-GROUP BY 來源平台, 活動, 貼文代號, 裝置 ORDER BY 人數 DESC`);
+  countIf(t = ft) AS 不重複人數, countIf(t > ft) AS 重複人數
+FROM (SELECT person_id, src, link, camp, post, min(timestamp) AS t, argMin(dev, timestamp) AS dev
+  FROM (SELECT person_id, timestamp,
+      ifNull(toString(properties.utm_source), '') AS src,
+      ifNull(toString(properties.link_code), '') != '' AS link,
+      ifNull(toString(properties.utm_campaign), '') AS camp,
+      ifNull(toString(properties.utm_content), '') AS post,
+      ifNull(toString(properties.$device_type), '') AS dev
+    FROM events WHERE ${SINCE_SQL})
+  GROUP BY person_id, src, link, camp, post) AS per
+JOIN (SELECT person_id, min(timestamp) AS ft FROM events WHERE ${SINCE_SQL} GROUP BY person_id) AS f ON per.person_id = f.person_id
+GROUP BY 來源平台, 活動, 貼文代號, 裝置 ORDER BY 不重複人數 + 重複人數 DESC`);
 
 await upsert('各遊戲各關通關時間', '真的過關才算(失敗、重試不算), 時間含這一關失敗重試的時間; 馬戲團一天算一關', `
 SELECT toString(properties.game) AS 遊戲, toInt(properties.level) AS 關卡, count() AS 通關次數, count(DISTINCT person_id) AS 人數,
