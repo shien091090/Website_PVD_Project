@@ -6,9 +6,9 @@ const CHARS = [
   ['ghost', '圓糰抱花靈'],
   ['dragon', '細頸蕈角龍'],
   ['whale', '尖鰭蜂蜜虎鯨'],
-  ['cat', '圓臉圓頂帽貓'],
-  ['man', '寬肩鬍子大叔'],
-  ['woman', '短髮圍巾女孩'],
+  ['owl', '橡果小梟'],
+  ['candle', '燭淚精靈'],
+  ['bunny', '飛行員兔兔'],
 ];
 export const AV = CHARS.map(([file, name], i) => ({ name, bg: BGS[i % BGS.length], src: `media/avatars/${file}.png` }));
 export const avHtml = i => {
