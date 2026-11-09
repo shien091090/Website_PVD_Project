@@ -241,3 +241,24 @@ test('直接開首頁(網址沒有 # 開頭的頁名)也要送首頁的頁面瀏
   assert.deepEqual(pv.map(c => c[2].page), ['home']);
   await ctx.close();
 });
+
+test('從短連結進站送一次點擊連結事件, 排在來源註冊之後; 重新整理不再送', async () => {
+  const ctx = await browser.newContext(PC);
+  await ctx.addCookies([{ name: 'pvd_link', value: encodeURIComponent(JSON.stringify({ c: 'Abc1234', s: 'test', ca: 'cb', co: 'p2' })), url: srv.url }]);
+  const page = await ctx.newPage();
+  await page.route('**/js/config.js', async r => {
+    const res = await r.fetch();
+    r.fulfill({ response: res, body: (await res.text()).replace("posthogKey: ''", "posthogKey: 'phc_test'").replace('analyticsHosts: [', "analyticsHosts: ['localhost', ") });
+  });
+  await page.route('**/static/array.full.js', r => r.fulfill({ contentType: 'text/javascript', body: FAKE('dark') }));
+  await page.goto(srv.url);
+  await page.waitForFunction(() => window.posthog?.calls.some(c => c[1] === '$pageview'));
+  const c = await page.evaluate(() => window.posthog.calls);
+  const reg = c.findIndex(x => x[0] === 'register' && x[1].link_code === 'Abc1234'), open = c.findIndex(x => x[1] === 'link_open');
+  assert.ok(reg >= 0 && open > reg, '先註冊來源再送點擊');
+  assert.equal(c.filter(x => x[1] === 'link_open').length, 1);
+  await page.reload();
+  await page.waitForFunction(() => window.posthog?.calls.some(c => c[1] === '$pageview'));
+  assert.equal((await page.evaluate(() => window.posthog.calls)).filter(x => x[1] === 'link_open').length, 0);
+  await ctx.close();
+});

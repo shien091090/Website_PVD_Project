@@ -18,7 +18,7 @@ const show = name => { open(null); location.hash = name; };
 let themeReady = false, firstPage = null;
 const flag = new Promise(res => initAnalytics({ onFlags: res }));
 const linkSrc = takeLinkSource(); // 從社群短連結進站: 來源要排在第一個頁面瀏覽之前
-if (linkSrc) setSource(linkSrc);
+if (linkSrc) { setSource(linkSrc); track('link_open'); } // 每點一次連結記一筆(來源 cookie 讀完就刪, 重新整理不會重送)
 initTheme(flag, ({ theme, source }) => {
   setTheme(theme, source);
   themeReady = true;
