@@ -10,7 +10,7 @@ after(async () => { await browser?.close(); await srv?.stop(); });
 const FAKE = flag => `window.posthog = { calls: [],
   init(k, o) { this.calls.push(['init', k, o]); },
   capture(e, p, o) { this.calls.push(['capture', e, p, o]); },
-  register(p) { this.calls.push(['register', p]); },
+  register(p) { this.calls.push(['register', p]); }, unregister(k) { this.calls.push(['unregister', k]); }, get_property() {},
   setPersonProperties(p) { this.calls.push(['person', p]); },
   onFeatureFlags(cb) { setTimeout(cb, 50); },
   getFeatureFlag() { return ${JSON.stringify(flag)}; } };`;
@@ -34,13 +34,13 @@ test('第一次來依旗標分組, 主題先註冊再送頁面瀏覽, 重新整�
   assert.equal(await page.evaluate(() => document.documentElement.className), 'dark');
   assert.equal(await page.evaluate(() => localStorage.getItem('pvd:theme')), '"dark"');
   const c = await calls();
-  const reg = c.findIndex(x => x[0] === 'register'), pv = c.findIndex(x => x[1] === '$pageview');
+  const reg = c.findIndex(x => x[0] === 'register' && 'theme' in x[1]), pv = c.findIndex(x => x[1] === '$pageview');
   assert.ok(reg >= 0 && reg < pv, '主題註冊在第一個頁面瀏覽之前');
   assert.deepEqual(c[reg][1], { theme: 'dark', theme_source: 'flag' });
   assert.match(c[pv][2].$current_url, /utm_source=threads/);
   await page.reload();
-  await page.waitForFunction(() => window.posthog?.calls.some(c => c[0] === 'register'));
-  assert.deepEqual((await calls()).find(x => x[0] === 'register')[1], { theme: 'dark', theme_source: 'stored' });
+  await page.waitForFunction(() => window.posthog?.calls.some(c => c[0] === 'register' && 'theme' in c[1]));
+  assert.deepEqual((await calls()).find(x => x[0] === 'register' && 'theme' in x[1])[1], { theme: 'dark', theme_source: 'stored' });
   await ctx.close();
 });
 
