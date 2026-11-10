@@ -38,10 +38,57 @@
   body.env-prod { --env: #e0362b; }
   body.env-test { --env: #e8a400; }
   body.env-test .env { color: #2d2144; }
+  /* 開發頁分頁: 左編輯、右即時預覽(用網站本身的樣式畫), 底部固定發布列 */
+  main:has(#tab-develop:not([hidden])) { max-width: 1240px; }
+  #tab-develop .dv { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; padding-bottom: 70px; }
+  @media (max-width: 900px) { #tab-develop .dv { grid-template-columns: minmax(0, 1fr); } }
+  #tab-develop .ed { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  #tab-develop .card { display: flex; flex-direction: column; gap: 10px; margin: 0; }
+  #tab-develop .card h3 { margin: 0; font-size: 16px; }
+  #tab-develop .card h3 small { font-weight: 400; color: var(--muted); font-size: 13px; margin-left: 6px; }
+  #tab-develop label.f, #tab-develop .flab { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 700; color: var(--muted); }
+  #tab-develop input:not([type=checkbox]), #tab-develop textarea { font: inherit; font-size: 15px; font-weight: 400; color: var(--fg); padding: 7px 10px; border: 1px solid #b9b4c6; border-radius: 8px; background: #fff; width: 100%; box-sizing: border-box; }
+  #tab-develop textarea { resize: vertical; line-height: 1.7; min-height: 92px; }
+  #tab-develop .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 520px) { #tab-develop .two { grid-template-columns: 1fr; } }
+  #tab-develop .chk { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); align-self: end; padding-bottom: 9px; }
+  #tab-develop .tool { display: flex; gap: 4px; flex-wrap: wrap; }
+  #tab-develop .tool .b { padding: 2px 9px; font-size: 13px; }
+  #tab-develop .b.ghost { border-style: dashed; color: var(--muted); }
+  #tab-develop .b:disabled { opacity: .45; cursor: default; }
+  #tab-develop .sec { border: 1px solid var(--line); border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 8px; background: var(--bg); }
+  #tab-develop .sec .top { display: flex; gap: 6px; align-items: center; }
+  #tab-develop .sec .no { width: 28px; height: 28px; border-radius: 6px; background: #f5e291; display: grid; place-items: center; font-weight: 900; flex: none; }
+  #tab-develop .sec .top input { flex: 1; min-width: 0; font-weight: 700; }
+  #tab-develop .sec .top .b { padding: 4px 8px; }
+  #tab-develop .lk { display: grid; grid-template-columns: minmax(0, .7fr) minmax(0, 1.3fr) auto; gap: 6px; }
+  #tab-develop .logo-up { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+  #tab-develop .lbox { width: 96px; height: 96px; border-radius: 20px; border: 3px dashed #c9c4d6; display: grid; place-items: center; font-weight: 900; font-size: 14px; color: var(--muted); overflow: hidden; flex: none; box-sizing: border-box; }
+  #tab-develop .lbox.has { border: 0; }
+  #tab-develop .lbox img { width: 100%; height: 100%; object-fit: contain; }
+  #tab-develop .lbtns { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--muted); min-width: 0; }
+  #tab-develop .hint { font-size: 12.5px; color: var(--muted); margin: 0; }
+  #tab-develop .hist ul { list-style: none; margin: 0; padding: 0; font-size: 14px; }
+  #tab-develop .hist li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--line); }
+  #tab-develop .hist li:last-child { border-bottom: 0; }
+  #tab-develop .hist .cur { color: #1f9d55; font-weight: 700; font-size: 13px; }
+  #tab-develop .pv { position: sticky; top: 12px; min-width: 0; }
+  #tab-develop .pvbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 13px; color: var(--muted); font-weight: 700; }
+  #tab-develop .seg { display: flex; border: 1px solid #b9b4c6; border-radius: 999px; overflow: hidden; }
+  #tab-develop .seg button { font: inherit; font-size: 12px; border: 0; background: #fff; color: var(--muted); padding: 4px 10px; cursor: pointer; }
+  #tab-develop .seg button.on { background: var(--fg); color: #fff; }
+  #tab-develop iframe { display: block; width: 100%; height: calc(100vh - 150px); min-height: 420px; border: 1px solid var(--line); border-radius: 12px; background: #fff; margin: 0 auto; }
+  #tab-develop iframe.phone { max-width: 390px; }
+  #tab-develop .pub { position: fixed; left: 0; right: 0; bottom: 0; background: #fff; border-top: 1px solid var(--line); padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px)); z-index: 5; }
+  #tab-develop .pub .in { max-width: 1240px; margin: 0 auto; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  #tab-develop .pub .st { font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px; margin-right: auto; }
+  #tab-develop .dot { width: 10px; height: 10px; border-radius: 50%; background: #1f9d55; flex: none; }
+  #tab-develop .dot.dirty { background: #e8a400; }
+  #tab-develop .b.pri { background: var(--fg); color: #fff; border-color: var(--fg); }
 </style>
 </head>
 <body>
-<header><b>PVD計畫後台</b><span class="env" id="env"></span><nav><button data-tab="comments" class="on">留言</button> <button data-tab="vote">投票</button> <button data-tab="links">連結產生</button></nav><small id="who"></small></header>
+<header><b>PVD計畫後台</b><span class="env" id="env"></span><nav><button data-tab="comments" class="on">留言</button> <button data-tab="vote">投票</button> <button data-tab="links">連結產生</button> <button data-tab="develop">開發頁</button></nav><small id="who"></small></header>
 <main>
   <section id="tab-comments">
     <div class="row"><label>遊戲 <select id="cgame"></select></label><label><input type="checkbox" id="lock"> 鎖住這款的留言</label><span class="msg" id="cstat"></span></div>
@@ -60,7 +107,64 @@
     <h3>已產生的連結</h3>
     <table><thead><tr><th>產生時間</th><th>平台</th><th>活動</th><th>貼文代號</th><th>開到</th><th>備註</th><th>連結</th><th></th></tr></thead><tbody id="ulist"></tbody></table>
   </section>
+  <section id="tab-develop" hidden>
+    <div class="dv">
+      <div class="ed">
+        <p class="msg" id="dnote" hidden></p>
+        <div class="card">
+          <h3>頁首</h3>
+          <label class="f">標題<input id="dtitle" maxlength="60"></label>
+          <div class="two">
+            <label class="f">最後更新日期<input id="dupd" maxlength="20" placeholder="2026/11/05"></label>
+            <label class="chk"><input type="checkbox" id="dauto"> 發布時自動改成當天</label>
+          </div>
+        </div>
+        <div class="card">
+          <h3>內文段落<small>每段一個標題，前面的編號會自動排</small></h3>
+          <div id="dsecs" style="display:flex;flex-direction:column;gap:10px"></div>
+          <button class="b ghost" id="daddsec">＋ 新增一段</button>
+          <p class="hint">選取文字後按「粗體」「刪除線」「連結」套用格式；空一行是新段落。</p>
+        </div>
+        <div class="card">
+          <h3>開發者資訊</h3>
+          <div class="two">
+            <label class="f">開發者名稱<input id="ddev" maxlength="40"></label>
+            <label class="f">Email<input id="dmail" maxlength="120" type="email"></label>
+          </div>
+          <label class="f">工作室名稱<input id="dstudio" maxlength="80"></label>
+          <div class="flab">外部連結 <span style="font-weight:400">頁面最下面的按鈕，沒有就整區不顯示</span></div>
+          <div id="dlinks" style="display:flex;flex-direction:column;gap:6px"></div>
+          <button class="b ghost" id="daddlink">＋ 新增連結</button>
+        </div>
+        <div class="card">
+          <h3>工作室</h3>
+          <div class="logo-up">
+            <div class="lbox" id="dlogo">LOGO</div>
+            <div class="lbtns">
+              <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="b" id="dlup">上傳 LOGO</button><button class="b danger" id="dldel" disabled>移除</button></div>
+              <input type="file" id="dlfile" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden>
+              <span id="dlmsg">PNG、JPG、WebP 或 SVG，1MB 以內；建議正方形、384×384 以上</span>
+            </div>
+          </div>
+          <div class="flab">工作室自介
+            <span class="tool" data-for="dbio"><button class="b" data-fx="b">粗體</button><button class="b" data-fx="d">刪除線</button><button class="b" data-fx="l">連結</button></span>
+            <textarea id="dbio" rows="4" maxlength="1000" aria-label="工作室自介"></textarea></div>
+        </div>
+        <div class="card hist"><h3>發布紀錄<small>發錯了可以退回之前的版本</small></h3><ul id="dhist"></ul></div>
+      </div>
+      <div class="pv">
+        <div class="pvbar"><span>即時預覽（開發頁）</span><span class="seg"><button class="on" data-w="pc">電腦</button><button data-w="phone">手機</button></span></div>
+        <iframe id="dframe" title="開發頁預覽"></iframe>
+      </div>
+    </div>
+    <div class="pub"><div class="in">
+      <span class="st"><span class="dot" id="ddot"></span><span id="dst">讀取中…</span></span>
+      <button class="b" id="drevert" disabled>放棄修改</button>
+      <button class="b pri" id="dpub" disabled>發布到開發頁</button>
+    </div></div>
+  </section>
 </main>
 <script type="module" src="admin.js"></script>
+<script type="module" src="develop.js"></script>
 </body>
 </html>

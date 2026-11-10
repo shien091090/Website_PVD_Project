@@ -1,29 +1,25 @@
-import { parseDevelop, richText } from './markdown.js';
-import { esc } from './format.js';
+import { fromMarkdown, developHtml } from './devcontent.js';
 
-// 開發頁內容來自 content/develop.md(使用者自己改檔推送即更新)
+// 開發頁內容: 後台發布的版本優先; 後台還沒發布過(或讀不到)就用 content/develop.md
 let loaded = false;
+async function load() {
+  try {
+    const r = await fetch('api/develop', { cache: 'no-store' });
+    if (r.ok) { const { content } = await r.json(); if (content) return content; }
+  } catch {}
+  const r = await fetch('content/develop.md', { cache: 'no-cache' });
+  if (!r.ok) throw new Error(r.status);
+  return fromMarkdown(await r.text());
+}
+
 export async function renderDevelop() {
   if (loaded) return;
   const box = document.getElementById('devin');
-  let text;
-  try {
-    const r = await fetch('content/develop.md', { cache: 'no-cache' });
-    if (!r.ok) throw new Error(r.status);
-    text = await r.text();
-  } catch {
+  let c;
+  try { c = await load(); } catch {
     box.innerHTML = '<p>開發日誌暫時讀不到，請稍後再試。</p>';
     return;
   }
   loaded = true;
-  const { meta, sections } = parseDevelop(text);
-  const logo = meta.LOGO ? `<img class="logo" src="${esc(meta.LOGO)}" alt="${esc(meta['工作室'] || '')} LOGO">` : '<div class="logo">LOGO</div>';
-  const studio = [meta['工作室'], meta['工作室英文']].filter(Boolean).map(esc).join(' ');
-  const mail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(meta.Email || '') ? `<a class="mail" href="mailto:${esc(meta.Email)}">${esc(meta.Email)}</a>` : '';
-  const links = (meta['連結'] || []).filter(l => /^https?:\/\//.test(l.url));
-  box.innerHTML = `
-    <div>${meta['更新日期'] ? `<span class="upd">最後更新 ${esc(meta['更新日期'])}</span>` : ''}<h1>${esc(meta['標題'] || '開發日誌')}</h1></div>
-    ${sections.map((s, i) => `<section><h2><span>${i + 1}</span>${esc(s.title)}</h2>${s.html}</section>`).join('')}
-    <div class="studio">${logo}<div class="who"><small>開發者</small><b>${esc(meta['開發者'] || '') || studio}</b>${meta['開發者'] ? `<span class="org">${studio}</span>` : ''}<p>${richText(meta['工作室簡介'] || '')}</p>${mail}</div></div>
-    ${links.length ? `<div class="links">${links.map(l => `<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)} ↗</a>`).join('')}</div>` : ''}`;
+  box.innerHTML = developHtml(c);
 }

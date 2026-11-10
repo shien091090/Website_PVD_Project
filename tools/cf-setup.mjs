@@ -1,4 +1,4 @@
-// Cloudflare 一次性設定: Pages 專案(連 GitHub)、D1(正式與測試環境各一)、Turnstile、Access(後台)、Pages 的秘密變數。可重跑: 已存在的就沿用
+// Cloudflare 一次性設定: Pages 專案(連 GitHub)、D1 與 R2(正式與測試環境各一)、Turnstile、Access(後台)、Pages 的秘密變數。可重跑: 已存在的就沿用
 // 用法: node tools/cf-setup.mjs [--dry-run]
 // 需要 .secrets.env: CLOUDFLARE_API_TOKEN、CLOUDFLARE_ACCOUNT_ID、ACCESS_TEAM、ADMIN_EMAIL
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
@@ -48,10 +48,15 @@ const findOrMakeDb = async name => (await cf('GET', `/d1/database?name=${name}`)
 const db = await findOrMakeDb('pvd'), previewDb = await findOrMakeDb('pvd-preview');
 const head = readFileSync('wrangler.toml', 'utf8').split('\n[[d1_databases]]')[0];
 const d1 = (prefix, name, id) => `\n[[${prefix}d1_databases]]\nbinding = "DB"\ndatabase_name = "${name}"\ndatabase_id = "${id}"\nmigrations_dir = "migrations"\n`;
+// 檔案(工作室 LOGO)存 R2: 正式 pvd-files、測試環境 pvd-files-preview
+const r2 = (prefix, name) => `\n[[${prefix}r2_buckets]]\nbinding = "FILES"\nbucket_name = "${name}"\n`;
 const vars = (prefix, aud) => `\n[${prefix}vars]\nACCESS_TEAM = "${env.ACCESS_TEAM}"\nACCESS_AUD = "${aud}"\n`;
 // 上層 = 正式環境; [env.preview] = 預覽網址。Pages 規定環境裡覆寫了資料庫, 變數也要一起寫
-const buildToml = aud => head + d1('', 'pvd', db.uuid) + vars('', aud)
-  + '\n# 預覽網址(測試環境)用另一個資料庫, 測試的留言與投票不會進正式站\n[env.preview]\n' + d1('env.preview.', 'pvd-preview', previewDb.uuid) + vars('env.preview.', aud);
+const buildToml = aud => head + d1('', 'pvd', db.uuid) + r2('', 'pvd-files') + vars('', aud)
+  + '\n# 預覽網址(測試環境)用另一個資料庫, 測試的留言與投票不會進正式站\n[env.preview]\n' + d1('env.preview.', 'pvd-preview', previewDb.uuid) + r2('env.preview.', 'pvd-files-preview') + vars('env.preview.', aud);
+// R2 要先在網頁上啟用(Cloudflare 會要求綁付款方式, 用量在免費額度內不收費); API 金鑰要有 R2 編輯權限
+for (const name of ['pvd-files', 'pvd-files-preview'])
+  if (!(await cf('GET', `/r2/buckets?name_contains=${name}`))?.buckets?.some(b => b.name === name)) await cf('POST', '/r2/buckets', { name });
 saveToml(buildToml(''));
 wrangler(['d1', 'migrations', 'apply', 'pvd', '--remote']);
 wrangler(['d1', 'migrations', 'apply', 'pvd-preview', '--remote', '--env', 'preview']);

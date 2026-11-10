@@ -8,6 +8,10 @@ database_name = "pvd"
 database_id = "9665405b-5756-486c-8693-057989fc7c33"
 migrations_dir = "migrations"
 
+[[r2_buckets]]
+binding = "FILES"
+bucket_name = "pvd-files"
+
 [vars]
 ACCESS_TEAM = "meraklika"
 ACCESS_AUD = "18c7f42cd76e0aabc1ed536f8c78d25ea49c3cae01815d7d6bea7dfbd62fa1d4"
@@ -20,6 +24,10 @@ binding = "DB"
 database_name = "pvd-preview"
 database_id = "4993583e-f489-4a30-8398-6448dcf2282c"
 migrations_dir = "migrations"
+
+[[env.preview.r2_buckets]]
+binding = "FILES"
+bucket_name = "pvd-files-preview"
 
 [env.preview.vars]
 ACCESS_TEAM = "meraklika"

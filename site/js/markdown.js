@@ -33,11 +33,14 @@ export function parseDevelop(text) {
     meta,
     sections: sections.map(s => ({
       title: s.title,
-      html: s.lines.join('\n').split(/\n\s*\n/).map(p => p.trim()).filter(Boolean)
-        .map(p => `<p>${p.split('\n').map(inline).join('<br>')}</p>`).join(''),
+      html: paragraphs(s.lines.join('\n')),
     })),
   };
 }
+
+// 內文: 空行分段落, 段內換行轉 br
+export const paragraphs = text => String(text).replace(/\r\n?/g, '\n').split(/\n\s*\n/).map(p => p.trim()).filter(Boolean)
+  .map(p => `<p>${p.split('\n').map(inline).join('<br>')}</p>`).join('');
 
 // 基本資料裡的多行文字: 每行照內文規則轉換, 換行轉 br
 export const richText = s => String(s).split('\n').map(inline).join('<br>');
