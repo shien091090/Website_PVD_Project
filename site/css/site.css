@@ -428,6 +428,9 @@ body[data-pg="vote"] .thm { left: auto; right: calc(12px + env(safe-area-inset-r
 .dev h2 { margin: 0; display: flex; align-items: center; gap: 12px; font: 900 24px/1.2 var(--font); }
 .dev h2 span { width: 34px; height: 34px; border-radius: 7px; background: var(--yellow); display: grid; place-items: center; font-size: 18px; flex: none; }
 .dev p { font-size: 17px; line-height: 1.9; }
+/* 內文本身已是粗字, 粗體再加螢光筆底線才看得出強調 (跟段落編號同一個黃) */
+.dev p b { font-weight: 900; padding: 0 2px; background: linear-gradient(transparent 58%, color-mix(in srgb, var(--yellow) 55%, transparent) 58%); }
+:root.dark .dev p b { color: var(--yellow); background: none; padding: 0; }
 .studio { border-top: 2px dashed var(--line); padding-top: 40px; display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 22px; align-items: start; }
 .logo { width: 96px; height: 96px; border-radius: 20px; border: 3px dashed var(--faint); display: grid; place-items: center; font: 900 14px/1 var(--font); color: var(--muted); box-sizing: border-box; }
 img.logo { border: 0; object-fit: contain; }
