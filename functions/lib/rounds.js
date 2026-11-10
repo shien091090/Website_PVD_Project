@@ -1,4 +1,4 @@
-const shape = r => r && { id: r.id, startsAt: r.starts_at, endsAt: r.ends_at, winner: r.winner };
+const shape = r => r && { id: r.id, startsAt: r.starts_at, endsAt: r.ends_at, winner: r.winner, shareImage: r.share_image || '' };
 
 // 目前這輪 = 已開始的輪次中最新的一輪(結束後到下一輪開始前, 仍是它)
 export async function currentRound(db, now) {

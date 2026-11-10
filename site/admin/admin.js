@@ -126,6 +126,9 @@ async function loadVote() {
     <div class="card" data-id="${r.id}"><b>第 ${r.id} 輪</b>・${PHASE[r.phase]}・共 ${r.total} 票${r.winner ? `・勝出：${esc(nameOf(r, r.winner))}（後台指定，前台公布時勝出款多加 1 票）` : ''}
       <div class="row" style="margin-top:8px"><label>開始 ${dtHtml('rs', r.startsAt)}</label>
         <label>截止 ${dtHtml('re', r.endsAt)}</label><button class="b rsave">儲存時間</button><button class="b danger rdel">刪除這一輪</button><span class="msg rmsg"></span></div>
+      <div class="row share" style="margin-top:8px">分享圖：${r.shareImage ? `<img src="/files/${esc(r.shareImage)}" alt="這一輪的分享圖" style="height:63px;border-radius:6px;border:1px solid #ccc">` : '<span class="msg">用整站預設圖</span>'}
+        <button class="b sup">${r.shareImage ? '換一張' : '上傳分享圖'}</button>${r.shareImage ? '<button class="b danger sdel">改回預設圖</button>' : ''}
+        <input type="file" class="sfile" accept="image/png,image/jpeg,image/webp" hidden><span class="msg smsg">建議 1200×630、2MB 以內；這一輪是目前這輪時，連結預覽就會用它</span></div>
       <div class="bars">${r.options.map(o => `<div><span>${esc(o.label)}</span><span style="display:inline-block;height:12px;background:#2fc9ed;width:${r.counts[o.id] / max(r) * 240}px"></span><span>${r.counts[o.id]}</span></div>`).join('')}</div>
       ${r.phase === 'ended' && r.tie ? `<div class="row" style="margin-top:8px"><span class="err">同票，請指定勝出：</span>
         <select class="wsel">${r.options.filter(o => !r.total || r.counts[o.id] === max(r)).map(o => `<option value="${o.id}" ${r.winner === o.id ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}</select>
@@ -153,6 +156,24 @@ async function loadVote() {
       }
       try { await api('rounds?id=' + id, 'DELETE'); loadVote(); }
       catch (err) { card.querySelector('.rmsg').innerHTML = `<span class="err">${esc(err.message)}</span>`; }
+    });
+    // 分享圖: 選了檔案就上傳, 立即生效
+    card.querySelector('.sup').addEventListener('click', () => card.querySelector('.sfile').click());
+    card.querySelector('.sfile').addEventListener('change', async e => {
+      const f = e.target.files[0], msg = card.querySelector('.smsg');
+      e.target.value = '';
+      if (!f) return;
+      if (f.size > 2 * 1024 * 1024) { msg.innerHTML = '<span class="err">圖片要在 2MB 以內</span>'; return; }
+      msg.textContent = '上傳中…';
+      try {
+        const data = await new Promise((ok, no) => { const rd = new FileReader(); rd.onload = () => ok(String(rd.result).split(',')[1]); rd.onerror = no; rd.readAsDataURL(f); });
+        await api('share', 'POST', { roundId: id, type: f.type, data });
+        loadVote();
+      } catch (err) { if (err.message !== '401') msg.innerHTML = `<span class="err">上傳失敗：${esc(({ bad_type: '只能上傳 PNG、JPG 或 WebP', bad_image: '這個檔案不是正確的圖片', too_large: '圖片要在 2MB 以內', no_storage: '圖片儲存空間還沒設定好' })[err.message] || err.message)}</span>`; }
+    });
+    card.querySelector('.sdel')?.addEventListener('click', async () => {
+      try { await api('share?roundId=' + id, 'DELETE'); loadVote(); }
+      catch (err) { card.querySelector('.smsg').innerHTML = `<span class="err">${esc(err.message)}</span>`; }
     });
     card.querySelector('.wset')?.addEventListener('click', async () => {
       try { await api('winner', 'PUT', { roundId: id, game: card.querySelector('.wsel').value }); loadVote(); }
