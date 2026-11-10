@@ -110,6 +110,9 @@ function dtHtml(cls, ms, def = [0, 0, 0]) {
 }
 const dtVal = el => { const [d, h, m, s] = [...el.querySelectorAll('input, select')].map(x => x.value); return d ? Date.parse(`${d}T${h}:${m}:${s}+08:00`) : NaN; };
 const PHASE = { upcoming: '尚未開始', live: '進行中', ended: '已結束' };
+// 分享圖縮圖: 沒有自己的就顯示整站預設圖
+const DEFAULT_SHARE = '/media/og/share-default-v1.png';
+const shareThumb = (key, h = 84) => `<img class="sthumb" src="${key ? '/files/' + esc(key) : DEFAULT_SHARE}" alt="分享圖" style="height:${h}px;aspect-ratio:1200/630;object-fit:cover;border-radius:6px;border:1px solid #ccc">`;
 const nameOf = (r, code) => r.options.find(o => o.id === code)?.label || code;
 async function loadVote() {
   const box = $('vbox');
@@ -117,7 +120,11 @@ async function loadVote() {
   let d;
   try { d = await api('rounds'); } catch (e) { if (e.message !== '401') box.innerHTML = `<p class="err">讀取失敗：${esc(e.message)}</p>`; return; }
   const max = r => Math.max(1, ...Object.values(r.counts));
+  // 目前首頁連結預覽用的圖 = 已開始的輪次中最新一輪的分享圖, 沒有就用預設圖(跟伺服器端同一個規則)
+  const cur = d.rounds.filter(r => r.startsAt <= d.now).sort((a, b) => b.startsAt - a.startsAt || b.id - a.id)[0];
   box.innerHTML = `
+    <div class="card cshare"><b>目前的連結預覽分享圖</b>
+      <div class="row" style="margin-top:8px">${shareThumb(cur?.shareImage, 126)}<span class="msg">${cur?.shareImage ? `用第 ${cur.id} 輪的分享圖` : cur ? `第 ${cur.id} 輪沒有上傳分享圖，用整站預設圖` : '還沒有開始的輪次，用整站預設圖'}</span></div></div>
     <div class="card"><b>新增一輪</b>
       <div class="row" style="margin-top:8px"><label>開始 ${dtHtml('nstart', null)}</label><label>截止 ${dtHtml('nend', null, [23, 59, 59])}</label>
       <button class="b" id="nadd">新增</button><span class="msg" id="nmsg"></span></div>
@@ -126,7 +133,7 @@ async function loadVote() {
     <div class="card" data-id="${r.id}"><b>第 ${r.id} 輪</b>・${PHASE[r.phase]}・共 ${r.total} 票${r.winner ? `・勝出：${esc(nameOf(r, r.winner))}（後台指定，前台公布時勝出款多加 1 票）` : ''}
       <div class="row" style="margin-top:8px"><label>開始 ${dtHtml('rs', r.startsAt)}</label>
         <label>截止 ${dtHtml('re', r.endsAt)}</label><button class="b rsave">儲存時間</button><button class="b danger rdel">刪除這一輪</button><span class="msg rmsg"></span></div>
-      <div class="row share" style="margin-top:8px">分享圖：${r.shareImage ? `<img src="/files/${esc(r.shareImage)}" alt="這一輪的分享圖" style="height:63px;border-radius:6px;border:1px solid #ccc">` : '<span class="msg">用整站預設圖</span>'}
+      <div class="row share" style="margin-top:8px">分享圖：${shareThumb(r.shareImage)}<span class="msg">${r.shareImage ? '這一輪自己的' : '整站預設圖'}</span>
         <button class="b sup">${r.shareImage ? '換一張' : '上傳分享圖'}</button>${r.shareImage ? '<button class="b danger sdel">改回預設圖</button>' : ''}
         <input type="file" class="sfile" accept="image/png,image/jpeg,image/webp" hidden><span class="msg smsg">建議 1200×630、2MB 以內；這一輪是目前這輪時，連結預覽就會用它</span></div>
       <div class="bars">${r.options.map(o => `<div><span>${esc(o.label)}</span><span style="display:inline-block;height:12px;background:#2fc9ed;width:${r.counts[o.id] / max(r) * 240}px"></span><span>${r.counts[o.id]}</span></div>`).join('')}</div>
