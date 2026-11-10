@@ -9,8 +9,9 @@ test('倒數負數歸零', () => {
   assert.deepEqual(splitCountdown(-5), { d: 0, h: 0, m: 0, s: 0 });
 });
 test('截止字樣用台灣時間', () => {
-  assert.equal(deadlineLabel(Date.UTC(2026, 10, 8, 12, 0)), '11/8(日) 20:00 截止');
-  assert.equal(deadlineLabel(Date.UTC(2026, 10, 30, 16, 5)), '12/1(二) 00:05 截止');
+  assert.equal(deadlineLabel(Date.UTC(2026, 10, 8, 12, 0)), '11/8(日) 20:00:00 截止');
+  assert.equal(deadlineLabel(Date.UTC(2026, 10, 30, 16, 5)), '12/1(二) 00:05:00 截止');
+  assert.equal(deadlineLabel(Date.parse('2026-11-29T23:59:59+08:00')), '11/29(日) 23:59:59 截止');
 });
 test('跳脫 HTML', () => {
   assert.equal(esc('<a "x">&\''), '&lt;a &quot;x&quot;&gt;&amp;&#39;');

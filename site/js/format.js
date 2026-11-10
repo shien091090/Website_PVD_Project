@@ -4,11 +4,11 @@ export function splitCountdown(ms) {
 }
 
 const WD = '日一二三四五六';
-// 台灣時間, 例: 11/8(日) 20:00 截止
+// 台灣時間到秒, 例: 11/29(日) 23:59:59 截止
 export function deadlineLabel(utcMs) {
   const t = new Date(utcMs + 8 * 3600000); // 台灣無日光節約, 固定 +8
   const p = n => String(n).padStart(2, '0');
-  return `${t.getUTCMonth() + 1}/${t.getUTCDate()}(${WD[t.getUTCDay()]}) ${p(t.getUTCHours())}:${p(t.getUTCMinutes())} 截止`;
+  return `${t.getUTCMonth() + 1}/${t.getUTCDate()}(${WD[t.getUTCDay()]}) ${p(t.getUTCHours())}:${p(t.getUTCMinutes())}:${p(t.getUTCSeconds())} 截止`;
 }
 
 export const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
