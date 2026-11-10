@@ -34,7 +34,7 @@ test('後台編輯開發頁: 帶入舊文字檔、即時預覽、上傳 LOGO、�
   // 上傳 LOGO → 預覽看得到
   await admin.setInputFiles('#dlfile', { name: 'logo.png', mimeType: 'image/png', buffer: readFileSync('site/media/avatars/dog.png') });
   await admin.locator('#dlmsg:has-text("已上傳")').waitFor();
-  await pv.locator('#devin img.logo').waitFor();
+  await pv.locator('#devin img.logo').waitFor({ state: 'attached' });
   assert.ok(await pv.locator('#devin img.logo').evaluate(i => i.complete && i.naturalWidth > 0), '預覽的 LOGO 有載入');
 
   // 發布 → 前台更新
@@ -45,6 +45,7 @@ test('後台編輯開發頁: 帶入舊文字檔、即時預覽、上傳 LOGO、�
   await page.locator('#devin h1:has-text("後台改的標題")').waitFor();
   await page.locator('#devin h2:has-text("新的段落")').waitFor();
   await page.waitForFunction(() => { const i = document.querySelector('#devin img.logo'); return i && i.complete && i.naturalWidth > 0; });
+  assert.ok(await page.locator('#devin .logo').isHidden(), '開發頁暫時不顯示 LOGO');
   assert.ok(await admin.locator('#dnote').isHidden());
 
   // 再發一版, 然後退回第一版

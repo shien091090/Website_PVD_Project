@@ -599,3 +599,6 @@ html:has(body[data-pg="game"]), body[data-pg="game"] { touch-action: manipulatio
 .studio .who .org { font: 700 15px/1.4 var(--font); color: var(--muted); margin-top: -4px; }
 .studio .who .mail { justify-self: start; align-self: flex-start; font: 700 15px/1.4 var(--font); color: var(--ink); text-decoration: underline; text-underline-offset: 3px; word-break: break-all; }
 .studio .who .mail:hover { color: var(--red); }
+/* 暫時隱藏開發頁的工作室 LOGO(後台照常可上傳); 要恢復就刪掉這兩行 */
+.dev .studio > .logo { display: none; }
+.dev .studio { grid-template-columns: minmax(0, 1fr); }
