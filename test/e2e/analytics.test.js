@@ -262,3 +262,24 @@ test('從短連結進站送一次點擊連結事件, 排在來源註冊之後; �
   assert.equal((await page.evaluate(() => window.posthog.calls)).filter(x => x[1] === 'link_open').length, 0);
   await ctx.close();
 });
+
+test('透明人連結: 進站後完全不載入 PostHog, 角落顯示透明模式; 按離開就恢復送數據', async () => {
+  const ctx = await browser.newContext(PC);
+  const page = await ctx.newPage();
+  await page.route('**/js/config.js', async r => {
+    const res = await r.fetch();
+    r.fulfill({ response: res, body: (await res.text()).replace("posthogKey: ''", "posthogKey: 'phc_test'").replace('analyticsHosts: [', "analyticsHosts: ['localhost', ") });
+  });
+  let loads = 0;
+  await page.route('**/static/array.full.js', r => { loads++; r.fulfill({ contentType: 'text/javascript', body: FAKE('dark') }); });
+  await page.goto(srv.url + 'ghost');
+  assert.equal(new URL(page.url()).pathname, '/');
+  await page.locator('.ghostbar').waitFor();
+  await page.goto(srv.url + '#play');
+  await page.waitForTimeout(1500);
+  assert.equal(loads, 0);
+  await page.click('.ghostbar a');
+  await page.waitForFunction(() => window.posthog?.calls.some(c => c[1] === '$pageview'));
+  assert.equal(await page.locator('.ghostbar').count(), 0);
+  await ctx.close();
+});

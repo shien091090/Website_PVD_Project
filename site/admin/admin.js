@@ -97,6 +97,9 @@ async function loadLinks() {
 }
 $('ulist').addEventListener('click', e => { const b = e.target.closest('[data-copy]'); if (b) copyText(linkUrl(b.dataset.copy), $('umsg')); });
 onTab('links', loadLinks);
+// 透明人連結: 固定網址, 點過的瀏覽器不送數據(只在這個網域有效)
+$('gmake').addEventListener('click', () => { $('gout').value = `${location.origin}/ghost`; $('gmsg').textContent = '用這條連結進站就是透明模式'; });
+$('gcopy').addEventListener('click', () => { if ($('gout').value) copyText($('gout').value, $('gmsg'), $('gout')); });
 
 // ---- 投票: 輪次清單、即時票數、同票指定勝出; 時間一律台灣時間 ----
 // 日期時間選擇: 日期 + 時(00~23)、分、秒下拉, 不用瀏覽器內建的上午/下午

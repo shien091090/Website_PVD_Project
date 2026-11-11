@@ -602,3 +602,7 @@ html:has(body[data-pg="game"]), body[data-pg="game"] { touch-action: manipulatio
 /* 暫時隱藏開發頁的工作室 LOGO(後台照常可上傳); 要恢復就刪掉這兩行 */
 .dev .studio > .logo { display: none; }
 .dev .studio { grid-template-columns: minmax(0, 1fr); }
+
+/* 透明人模式提示(只有站長自己的瀏覽器看得到) */
+.ghostbar { position: fixed; z-index: 9999; left: max(12px, env(safe-area-inset-left, 0px)); bottom: max(12px, env(safe-area-inset-bottom, 0px)); display: flex; gap: 10px; align-items: center; padding: 6px 12px; border-radius: 999px; background: var(--fg); color: var(--bg); font: 700 12px/1.4 var(--font); opacity: .85; }
+.ghostbar a { color: inherit; }

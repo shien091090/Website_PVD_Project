@@ -104,6 +104,10 @@
       <label>備註 <input id="unote" placeholder="只給後台看，不影響連結" size="28"></label>
       <button class="b" id="umake">產生連結</button><button class="b" id="ucopy">複製</button><span class="msg" id="umsg"></span></div>
     <input class="out" id="uout" readonly placeholder="按「產生連結」後顯示在這裡">
+    <div class="card" style="margin-top:12px"><b>透明人連結（自己用）</b>
+      <p class="msg">用這條連結進站的瀏覽器會一直保持透明，不送任何數據到 PostHog，可以放心在正式網站看東西、做測試。換瀏覽器或清除網站資料要再點一次；網站左下角會顯示「透明模式」，按「離開」就恢復。投票與留言照常寫進資料庫。</p>
+      <div class="row"><button class="b" id="gmake">產生透明人連結</button><button class="b" id="gcopy">複製</button><span class="msg" id="gmsg"></span></div>
+      <input class="out" id="gout" readonly placeholder="按「產生透明人連結」後顯示在這裡"></div>
     <h3>已產生的連結</h3>
     <table><thead><tr><th>產生時間</th><th>平台</th><th>活動</th><th>貼文代號</th><th>開到</th><th>備註</th><th>連結</th><th></th></tr></thead><tbody id="ulist"></tbody></table>
   </section>

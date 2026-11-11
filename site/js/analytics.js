@@ -1,8 +1,9 @@
 import { SITE } from './config.js';
+import { isGhost } from './ghost.js';
 
-// PostHog: 沒填 posthogKey 或不在正式網址時所有函式都是空操作。hash 路由所以頁面瀏覽手動送
+// PostHog: 沒填 posthogKey、不在正式網址或是透明人模式時所有函式都是空操作。hash 路由所以頁面瀏覽手動送
 let ph = null, queue = [];
-const on = () => SITE.posthogKey && SITE.analyticsHosts.includes(location.hostname);
+const on = () => SITE.posthogKey && SITE.analyticsHosts.includes(location.hostname) && !isGhost();
 const run = fn => (ph ? fn(ph) : on() && queue.push(fn));
 
 export function initAnalytics({ onFlags = () => {} } = {}) {

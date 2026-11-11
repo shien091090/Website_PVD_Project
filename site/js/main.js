@@ -10,6 +10,7 @@ import { initGamePage, enterGame, leaveGame, lapGame } from './gamepage.js';
 import { board, initComments } from './comments.js';
 import { initAnalytics, track, trackPage, setTheme, initEngage, setSource } from './analytics.js';
 import { takeLinkSource } from './link.js';
+import { showGhostBadge } from './ghost.js';
 import * as store from './store.js';
 
 const show = name => { open(null); location.hash = name; };
@@ -28,6 +29,7 @@ const pageView = page => (themeReady ? trackPage(page) : (firstPage = page));
 const engage = initEngage(() => document.body.dataset.pg);
 
 renderHeaders();
+showGhostBadge();
 initHome({ show, onVideo: what => track(what === 'play' ? 'video_play' : 'video_complete') });
 initPlay({ onOpen: game => track('game_detail_open', { game }) });
 initGamePage({ onClear: (kind, game, seconds, level) => kind === 'level'
