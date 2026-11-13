@@ -3,7 +3,7 @@ import { renderHeaders } from './shell.js';
 import { initHome, fit, open } from './home.js';
 import { initPlay, enterPlay, setBoard } from './play.js';
 import { initVote, setState, getState, focusVoted, setVoteError } from './vote.js';
-import { getJSON, postJSON, turnstileToken } from './api.js';
+import { getJSON, postJSON, turnstileToken, prefetchToken } from './api.js';
 import { renderDevelop } from './develop.js';
 import { initTheme } from './theme.js';
 import { initGamePage, enterGame, leaveGame, lapGame } from './gamepage.js';
@@ -46,10 +46,13 @@ async function loadState() {
   try {
     const s = await getJSON('/api/state');
     setState(sending && s.phase === 'live' ? { ...s, myVote: want, sending: true } : s); // 改投還在送: 畫面維持最後點的那款
+    readyVote(s);
   }
   catch { retry = setTimeout(loadState, 5000); }
 }
 const VOTE_ERR = { turnstile: '驗證沒有通過，請再試一次', ip_limit: '這個網路投票次數太多，請稍後再試' };
+// 在投票頁且投票進行中就先把防機器人驗證做好, 按下投票時直接送出, 不用再等驗證(縮短按完馬上關網頁會漏票的時間)
+const readyVote = s => { if (document.body.dataset.pg === 'vote' && s?.phase === 'live') prefetchToken(); };
 // 一次只送一票: 送出中又改點, 等這票回來再送最後點的那款, 慢回來的舊票不會把打勾蓋回去
 let sending = false, want = null, saved = null;
 async function pickVote(code) {
@@ -64,7 +67,7 @@ async function pickVote(code) {
     while (want !== saved) {
       // 取消投票不用防機器人驗證
       const game = want, token = game ? await turnstileToken() : undefined;
-      const r = await postJSON('/api/vote', { game, token });
+      const r = await postJSON('/api/vote', { game, token }, { keepalive: true }); // 送出後就算關掉網頁也會送完
       if (game) track('vote_cast', { game, changed: !!saved }); else track('vote_cancel', { game: saved });
       saved = r.myVote;
     }
@@ -73,7 +76,7 @@ async function pickVote(code) {
     setState({ ...getState(), myVote: saved, now: undefined });
     if (e.code === 'ended' || e.code === 'no_round') loadState();
     else setVoteError(VOTE_ERR[e.code] || '投票失敗，請稍後再試');
-  } finally { sending = false; setState({ ...getState(), sending: false, now: undefined }); }
+  } finally { sending = false; setState({ ...getState(), sending: false, now: undefined }); readyVote(getState()); }
 }
 loadState();
 document.addEventListener('visibilitychange', () => { if (!document.hidden) loadState(); });

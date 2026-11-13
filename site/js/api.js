@@ -22,7 +22,8 @@ async function send(path, init) {
 }
 
 export const getJSON = path => call(path);
-export const postJSON = (path, body) => call(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+// opts.keepalive: 網頁關掉後瀏覽器仍把這個請求送完
+export const postJSON = (path, body, opts = {}) => call(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), ...opts });
 
 // Turnstile 隱形驗證: 送出留言或投票前取一次 token。
 // 同時多次呼叫時依序處理, 各拿各的 token; 沒跳出手動驗證就 8 秒逾時,

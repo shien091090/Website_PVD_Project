@@ -182,3 +182,23 @@ test('後台開新一輪只勾 2 款候選, 投票頁只出現這 2 款', async 
   assert.deepEqual(await page.locator('#vrows .vr').evaluateAll(els => els.map(e => e.dataset.k)), ['bubble-tempo', 'jelly-jinni']);
   await ctx.close();
 });
+
+test('進投票頁就先做好驗證, 投票請求帶「關網頁也送完」; 其他頁不先驗證', async () => {
+  round(-60000, 600000);
+  const ctx = await browser.newContext(PC);
+  await ctx.addInitScript(() => {
+    const f = window.fetch; window.keepalives = [];
+    window.fetch = (u, init) => { if (String(u).includes('/api/vote')) window.keepalives.push(!!init?.keepalive); return f(u, init); };
+  });
+  const page = await ctx.newPage();
+  await page.goto(srv.url);
+  await page.waitForTimeout(1500);
+  assert.equal(await page.locator('#ts').count(), 0, '首頁不先驗證');
+  await page.goto(srv.url + '#vote');
+  await page.locator('#ts').waitFor({ state: 'attached', timeout: 15000 }); // 還沒點任何一款就開始驗證
+  const voted = page.waitForResponse(r => r.url().endsWith('/api/vote') && r.status() === 200, { timeout: 15000 });
+  await page.click('.vr[data-k="bubble-tempo"]');
+  await voted;
+  assert.deepEqual(await page.evaluate(() => window.keepalives), [true]);
+  await ctx.close();
+});
