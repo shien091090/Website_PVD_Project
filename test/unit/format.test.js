@@ -16,3 +16,12 @@ test('截止字樣用台灣時間', () => {
 test('跳脫 HTML', () => {
   assert.equal(esc('<a "x">&\''), '&lt;a &quot;x&quot;&gt;&amp;&#39;');
 });
+
+test('得票百分比四捨五入成整數且加總剛好 100', async () => {
+  const { percents } = await import('../../site/js/format.js');
+  assert.deepEqual(percents([58, 41, 27]), [46, 33, 21]);
+  assert.deepEqual(percents([1, 1, 1]), [34, 33, 33]);
+  assert.deepEqual(percents([2, 1, 0]), [67, 33, 0]);
+  assert.deepEqual(percents([0, 0]), [0, 0]);
+  for (const n of [[7, 3, 5, 9], [1, 2, 3, 4, 5], [999, 1]]) assert.equal(percents(n).reduce((a, b) => a + b, 0), 100);
+});

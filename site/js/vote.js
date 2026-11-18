@@ -1,5 +1,5 @@
 import { byCode } from './games.js';
-import { splitCountdown, deadlineLabel, esc } from './format.js';
+import { splitCountdown, deadlineLabel, esc, percents } from './format.js';
 import { ico } from './play.js';
 import * as store from './store.js';
 
@@ -61,17 +61,16 @@ export function render() {
     const w = opts.find(g => g.code === r.winner) || optOf({ id: r.winner, label: r.winner });
     const rk = opts.map(g => ({ g, n: r.counts[g.code] || 0 }))
       .sort((a, b) => (b.g === w) - (a.g === w) || b.n - a.n); // 勝出款排第一(同票由後台指定時也一樣)
-    const top = Math.max(1, ...rk.map(x => x.n));
-    const wn = r.counts[w.code] || 0;
+    const pc = percents(rk.map(x => x.n)); // 只公布百分比, 不公布票數
+    const wp = pc[rk.findIndex(x => x.g === w)];
     winbox.innerHTML = `
       <span class="lb">投票結束 · 勝出</span>
-      <div class="body">${w.banner ? `<img class="wbn" src="${esc(w.banner)}" alt="">` : ico(w, 'wi')}<div style="display:flex;flex-direction:column;gap:inherit"><span class="k">投票結束 · 勝出</span><b>${winName(w.name)}</b><span class="vs">${wn.toLocaleString()} 票 · 佔 ${r.total ? Math.round(wn / r.total * 100) : 0}%</span></div></div>`;
-    ranked.innerHTML = `<h2>最終票數<small>共 ${r.total.toLocaleString()} 票</small></h2>` + rk.map(({ g, n }, i) => `
-      <div class="vr rr${i === 0 ? ' first' : ''}">${i === 0 ? CROWN : ''}<span class="rk">${i + 1}</span>${ico(g)}<span class="rn">${esc(g.name)}</span>
-        <span class="bar${n ? '' : ' zero'}"><i data-w="${n / top * 100}%">${n ? Math.round(n / r.total * 100) + '%' : ''}</i></span>
-        <span class="vc"><b>${n.toLocaleString()}</b><small> 票</small></span></div>`).join('');
+      <div class="body">${w.banner ? `<img class="wbn" src="${esc(w.banner)}" alt="">` : ico(w, 'wi')}<div style="display:flex;flex-direction:column;gap:inherit"><span class="k">投票結束 · 勝出</span><b>${winName(w.name)}</b><strong class="wp">${wp}<small>%</small></strong><span class="vs">的玩家投給它</span></div></div>`;
+    ranked.innerHTML = '<h2>最終結果</h2>' + rk.map(({ g }, i) => `
+      <div class="vr rr${i === 0 ? ' first' : ''}"><span class="fbox"><span class="fill" data-w="${pc[i]}%"></span></span>${i === 0 ? CROWN : ''}<span class="rk">${i + 1}</span>${ico(g)}<span class="rn">${esc(g.name)}</span>
+        <span class="vc"><b>${pc[i]}<small>%</small></b></span></div>`).join('');
     fitResults();
-    requestAnimationFrame(() => requestAnimationFrame(() => ranked.querySelectorAll('.bar i').forEach(i => i.style.width = i.dataset.w)));
+    requestAnimationFrame(() => requestAnimationFrame(() => ranked.querySelectorAll('.fill').forEach(i => i.style.width = i.dataset.w)));
   } else if (r) {
     winbox.innerHTML = '<span class="lb">投票結束</span><div class="body"><div style="display:flex;flex-direction:column;gap:inherit"><span class="k">投票結束</span><b>結果統計中</b><span class="vs">勝出遊戲將由工作室公布</span></div></div>';
     ranked.innerHTML = '';
@@ -85,7 +84,7 @@ function winName(name) {
   return m ? `<span class="nw">${esc(m[1])}</span><wbr><span class="nw">${esc(m[2])}</span>` : esc(name);
 }
 
-// 結果頁版面: 勝出卡名稱縮字到兩行內、不超出卡片; 名次各列名稱欄取最長名稱的寬度(上限為列寬 38%), 長條就能對齊
+// 結果頁版面: 勝出卡名稱縮字到兩行內、不超出卡片
 function fitResults() {
   if (!pg.classList.contains('end') || pg.classList.contains('pending')) return;
   const b = document.querySelector('#winbox .body b');
@@ -99,11 +98,6 @@ function fitResults() {
     };
     while (!fits() && fs > min) { fs -= 2; b.style.fontSize = fs + 'px'; }
   }
-  const rows = [...ranked.querySelectorAll('.rr')];
-  if (!rows.length || !rows[0].offsetParent || getComputedStyle(rows[0]).display !== 'grid' || innerWidth <= 1000) { ranked.style.removeProperty('--rnw'); return; }
-  ranked.style.setProperty('--rnw', 'max-content');
-  const need = Math.max(...rows.map(r => r.querySelector('.rn').getBoundingClientRect().width));
-  ranked.style.setProperty('--rnw', Math.ceil(Math.min(need, rows[0].clientWidth * 0.38)) + 'px');
 }
 let fitT;
 addEventListener('resize', () => { clearTimeout(fitT); fitT = setTimeout(fitResults, 120); });

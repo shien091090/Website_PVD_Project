@@ -333,6 +333,8 @@ body[data-pg="vote"] .thm { left: auto; right: calc(12px + env(safe-area-inset-r
 .win .body { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 22px; min-height: 0; }
 .win .body b { font: 900 56px/1 var(--font); }
 .win .body .vs { font: 700 18px/1 var(--font); }
+.win .body .wp { font: 900 72px/.9 var(--font); font-variant-numeric: tabular-nums; letter-spacing: -.02em; margin-bottom: -14px; }
+.win .body .wp small { font-size: .45em; margin-left: 2px; }
 .win .todev { display: flex; justify-content: center; background: var(--ink); color: var(--on-ink); border-radius: 999px; padding: 15px; font: 900 17px/1 var(--font); text-decoration: none; }
 .win .todev:hover { background: var(--red); }
 .rr { cursor: default; gap: 20px; }
@@ -340,13 +342,10 @@ body[data-pg="vote"] .thm { left: auto; right: calc(12px + env(safe-area-inset-r
 .rr .rk { width: 34px; font: 900 34px/1 var(--font); text-align: center; flex: none; }
 .rr .icon { width: clamp(52px, 8.5vh, 72px); height: clamp(52px, 8.5vh, 72px); border-radius: 16px; font-size: clamp(28px, 4.8vh, 40px); }
 .rr .rn { width: 120px; font: 900 26px/1 var(--font); flex: none; }
-.rr .bar { flex: 1; height: 34px; background: var(--chip); border-radius: 10px; overflow: hidden; }
-.rr .bar i { display: block; height: 100%; width: 0; background: #c9c4d6; border-right: 3px solid var(--ink); border-radius: 10px; box-sizing: border-box; transition: width .8s cubic-bezier(.2,.8,.2,1); }
 .rr.first { box-shadow: 6px 6px 0 var(--hard); }
-.rr.first .bar i { background: var(--red); }
 .rr .vc { width: 120px; text-align: right; flex: none; }
 .rr .vc b { font: 900 30px/1 var(--font); font-variant-numeric: tabular-nums; }
-.rr .vc small { font: 700 13px/1 var(--font); color: var(--muted); }
+.rr .vc small { font: 900 .55em/1 var(--font); margin-left: 1px; }
 /* 題目區: 沒投時是題目 + 一行說明; 投完換成綠底「已完成投票! 你投給了 (icon) 名稱」, 高度固定避免選項跳動 */
 .vhead { flex: none; min-height: 78px; display: flex; flex-direction: column; justify-content: center; gap: 6px; box-sizing: border-box; }
 .vhead h2 { margin: 0; }
@@ -403,8 +402,8 @@ body[data-pg="vote"] .thm { left: auto; right: calc(12px + env(safe-area-inset-r
   .win .body .k { font: 700 12px/1 var(--font); }
   .win .body b { font-size: 26px; }
   .win .body .vs { font-size: 13px; }
+  .win .body .wp { font-size: 30px; margin-bottom: -4px; }
   .rr .vc { order: 1; }
-  .rr .bar { order: 2; }
   .win .todev { background: none; color: var(--ink); padding: 0; justify-content: flex-start; font-size: 13px; text-decoration: underline; }
   .win .todev:hover { background: none; color: var(--red); }
   .rr { flex-wrap: wrap; gap: 6px 10px; padding: 10px 14px; align-content: center; }
@@ -413,8 +412,6 @@ body[data-pg="vote"] .thm { left: auto; right: calc(12px + env(safe-area-inset-r
   .rr .rn { flex: 1; width: auto; font-size: 16px; }
   .rr .vc { width: auto; }
   .rr .vc b { font-size: 19px; }
-  .rr .bar { flex: 0 0 100%; height: 12px; border-radius: 6px; }
-  .rr .bar i { border-right-width: 2px; border-radius: 6px; }
   .rr.first { box-shadow: 4px 4px 0 var(--hard); }
 }
 @media (min-width: 721px) { .cd .side { display: contents; } .cd .side .lb, .win .body .k { display: none; } }
@@ -504,15 +501,14 @@ html:has(body[data-pg="game"]), body[data-pg="game"] { touch-action: manipulatio
 #pg-vote.pending .vmain { display: flex; align-items: center; justify-content: center; }
 #pg-vote.pending #ranked { display: none; }
 #pg-vote.pending .win { flex: none; width: min(100%, 520px); min-height: 240px; }
-@media (min-width: 721px) and (max-width: 1000px) { .rr { gap: 12px; padding: 0 16px; } .rr .rn { min-width: 0; max-width: 6em; font-size: 22px; } .rr .vc { width: auto; } .rr .bar { min-width: 40px; } }
+@media (min-width: 721px) and (max-width: 1000px) { .rr { gap: 12px; padding: 0 16px; } .rr .rn { min-width: 0; max-width: 6em; font-size: 22px; } .rr .vc { width: auto; } }
 
 /* 勝出卡名稱: 字數多時由 vote.js 縮字, 維持兩行內; 「中文(英文)」在括號前換行 */
 .win .body b { line-height: 1.08; overflow-wrap: anywhere; }
 .win .body b .nw { display: inline-block; white-space: nowrap; }
 /* 結果名次(電腦): 各列共用同一組欄寬, 長條起點與終點對齊(名稱欄寬由 vote.js 量最長的名稱); 第一名放大, 其他縮小 */
 @media (min-width: 721px) {
-  #ranked { --rnw: 9em; }
-  .rr { display: grid; grid-template-columns: 48px 108px var(--rnw) minmax(40px, 1fr) 110px; column-gap: 20px; flex: 1; min-height: 56px; }
+  .rr { display: grid; grid-template-columns: 48px 108px minmax(0, 1fr) auto; column-gap: 20px; flex: 1; min-height: 56px; }
   .rr.first { flex: 1.7; }
   .rr .rk, .rr .vc { width: auto; }
   .rr .rn { width: auto; min-width: 0; max-width: none; white-space: normal; overflow: visible; line-height: 1.1; }
@@ -520,20 +516,15 @@ html:has(body[data-pg="game"]), body[data-pg="game"] { touch-action: manipulatio
   .rr.first .rk { font-size: 42px; }
   .rr.first .icon { width: clamp(60px, 10vh, 80px); height: clamp(60px, 10vh, 80px); border-radius: 18px; font-size: clamp(32px, 5.6vh, 46px); }
   .rr.first .rn { font-size: 30px; }
-  .rr.first .bar { height: 40px; }
   .rr.first .vc b { font-size: 38px; }
   .rr:not(.first) { border-width: 2px; }
   .rr:not(.first) .rk { font-size: 24px; color: var(--muted); }
   .rr:not(.first) .icon { width: clamp(38px, 6vh, 50px); height: clamp(38px, 6vh, 50px); border-radius: 12px; font-size: clamp(20px, 3.4vh, 28px); }
   .rr:not(.first) .rn { font-size: 20px; }
-  .rr:not(.first) .bar { height: 20px; border-radius: 7px; }
-  .rr:not(.first) .bar i { border-radius: 7px; border-right-width: 2px; }
   .rr:not(.first) .vc b { font-size: 22px; }
 }
 @media (min-width: 721px) and (max-width: 1000px) {
-  /* 窄視窗: 長條移到名稱下方一整行, 才有足夠長度 */
-  .rr { grid-template-columns: 34px 76px minmax(0, 1fr) auto; grid-template-areas: "rk ic rn vc" "rk ic bar bar"; align-content: center; gap: 6px 12px; padding: 10px 16px; }
-  .rr .rk { grid-area: rk; } .rr .icon { grid-area: ic; } .rr .rn { grid-area: rn; } .rr .vc { grid-area: vc; } .rr .bar { grid-area: bar; }
+  .rr { grid-template-columns: 34px 76px minmax(0, 1fr) auto; align-content: center; gap: 6px 12px; padding: 10px 16px; }
   .rr.first .rn { font-size: 24px; }
   .rr:not(.first) .rn { font-size: 17px; }
 }
@@ -543,12 +534,10 @@ html:has(body[data-pg="game"]), body[data-pg="game"] { touch-action: manipulatio
   .rr.first { flex: 1.5; }
   .rr.first .rn { font-size: 19px; }
   .rr.first .vc b { font-size: 23px; }
-  .rr.first .bar { height: 16px; }
   .rr:not(.first) { border-width: 2px; }
   .rr:not(.first) .rk { color: var(--muted); }
   .rr:not(.first) .rn { font-size: 14px; }
   .rr:not(.first) .vc b { font-size: 16px; }
-  .rr:not(.first) .bar { height: 9px; }
 }
 
 /* 勝出卡: 用遊戲橫幅當主視覺 */
@@ -577,23 +566,12 @@ html:has(body[data-pg="game"]), body[data-pg="game"] { touch-action: manipulatio
   .rr .crown { left: -12px; top: -24px; width: 48px; }
 }
 
-/* 票數條(方案 E): 實心條, 終點寫得票百分比; 第一名紅色加底部暗邊, 其他名次深灰紫 */
-.rr { --bar-o: #8d86a3; }
-:root.dark .rr { --bar-o: #6d6a78; }
-.rr .bar { background: var(--chip); }
-.rr .bar i { display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; min-width: 2.8em; background: var(--bar-o); border-right: 0; color: #fff; font: 900 12px/1 var(--font); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; }
-.rr.first .bar i { background: var(--red); font-size: 16px; padding-right: 12px; box-shadow: inset 0 -5px 0 rgba(0, 0, 0, .14); }
-.rr .bar.zero i { min-width: 0; padding: 0; }
-@media (min-width: 721px) {
-  .rr:not(.first) .bar { height: 24px; }
-  .rr:not(.first) .bar i { border-right-width: 0; }
-}
-@media (max-width: 720px) {
-  .rr.first .bar { height: 22px; }
-  .rr:not(.first) .bar { height: 16px; }
-  .rr .bar i { font-size: 10px; padding-right: 6px; }
-  .rr.first .bar i { font-size: 12px; padding-right: 8px; box-shadow: inset 0 -3px 0 rgba(0, 0, 0, .14); }
-}
+/* 結果名次(方案 B): 整列就是長條, 底色從左填到得票百分比; 第一名紅色, 只顯示百分比不顯示票數 */
+.rr { position: relative; isolation: isolate; --fill: rgba(141, 134, 163, .22); --fill1: rgba(245, 85, 74, .42); }
+.rr .fbox { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; z-index: -1; pointer-events: none; }
+:root.dark .rr { --fill: rgba(168, 165, 174, .16); --fill1: rgba(245, 85, 74, .34); }
+.rr .fill { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--fill); transition: width .8s cubic-bezier(.2,.8,.2,1); }
+.rr.first .fill { background: var(--fill1); }
 
 /* 開發頁自介: 名字下面接工作室名稱, 最後一行 email */
 .studio .who .org { font: 700 15px/1.4 var(--font); color: var(--muted); margin-top: -4px; }

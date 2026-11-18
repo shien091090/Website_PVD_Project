@@ -57,15 +57,18 @@ test('已投的那款再點一次就取消投票, 重新整理後也沒有票', 
   await ctx.close();
 });
 
-test('已結束: 勝出卡與 4 條長條, 全站結束狀態', async () => {
+test('已結束: 勝出卡與 4 列名次只顯示百分比, 全站結束狀態', async () => {
   round(-7200000, -3600000);
   votes([['a', 'bubble-tempo'], ['b', 'bubble-tempo'], ['c', 'bubble-tempo'], ['d', 'jelly-jinni']]);
   const ctx = await browser.newContext(PC);
   const page = await ctx.newPage();
   await page.goto(srv.url + '#vote');
   await page.locator('#winbox:has-text("Bubble Tempo")').waitFor();
-  assert.match(await page.locator('#winbox').textContent(), /3 票 · 佔 75%/);
+  assert.match(await page.locator('#winbox').textContent(), /75%的玩家投給它/);
   assert.equal(await page.locator('#ranked .rr').count(), 4);
+  // 只公布百分比, 頁面上不出現票數
+  assert.deepEqual(await page.locator('#ranked .rr .vc').allTextContents(), ['75%', '25%', '0%', '0%']);
+  assert.doesNotMatch(await page.locator('#pg-vote').textContent(), /\d+\s*票/);
   assert.ok(await page.locator('#pg-vote .tab[data-k="vote"] .badge').isVisible());
   await page.goto(srv.url + '#play');
   assert.ok(await page.locator('.vnote:has-text("投票已結束，但遊戲仍可以試玩")').isVisible());
