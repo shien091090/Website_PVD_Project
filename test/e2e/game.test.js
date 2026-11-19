@@ -247,7 +247,9 @@ test('遊戲清單電腦手機都用橫幅當按鈕, 沒橫幅的用主色暫代
     await page.locator('#glist .gh').first().waitFor();
     const zoo = page.locator('.gh:has-text("塔防＋組裝")');
     assert.match(await zoo.locator('img.cv').getAttribute('src'), /soul-smith-defense-banner\.png$/, w);
-    assert.equal(await zoo.locator('.chip').textContent(), byCode('soul-smith-defense').time);
+    assert.equal(await zoo.locator('.chip').count(), 0, '清單不放時長');
+    const tag = await page.locator('.gi:has(.gh:has-text("塔防＋組裝")) .tagp').boundingBox(), card = await zoo.boundingBox();
+    assert.ok(tag.x < card.x && tag.y < card.y, '類型標籤突出卡片左上角');
     await page.waitForFunction(() => [...document.querySelectorAll('#glist img.cv')].every(i => i.complete));
     const box = await zoo.boundingBox();
     assert.ok(Math.abs(box.width / box.height - 21 / 9) < 0.35, `${w} 格子 ${box.width}x${box.height}`);
