@@ -339,7 +339,7 @@ test('遊戲有回報載入進度時, 載入畫面顯示百分比, 等遊戲說�
   await ctx.close();
 });
 
-test('30 秒介紹: 清單橫幅與介紹卡片都能開彈窗, 不是全螢幕, Esc 關掉後焦點回到按鈕; 手機點它不會拉出抽屜', async () => {
+test('30 秒介紹: 清單橫幅開彈窗, 不是全螢幕, Esc 關掉後焦點回到按鈕; 手機點它不會拉出抽屜', async () => {
   for (const opt of [PC, PHONE]) {
     const ctx = await browser.newContext(opt);
     const page = await ctx.newPage();
@@ -360,8 +360,9 @@ test('30 秒介紹: 清單橫幅與介紹卡片都能開彈窗, 不是全螢幕,
     assert.equal(await page.locator('.trl.on').count(), 0);
     assert.equal(await btn.evaluate(b => b === document.activeElement), true, '焦點回到按鈕');
     if (opt === PC) {
-      await page.click('#detail .trbtn');
-      await page.locator('.trl.on .top b:has-text("塔防＋組裝")').waitFor();
+      assert.equal(await page.locator('#detail [data-trailer]').count(), 0, '介紹卡片不重複放按鈕');
+      await btn.click();
+      await dlg.waitFor();
       await page.mouse.click(5, 5); // 點彈窗外面關掉
       assert.equal(await page.locator('.trl.on').count(), 0);
     }

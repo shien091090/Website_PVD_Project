@@ -251,10 +251,6 @@ body.vend .pmain { --vn: 60px; }
 .dl .hd b { font: 900 clamp(24px, 2.2vw, 32px)/1.15 var(--font); }
 .acts { display: flex; flex-direction: column; gap: 14px; padding-top: 16px; }
 .dl .startbtn { padding: 16px; font-size: 22px; }
-.trbtn { display: inline-flex; align-items: center; gap: 8px; align-self: flex-start; background: transparent; color: var(--fg); border: 2px solid var(--ink); border-radius: 999px; padding: 6px 14px 6px 8px; font: 700 13px/1 var(--font); cursor: pointer; }
-.trbtn .p { width: 22px; height: 22px; border-radius: 50%; background: var(--red); display: grid; place-items: center; flex: none; }
-.trbtn .p::before { content: ""; margin-left: 2px; border-style: solid; border-width: 5px 0 5px 8px; border-color: transparent transparent transparent #fff; }
-.trbtn:hover { background: var(--hov); }
 /* 介紹影片彈窗: 置中, 最寬 880px, 不是全螢幕 */
 .trl { position: fixed; inset: 0; z-index: 60; display: none; place-items: center; background: rgba(20, 14, 32, .72);
   padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }

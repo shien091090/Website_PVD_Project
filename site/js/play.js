@@ -36,9 +36,9 @@ if (!(myAv >= 0 && myAv < AV.length)) myAv = Math.floor(Math.random() * AV.lengt
 const band = (g, extra = '') => `<div class="band"${g.pattern ? ` style="background-image:url('${esc(g.pattern)}')"` : ''}>${extra}</div>`;
 // 標題是核心玩法標籤, 正下方一個淺色框: 第一列遊戲玩法, 第二列時長(不顯示遊戲簡介)
 const info = g => `<dl class="info">${g.pitch ? `<dt>遊戲玩法</dt><dd>${esc(g.pitch)}</dd>` : ''}<dt>時長</dt><dd>${esc(g.time)}</dd></dl>`;
-// 30 秒介紹影片按鈕: 清單橫幅右下角一顆、介紹卡片資訊框下方一顆
+// 30 秒介紹影片按鈕: 只放在清單橫幅右下角(介紹卡片不重複放)
 const trBtn = (g, cls, text) => `<button type="button" class="${cls}" data-trailer="${g.code}" aria-label="播放${esc(tagOf(g))}的 30 秒介紹影片">${text}</button>`;
-const head = g => `<div class="hd">${ico(g)}<div class="ht"><b>${esc(tagOf(g))}</b>${info(g)}${trBtn(g, 'trbtn', '<span class="p"></span>看 30 秒介紹影片')}</div></div>`;
+const head = g => `<div class="hd">${ico(g)}<div class="ht"><b>${esc(tagOf(g))}</b>${info(g)}</div></div>`;
 
 export function renderPlay() {
   const mob = mobileQ.matches;
