@@ -5,7 +5,7 @@ import * as stateApi from '../../functions/api/state.js';
 import * as voteApi from '../../functions/api/vote.js';
 import * as roundsApi from '../../functions/api/admin/rounds.js';
 import * as winnerApi from '../../functions/api/admin/winner.js';
-import { winnerOf } from '../../functions/lib/votes.js';
+import { winnerOf, percents } from '../../functions/lib/votes.js';
 
 const H = 3_600_000, T0 = 1_800_000_000_000;
 function setup() {
@@ -94,9 +94,8 @@ test('同票: 統計中, 後台指定後顯示勝出與票數', async () => {
   const r = (await s.state()).body.results;
   assert.equal(r.pending, false);
   assert.equal(r.winner, 'jelly-jinni');
-  assert.equal(r.total, 5); // 後台指定勝出款前台多加 1 票
-  assert.equal(r.counts['jelly-jinni'], 3);
-  assert.equal(r.counts['bubble-tempo'], 2);
+  assert.deepEqual(r.pct, { 'jelly-jinni': 60, 'bubble-tempo': 40, 'dungeon-zoo': 0, 'soul-smith-defense': 0 }); // 後台指定勝出款前台多算 1 票: 3:2
+  assert.ok(!/counts|total/.test(JSON.stringify(r)), '結果不含票數');
   assert.equal((await s.call(roundsApi.onRequestGet, 'GET', '/api/admin/rounds')).body.rounds[0].counts['jelly-jinni'], 2); // 後台仍是原始票數
 });
 
@@ -105,7 +104,9 @@ test('唯一最高票直接勝出; 非同票不能指定', async () => {
   await s.round(T0 - H, T0 + H);
   await s.vote('dungeon-zoo', { vid: 'a' }); await s.vote('dungeon-zoo', { vid: 'b' }); await s.vote('jelly-jinni', { vid: 'c' });
   s.set(T0 + 2 * H);
-  assert.equal((await s.state()).body.results.winner, 'dungeon-zoo');
+  const r = (await s.state()).body.results;
+  assert.equal(r.winner, 'dungeon-zoo');
+  assert.deepEqual(r.pct, { 'dungeon-zoo': 67, 'jelly-jinni': 33, 'bubble-tempo': 0, 'soul-smith-defense': 0 });
   assert.equal((await s.call(winnerApi.onRequestPut, 'PUT', '/api/admin/winner', { roundId: 1, game: 'jelly-jinni' })).body.error.code, 'not_tie');
 });
 
@@ -203,4 +204,12 @@ test('資料庫升級時, 既有輪次自動補上第一波 4 款候選', async 
   db.exec(readFileSync(new URL('../../migrations/0003_round_options.sql', import.meta.url), 'utf8'));
   assert.deepEqual(db.prepare('SELECT option_id FROM round_options WHERE round_id = 1 ORDER BY sort').all().map(r => r.option_id),
     ['bubble-tempo', 'jelly-jinni', 'soul-smith-defense', 'dungeon-zoo']);
+});
+
+test('得票百分比四捨五入成整數且加總剛好 100', () => {
+  assert.deepEqual(percents([58, 41, 27]), [46, 33, 21]);
+  assert.deepEqual(percents([1, 1, 1]), [34, 33, 33]);
+  assert.deepEqual(percents([2, 1, 0]), [67, 33, 0]);
+  assert.deepEqual(percents([0, 0]), [0, 0]);
+  for (const n of [[7, 3, 5, 9], [1, 2, 3, 4, 5], [999, 1]]) assert.equal(percents(n).reduce((a, b) => a + b, 0), 100);
 });

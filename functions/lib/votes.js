@@ -45,3 +45,13 @@ export function winnerOf(counts, adminWinner) {
 export async function myVote(db, roundId, vid) {
   return (await db.prepare('SELECT game FROM votes WHERE round_id = ? AND vid = ?').bind(roundId, vid).first('game')) || null;
 }
+
+// 票數換成整數百分比, 加總剛好 100(餘數依小數大小分配, 同小數給排前面的)
+export function percents(nums) {
+  const total = nums.reduce((a, b) => a + b, 0);
+  if (!total) return nums.map(() => 0);
+  const raw = nums.map(n => n / total * 100), out = raw.map(Math.floor);
+  const left = 100 - out.reduce((a, b) => a + b, 0);
+  raw.map((r, i) => [r - out[i], i]).sort((a, b) => b[0] - a[0] || a[1] - b[1]).slice(0, left).forEach(([, i]) => out[i]++);
+  return out;
+}

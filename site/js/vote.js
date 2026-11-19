@@ -1,5 +1,5 @@
 import { byCode } from './games.js';
-import { splitCountdown, deadlineLabel, esc, percents } from './format.js';
+import { splitCountdown, deadlineLabel, esc } from './format.js';
 import { ico } from './play.js';
 import * as store from './store.js';
 
@@ -59,10 +59,10 @@ export function render() {
   if (r && !r.pending) {
     const opts = options();
     const w = opts.find(g => g.code === r.winner) || optOf({ id: r.winner, label: r.winner });
-    const rk = opts.map(g => ({ g, n: r.counts[g.code] || 0 }))
-      .sort((a, b) => (b.g === w) - (a.g === w) || b.n - a.n); // 勝出款排第一(同票由後台指定時也一樣)
-    const pc = percents(rk.map(x => x.n)); // 只公布百分比, 不公布票數
-    const wp = pc[rk.findIndex(x => x.g === w)];
+    const rk = opts.map(g => ({ g, p: r.pct[g.code] || 0 }))
+      .sort((a, b) => (b.g === w) - (a.g === w) || b.p - a.p); // 勝出款排第一(同票由後台指定時也一樣)
+    const pc = rk.map(x => x.p); // 伺服器只給百分比, 不給票數
+    const wp = pc[0];
     winbox.innerHTML = `
       <span class="lb">投票結束 · 勝出</span>
       <div class="body">${w.banner ? `<img class="wbn" src="${esc(w.banner)}" alt="">` : ico(w, 'wi')}<div style="display:flex;flex-direction:column;gap:inherit"><span class="k">投票結束 · 勝出</span><b>${winName(w.name)}</b><strong class="wp">${wp}<small>%</small></strong><span class="vs">的玩家投給它</span></div></div>`;
