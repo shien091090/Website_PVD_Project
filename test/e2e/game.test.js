@@ -162,8 +162,8 @@ test('電腦版介紹收成上方橫條: 按鈕在介紹右側, 去投票是靠�
   await vote.waitFor();
   assert.equal(await vote.getAttribute('href'), '#vote');
   const box = s => page.locator(s).boundingBox();
-  const [det, dl, dr, p, start, v] = await Promise.all(['#detail', '#detail .dl', '#detail .dr', '#detail .dl p', '#detail .startbtn', '#detail .votebtn'].map(box));
-  assert.ok(start.x >= p.x + p.width, '開始試玩在介紹文字右側');
+  const [det, dl, dr, p, start, v] = await Promise.all(['#detail', '#detail .dl', '#detail .dr', '#detail .info', '#detail .startbtn', '#detail .votebtn'].map(box));
+  assert.ok(start.x >= p.x + p.width, '開始試玩在遊戲玩法框右側');
   assert.ok(v.y >= start.y + start.height, '去投票在開始試玩下方');
   assert.ok(Math.abs(v.x + v.width - (start.x + start.width)) <= 2, '去投票靠右對齊');
   assert.ok(v.height < start.height && v.width < start.width, '去投票比開始試玩小');
@@ -288,7 +288,7 @@ test('不顯示建議裝置; 用手機看才提示建議用電腦, 放在開始�
   const page = await ctx.newPage();
   await page.goto(srv.url + '#play/bubble-tempo');
   await page.locator('.detail .startbtn').waitFor();
-  assert.doesNotMatch(await page.locator('.detail .meta').textContent(), /裝置/);
+  assert.doesNotMatch(await page.locator('.detail .info').textContent(), /裝置/);
   assert.equal(await page.locator('.detail .rec').count(), 0, '電腦不提示');
   await ctx.close();
 

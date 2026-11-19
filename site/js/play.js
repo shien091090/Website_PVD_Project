@@ -33,9 +33,9 @@ if (!(myAv >= 0 && myAv < AV.length)) myAv = Math.floor(Math.random() * AV.lengt
 
 // 介紹頂端的色帶: 有圖樣鋪圖樣, 沒有用純主色; 名稱和時長放在色帶下方的白底, 圖示壓在色帶下緣
 const band = (g, extra = '') => `<div class="band"${g.pattern ? ` style="background-image:url('${esc(g.pattern)}')"` : ''}>${extra}</div>`;
-// 標題是核心玩法標籤, 正下方一行「遊戲玩法」當副標題, 再下面才是時長與介紹
-const how = g => g.pitch ? `<span class="how"><span>遊戲玩法：</span>${esc(g.pitch)}</span>` : '';
-const head = (g, meta) => `<div class="hd">${ico(g)}<div class="ht"><b>${esc(tagOf(g))}</b>${how(g)}${meta}</div></div>`;
+// 標題是核心玩法標籤, 正下方一個淺色框: 第一列遊戲玩法, 第二列時長(不顯示遊戲簡介)
+const info = g => `<dl class="info">${g.pitch ? `<dt>遊戲玩法</dt><dd>${esc(g.pitch)}</dd>` : ''}<dt>時長</dt><dd>${esc(g.time)}</dd></dl>`;
+const head = g => `<div class="hd">${ico(g)}<div class="ht"><b>${esc(tagOf(g))}</b>${info(g)}</div></div>`;
 
 export function renderPlay() {
   const mob = mobileQ.matches;
@@ -53,8 +53,8 @@ export function renderPlay() {
     const g = GAMES[sel];
     psheet.innerHTML = `<div class="bd"></div>
       <div class="pn" role="dialog" aria-modal="true" aria-label="${esc(tagOf(g))}" style="--c:${g.bg};--fc:${g.fg}">
-        ${band(g, '<button class="x" aria-label="關閉">✕</button>')}${head(g, `<span class="tm">${esc(g.time)}</span>`)}
-        <div class="gb"><p>${esc(g.intro)}</p>${startBtn(g)}${voteBtn}<div class="board" data-code="${g.code}" style="display:contents">${board.html(g.code)}</div></div>
+        ${band(g, '<button class="x" aria-label="關閉">✕</button>')}${head(g)}
+        <div class="gb">${startBtn(g)}${voteBtn}<div class="board" data-code="${g.code}" style="display:contents">${board.html(g.code)}</div></div>
       </div>`;
     board.mount(psheet.querySelector('.board'), g.code);
   } else psheet.innerHTML = '';
@@ -62,7 +62,7 @@ export function renderPlay() {
     const g = GAMES[sel];
     detail.innerHTML = `
       <div class="dl" style="--c:${g.bg};--fc:${g.fg}">
-        ${band(g)}<div class="drow">${head(g, `<dl class="meta"><dt>時長</dt><dd>${esc(g.time)}</dd></dl><p>${esc(g.intro)}</p>`)}<div class="acts">${startBtn(g)}${voteBtn}</div></div>
+        ${band(g)}<div class="drow">${head(g)}<div class="acts">${startBtn(g)}${voteBtn}</div></div>
       </div>
       <div class="dr board" data-code="${g.code}">${board.html(g.code)}</div>`;
     board.mount(detail.querySelector('.board'), g.code);

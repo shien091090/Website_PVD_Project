@@ -222,7 +222,6 @@ body.vend .pmain { --vn: 60px; }
 .psheet .hd .icon { width: 68px; height: 68px; border-radius: 16px; font-size: 36px; margin-top: -34px; box-shadow: 3px 3px 0 var(--hard); }
 .psheet .ht { gap: 7px; padding-top: 8px; }
 .psheet .hd b { font: 900 21px/1.15 var(--font); }
-.psheet .tm { font: 700 13px/1 var(--font); color: var(--muted); }
 .psheet .gb { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px)); }
 @keyframes up { from { transform: translateY(100%); } }
 @keyframes fade { from { opacity: 0; } }
@@ -239,9 +238,12 @@ body.vend .pmain { --vn: 60px; }
 .dl .hd b { font: 900 clamp(24px, 2.2vw, 32px)/1.15 var(--font); }
 .acts { display: flex; flex-direction: column; gap: 14px; padding-top: 16px; }
 .dl .startbtn { padding: 16px; font-size: 22px; }
-.how { font: 700 15px/1.5 var(--font); background: var(--chip); border-radius: 10px; padding: 7px 12px; align-self: flex-start; overflow-wrap: anywhere; }
-.how > span { color: var(--muted); }
-.psheet .how { font-size: 14px; padding: 6px 10px; }
+.info { display: grid; grid-template-columns: auto minmax(0, 1fr); margin: 0; font: 700 15px/1.5 var(--font); background: var(--chip); border-radius: 12px; padding: 4px 14px; align-self: flex-start; max-width: 100%; box-sizing: border-box; }
+.info dt { color: var(--muted); white-space: nowrap; padding: 6px 16px 6px 0; }
+.info dd { margin: 0; overflow-wrap: anywhere; padding: 6px 0; }
+.info dd ~ dt, .info dd ~ dt + dd { border-top: 1px solid var(--line); } /* 遊戲玩法與時長之間的淡分隔線 */
+.psheet .info { font-size: 14px; padding: 2px 12px; }
+.psheet .info dt { padding: 5px 12px 5px 0; } .psheet .info dd { padding: 5px 0; }
 .meta { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 10px 18px; font: 700 15px/1.4 var(--font); }
 .meta dt { color: var(--muted); }
 .meta dd { margin: 0; }
