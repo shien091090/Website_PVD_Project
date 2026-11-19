@@ -50,7 +50,10 @@ for (const code of codes) {
     cpSync(join(RELEASE[code], 'assets', 'icon.png'), `site/media/games/${code}.png`);
     cpSync(join(RELEASE[code], 'assets', 'banner.png'), `site/media/games/${code}-banner.png`);
     cpSync(join(RELEASE[code], 'assets', 'pattern.png'), `site/media/games/${code}-pattern.png`);
-    games = applyInfo(games, infos[code], `media/games/${code}.png`, `media/games/${code}-banner.png`, `media/games/${code}-pattern.png`);
+    // 介紹影片放 media/ 第一層, 才會經過支援拖拉進度的影片轉送; 發布版拿掉影片時網站也跟著拿掉
+    const tr = join(RELEASE[code], 'assets', 'trailer.mp4'), trDst = `site/media/trailer-${code}.mp4`;
+    if (existsSync(tr)) cpSync(tr, trDst); else rmSync(trDst, { force: true });
+    games = applyInfo(games, infos[code], `media/games/${code}.png`, `media/games/${code}-banner.png`, `media/games/${code}-pattern.png`, existsSync(tr) ? `media/trailer-${code}.mp4` : null);
   }
   console.log(`${code} ← ${src}`);
 }

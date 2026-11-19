@@ -2,6 +2,7 @@ import { GAMES, tagOf } from './games.js';
 import { AV, avHtml } from './avatars.js';
 import * as store from './store.js';
 import { esc } from './format.js';
+import { openTrailer } from './trailer.js';
 
 // 試玩頁(1b): 電腦左清單 + 右詳情(上方介紹橫條、下方留言板); 手機點一款從底部拉出抽屜
 export const mobileQ = matchMedia('(max-width: 720px)');
@@ -35,7 +36,9 @@ if (!(myAv >= 0 && myAv < AV.length)) myAv = Math.floor(Math.random() * AV.lengt
 const band = (g, extra = '') => `<div class="band"${g.pattern ? ` style="background-image:url('${esc(g.pattern)}')"` : ''}>${extra}</div>`;
 // 標題是核心玩法標籤, 正下方一個淺色框: 第一列遊戲玩法, 第二列時長(不顯示遊戲簡介)
 const info = g => `<dl class="info">${g.pitch ? `<dt>遊戲玩法</dt><dd>${esc(g.pitch)}</dd>` : ''}<dt>時長</dt><dd>${esc(g.time)}</dd></dl>`;
-const head = g => `<div class="hd">${ico(g)}<div class="ht"><b>${esc(tagOf(g))}</b>${info(g)}</div></div>`;
+// 30 秒介紹影片按鈕: 清單橫幅右下角一顆、介紹卡片資訊框下方一顆
+const trBtn = (g, cls, text) => `<button type="button" class="${cls}" data-trailer="${g.code}" aria-label="播放${esc(tagOf(g))}的 30 秒介紹影片">${text}</button>`;
+const head = g => `<div class="hd">${ico(g)}<div class="ht"><b>${esc(tagOf(g))}</b>${info(g)}${trBtn(g, 'trbtn', '<span class="p"></span>看 30 秒介紹影片')}</div></div>`;
 
 export function renderPlay() {
   const mob = mobileQ.matches;
@@ -46,6 +49,7 @@ export function renderPlay() {
         ? `<img class="cv" src="${esc(g.banner)}" alt=""><b class="tagp"><i></i>${esc(tagOf(g))}</b>`
         : `<span class="fb">${ico(g)}<b>${esc(tagOf(g))}</b></span>`}
         <span class="chip">${esc(g.time)}</span></button>
+      ${trBtn(g, 'vb', '30 秒介紹')}
     </div>`).join('');
   const open = mob && sel != null;
   psheet.classList.toggle('on', open);
@@ -91,6 +95,7 @@ export function initPlay(opts = {}) {
     onOpen(GAMES[sel].code);
     psheet.querySelector('.x')?.focus();
   });
+  document.addEventListener('click', e => { const b = e.target.closest('[data-trailer]'); if (b) openTrailer(b.dataset.trailer, b); });
   const closeSheet = () => { if (!mobileQ.matches || sel == null) return; const i = sel; sel = null; renderPlay(); glist.querySelector(`[data-i="${i}"]`)?.focus(); };
   psheet.addEventListener('click', e => { if (e.target.closest('.x') || e.target.classList.contains('bd')) closeSheet(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !avpop.classList.contains('on')) closeSheet(); });

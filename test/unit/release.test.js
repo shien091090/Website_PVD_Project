@@ -113,3 +113,10 @@ test('不用再提供建議裝置; 舊的 info.json 還帶著也不擋、不寫�
   const out = applyInfo(readFileSync('site/js/games.js', 'utf8'), { ...INFO, device: 'mobile' }, null, null);
   assert.doesNotMatch(out, /device/);
 });
+
+test('有介紹影片時遊戲資料帶上影片路徑, 沒有就不帶', async () => {
+  const src = readFileSync('site/js/games.js', 'utf8');
+  const load = async out => (await import('data:text/javascript,' + encodeURIComponent(out))).ALL_GAMES.find(x => x.code === 'dungeon-zoo');
+  assert.equal((await load(applyInfo(src, INFO, 'a.png', 'b.png', 'c.png', 'media/trailer-dungeon-zoo.mp4'))).trailer, 'media/trailer-dungeon-zoo.mp4');
+  assert.equal((await load(applyInfo(src, INFO, 'a.png', 'b.png', 'c.png'))).trailer, undefined);
+});

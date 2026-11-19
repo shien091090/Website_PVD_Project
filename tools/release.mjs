@@ -23,6 +23,8 @@ export function checkRelease(dir) {
     if (/\.(js|html)$/i.test(f) && DOWNLOAD.test(readFileSync(f, 'utf8'))) errors.push(`程式裡有下載檔案的寫法: ${rel}`);
   }
   for (const f of ['icon.png', 'banner.png', 'pattern.png']) if (!existsSync(join(dir, 'assets', f))) errors.push(`release/assets/ 裡沒有 ${f}`);
+  const trailer = join(dir, 'assets', 'trailer.mp4'); // 30 秒介紹影片, 選填
+  if (existsSync(trailer) && statSync(trailer).size > LIMIT) errors.push('介紹影片 trailer.mp4 超過 25MB');
 
   let info = null;
   const infoPath = join(dir, 'assets', 'info.json');
@@ -43,11 +45,11 @@ export function checkRelease(dir) {
 const q = s => `'${String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
 
 // 只換掉 games.js 裡這款遊戲的那一筆, 其他內容原樣保留
-export function applyInfo(src, info, icon, banner, pattern) {
+export function applyInfo(src, info, icon, banner, pattern, trailer = null) {
   const re = new RegExp(`  \\{ code: '${info.code}',[\\s\\S]*?\\},\\r?\\n`);
   if (!re.test(src)) throw new Error(`games.js 裡找不到 ${info.code}`);
   const name = info.name?.trim() || info.tag; // 名稱選填, 只給後台與讀屏用; 沒給就用標籤
   const entry = `  { code: ${q(info.code)}, name: ${q(name)}, tag: ${q(info.tag)}, letter: ${q([...name][0])}, time: ${q(info.time)}, `
-    + `bg: ${q(info.color)}, fg: ${q(info.textColor)}, icon: ${q(icon)}, banner: ${q(banner)}, pattern: ${q(pattern)},\n    pitch: ${q(info.pitch)},\n    intro: ${q(info.intro)} },\n`;
+    + `bg: ${q(info.color)}, fg: ${q(info.textColor)}, icon: ${q(icon)}, banner: ${q(banner)}, pattern: ${q(pattern)},${trailer ? ` trailer: ${q(trailer)},` : ''}\n    pitch: ${q(info.pitch)},\n    intro: ${q(info.intro)} },\n`;
   return src.replace(re, () => entry);
 }

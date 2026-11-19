@@ -336,3 +336,33 @@ test('遊戲有回報載入進度時, 載入畫面顯示百分比, 等遊戲說�
   await ld.waitFor({ state: 'hidden', timeout: 15000 });
   await ctx.close();
 });
+
+test('30 秒介紹: 清單橫幅與介紹卡片都能開彈窗, 不是全螢幕, Esc 關掉後焦點回到按鈕; 手機點它不會拉出抽屜', async () => {
+  for (const opt of [PC, PHONE]) {
+    const ctx = await browser.newContext(opt);
+    const page = await ctx.newPage();
+    await page.goto(srv.url + '#play/soul-smith-defense');
+    await page.locator('#glist .gi').first().waitFor();
+    if (opt === PHONE) await page.goto(srv.url + '#play');
+    const btn = page.locator('#glist .gi:has-text("節奏＋分色") .vb');
+    await btn.click();
+    const dlg = page.locator('.trl.on');
+    await dlg.waitFor();
+    assert.equal(await dlg.locator('.top b').textContent(), '節奏＋分色');
+    const box = await dlg.locator('.box').boundingBox(), vp = page.viewportSize();
+    assert.ok(box.width < vp.width && box.height < vp.height, `彈窗 ${box.width}x${box.height} 小於畫面`);
+    if (opt === PHONE) assert.equal(await page.locator('.psheet.on').count(), 0, '沒有拉出抽屜');
+    else assert.match(await page.locator('#detail .hd b').textContent(), /塔防＋組裝/, '沒有切換選取的遊戲');
+    await page.keyboard.press('Escape');
+    await dlg.waitFor({ state: 'detached' }).catch(() => {});
+    assert.equal(await page.locator('.trl.on').count(), 0);
+    assert.equal(await btn.evaluate(b => b === document.activeElement), true, '焦點回到按鈕');
+    if (opt === PC) {
+      await page.click('#detail .trbtn');
+      await page.locator('.trl.on .top b:has-text("塔防＋組裝")').waitFor();
+      await page.mouse.click(5, 5); // 點彈窗外面關掉
+      assert.equal(await page.locator('.trl.on').count(), 0);
+    }
+    await ctx.close();
+  }
+});
