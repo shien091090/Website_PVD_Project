@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { checkRelease, applyInfo } from '../../tools/release.mjs';
 
 const INFO = {
-  code: 'dungeon-zoo', name: '來馬戲團看一點大場面', intro: '深入地下城戰鬥、捕捉怪物。', time: '18–30 分鐘',
+  code: 'dungeon-zoo', tag: '地城＋經營', pitch: '地城裡抓怪物，帶回馬戲團表演賺錢', name: '來馬戲團看一點大場面', intro: '深入地下城戰鬥、捕捉怪物。', time: '18–30 分鐘',
   color: '#f29cac', textColor: '#2d2144', ratio: '16:9', mobileRatio: '16:9-21:9',
 };
 
@@ -38,6 +38,18 @@ test('合格的發布資料夾沒有錯誤, 並讀出遊戲資料', () => {
   rmSync(d, { recursive: true });
   assert.deepEqual(r.errors, []);
   assert.equal(r.info.name, INFO.name);
+});
+
+test('標籤與遊戲玩法必填, 名稱選填(沒給就用標籤)', async () => {
+  const { tag, pitch, name, ...rest } = INFO;
+  assert.match(errorsOf({ 'assets/info.json': JSON.stringify({ ...rest, pitch }) }).join(' '), /tag/);
+  assert.match(errorsOf({ 'assets/info.json': JSON.stringify({ ...rest, tag }) }).join(' '), /pitch/);
+  assert.deepEqual(errorsOf({ 'assets/info.json': JSON.stringify({ ...rest, tag, pitch }) }), []);
+  const out = applyInfo(readFileSync('site/js/games.js', 'utf8'), { ...rest, tag, pitch }, 'a.png', 'b.png', 'c.png');
+  const { ALL_GAMES } = await import('data:text/javascript,' + encodeURIComponent(out));
+  const g = ALL_GAMES.find(x => x.code === 'dungeon-zoo');
+  assert.equal(g.name, tag);
+  assert.equal(g.letter, '地');
 });
 
 test('沒有入口頁要擋', () => {
@@ -81,8 +93,8 @@ test('套用遊戲資料只改這一款, 其他款不動', async () => {
   const { ALL_GAMES: before } = await import('../../site/js/games.js');
   const g = GAMES.find(x => x.code === 'dungeon-zoo');
   assert.deepEqual(g, {
-    code: 'dungeon-zoo', name: INFO.name, letter: '來', time: INFO.time,
-    bg: INFO.color, fg: INFO.textColor, icon: 'media/games/dungeon-zoo.png', banner: 'media/games/dungeon-zoo-banner.png', pattern: 'media/games/dungeon-zoo-pattern.png', intro: "有'引號'的介紹",
+    code: 'dungeon-zoo', name: INFO.name, tag: INFO.tag, letter: '來', time: INFO.time,
+    bg: INFO.color, fg: INFO.textColor, icon: 'media/games/dungeon-zoo.png', banner: 'media/games/dungeon-zoo-banner.png', pattern: 'media/games/dungeon-zoo-pattern.png', pitch: INFO.pitch, intro: "有'引號'的介紹",
   });
   assert.deepEqual(GAMES.filter(x => x.code !== 'dungeon-zoo'), before.filter(x => x.code !== 'dungeon-zoo'));
 });

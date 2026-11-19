@@ -1,4 +1,4 @@
-import { byCode } from './games.js';
+import { byCode, tagOf } from './games.js';
 import { splitCountdown, deadlineLabel, esc } from './format.js';
 import { ico } from './play.js';
 import * as store from './store.js';
@@ -44,13 +44,13 @@ export function render() {
   const head = document.getElementById('vhead'), live = state.phase === 'live';
   const mine = live && state.myVote && options().find(g => g.code === state.myVote), done = mine && !state.sending;
   head.className = 'vhead' + (done ? ' done' : '');
-  head.innerHTML = done ? `<span class="okc">${CHECK}</span><h2>已完成投票！你投給了 ${ico(mine)}<span>${esc(mine.name)}</span></h2>`
+  head.innerHTML = done ? `<span class="okc">${CHECK}</span><h2>已完成投票！你投給了 ${ico(mine)}<span>${esc(tagOf(mine))}</span></h2>`
     : `<h2>${mine ? '投票送出中…' : '哪一款遊戲你希望開發者繼續做完?'}</h2>${live ? '<small>點一款就完成投票，不用另外按送出</small>' : ''}`;
   const played = new Set(store.get('played', []));
   vrows.innerHTML = state.phase === 'loading' ? '' : state.phase === 'none' ? '<p class="vmsg">投票尚未開放</p>' : options().map(g => `
     <div class="vr${state.myVote === g.code ? ' on' : ''}" role="radio" tabindex="0" aria-checked="${state.myVote === g.code}" data-k="${g.code}">
       <span class="rd">${CHECK}</span>${ico(g)}
-      <span class="nm"><b>${esc(g.name)}</b><span class="st">${played.has(g.code)
+      <span class="nm"><b>${esc(tagOf(g))}</b><span class="st">${played.has(g.code)
         ? '<span class="tag-played">✓ 玩過了</span>'
         : `<span class="tag-un">還沒玩過</span><a class="gotry" href="#play/${g.code}">去試玩 ›</a>`}</span></span>
     </div>`).join('');
@@ -65,9 +65,9 @@ export function render() {
     const wp = pc[0];
     winbox.innerHTML = `
       <span class="lb">投票結束 · 勝出</span>
-      <div class="body">${w.banner ? `<img class="wbn" src="${esc(w.banner)}" alt="">` : ico(w, 'wi')}<div style="display:flex;flex-direction:column;gap:inherit"><span class="k">投票結束 · 勝出</span><b>${winName(w.name)}</b><strong class="wp">${wp}<small>%</small></strong><span class="vs">的玩家投給它</span></div></div>`;
+      <div class="body">${w.banner ? `<img class="wbn" src="${esc(w.banner)}" alt="">` : ico(w, 'wi')}<div style="display:flex;flex-direction:column;gap:inherit"><span class="k">投票結束 · 勝出</span><b>${winName(tagOf(w))}</b><strong class="wp">${wp}<small>%</small></strong><span class="vs">的玩家投給它</span></div></div>`;
     ranked.innerHTML = '<h2>最終結果</h2>' + rk.map(({ g }, i) => `
-      <div class="vr rr${i === 0 ? ' first' : ''}"><span class="fbox"><span class="fill" data-w="${pc[i]}%"></span></span>${i === 0 ? CROWN : ''}<span class="rk">${i + 1}</span>${ico(g)}<span class="rn">${esc(g.name)}</span>
+      <div class="vr rr${i === 0 ? ' first' : ''}"><span class="fbox"><span class="fill" data-w="${pc[i]}%"></span></span>${i === 0 ? CROWN : ''}<span class="rk">${i + 1}</span>${ico(g)}<span class="rn">${esc(tagOf(g))}</span>
         <span class="vc"><b>${pc[i]}<small>%</small></b></span></div>`).join('');
     fitResults();
     requestAnimationFrame(() => requestAnimationFrame(() => ranked.querySelectorAll('.fill').forEach(i => i.style.width = i.dataset.w)));

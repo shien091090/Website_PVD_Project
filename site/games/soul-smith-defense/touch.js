@@ -33,6 +33,7 @@
       var none = { dpad: false, a: false, b: false, c: false, d: false };
       try {
         if (typeof G === 'undefined') return none;
+        if (G.screen === 'start') return none;                                           // 開始畫面: 沒有虛擬按鈕, 整個畫面都是開始鈕
         if (G.screen === 'title') {
           if (G.tt.clear) return { dpad: false, a: true, b: false, c: false, d: false };  // 通關大提示: 只收 Z
           if (G.tt.adv) return none;                                                     // 推進動畫: 不能操作
@@ -317,6 +318,9 @@
     e.preventDefault();
     var list = e.changedTouches, i, t, end = e.type === 'touchend' || e.type === 'touchcancel';
     if (e.type === 'touchstart' && !PVDX.paused) call(CONFIG.initAudio);
+    // 開始畫面: 點畫面任何位置就開始(暫停中、等「點一下繼續」的那一下不算); 手指離開才算放開
+    if (e.type === 'touchstart' && !PVDX.paused && typeof startScreenGo === 'function') call(function () { startScreenGo('touch', null); });
+    if ((e.type === 'touchend' || e.type === 'touchcancel') && typeof startScreenUp === 'function') call(function () { startScreenUp('touch'); });
     if (e.type === 'touchend') { call(CONFIG.initAudio); if (needTap) { tapResume(); return; } }
     if (PVDX.paused) return;
     for (i = 0; i < list.length; i++) {

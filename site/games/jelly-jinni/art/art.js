@@ -11,33 +11,16 @@
 // polish-10: 開始畫面改「接力跑道」(兩行標題 + 三代跳接 3.6 秒循環 + 內嵌標題字型); 新增 drawGoalArrow;
 //           觸控模式: 世界倍率 2.1(世界層觸控放大 1.9 → 1.35)、HUD / 橫幅 / 暫停選單由 RD 放大 1.4(函式內不再自己放大字),
 //           泡泡讀 scale / bounds; 全畫面頁底色畫滿可見範圍 vx, vy, vw, vh。電腦版其餘畫面不變。
+// polish-11: 開始畫面重做: 拿掉標題文字與內嵌標題字型(FontFace / base64), 改成放大 4.5 倍的迷你關卡(地面 + 尖刺 + 高台 + 終點旗),
+//           9 秒循環演「第 1 代跳不上 → 死在尖刺 → 第 2 代踩著第 1 代幽靈上高台碰旗」; 底部「按任意按鍵開始遊戲」+ 一行署名。其他函式不變。
+// polish-12: 開始畫面改成發布橫幅式主視覺(不演玩法): 夜空星點 + 兩代幽靈沿幽靈藍路線排到放大 9 倍的本尊 + 光暈;
+//           入場 2 秒演一次, 之後 4 秒待機循環(漂浮、接力光點跑過路線、本尊接住一壓一彈、眨眼)。其他函式不變。
 (function () {
   'use strict';
 
   // ---------- 設計座標常數(全畫面類函式只引用這些) ----------
   var W = 1280, H = 720, HUD_H = 48;   // 畫面座標; 整面的東西一律畫 0~1280
   var CX = W / 2;
-
-  // ---------- 標題字型(OFL; 子集只含「接力吉尼」「-Jelly Jinni-」, 別處不要用) ----------
-  // base64 內嵌(file:// 下相對路徑載字型會失敗)。canvas 的 font 字串把它們排第一、後面接現有字型:
-  // 載好前 / 失敗時瀏覽器自動用後面的粗體字型畫, 載好後下一幀自動換; 載入不擋任何東西、不拋錯
-  var TITLE_FONT_ZH = 'JJ Zen Maru Gothic', TITLE_FONT_EN = 'JJ Mochiy Pop One';
-  var FONT_DATA_ZH = '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';
-  var FONT_DATA_EN = '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';
-  (function loadTitleFonts() {
-    try {
-      if (typeof FontFace === 'undefined' || typeof document === 'undefined' || !document.fonts) return;
-      var list = [[TITLE_FONT_ZH, FONT_DATA_ZH, '900 104px', '接力吉尼'], [TITLE_FONT_EN, FONT_DATA_EN, 'bold 40px', '-Jelly Jinni-']];
-      for (var i = 0; i < list.length; i++) {
-        var f = new FontFace(list[i][0], 'url(data:font/woff2;base64,' + list[i][1] + ')', { weight: '100 900' });
-        document.fonts.add(f);
-        var p = f.load();
-        if (p && p.catch) p.catch(function () { /* 失敗就用後備字型 */ });
-        var q = document.fonts.load(list[i][2] + ' "' + list[i][0] + '"', list[i][3]);
-        if (q && q.catch) q.catch(function () { /* 同上 */ });
-      }
-    } catch (e) { /* 不支援 FontFace: 用後備字型 */ }
-  })();
 
   // ---------- 畫面寬度依裝置(電腦 1280; 觸控裝置照可視區長寬比, 夾 1280~1680; 設計區 1280 由 game.js 置中) ----------
   function pickWidth() {
@@ -118,7 +101,7 @@
   var FONT = '"Microsoft JhengHei", "PingFang TC", "Noto Sans TC", sans-serif';
   var STROKE = 'rgba(8,10,18,0.9)';
 
-  // 開始畫面 / 全破畫面底部的音樂署名(照抄 spec)
+  // 全破畫面底部的音樂署名(4 行, 照抄 spec; 開始畫面改用一行版 CREDIT_LINE)
   var CREDITS = [
     '"Monkeys Spinning Monkeys", "Easy Lemon", "Fluffing a Duck", "Life of Riley"',
     'Kevin MacLeod (incompetech.com)',
@@ -1021,219 +1004,389 @@
     ctx.restore();
   }
 
-  // ---------- 開始畫面「接力跑道」組件(設計座標) ----------
-  var TITLE_LOOP = 3.6;
-  var TITLE_L1 = '接力吉尼', TITLE_L2 = '-Jelly Jinni-';
-  var RUN_Y = 500;                     // 跑道地面線(腳底)
-  var RUN_X = [330, 530, 730];         // 第 1 代幽靈 / 第 2 代幽靈 / 第 3 代本尊 腳底中點
-  var FLAG_X = 930, LAND_X = 892;      // 旗桿底 / 第 3 代落地的腳底中點(身體右緣 922 貼著旗桿)
-  var FIG_K = 3, FIG_H = 28 * FIG_K;   // 放大 3 倍世界單位: 60 × 84
-  var ARC_H = 88;                      // 虛線弧比頭頂高約 90(弧頂 y 328, 跳躍中頭頂最高 ≈ 300)
+  // ---------- 開始畫面(polish-12): 發布橫幅式主視覺 — 夜空 + 兩代幽靈沿幽靈藍路線排到放大的本尊 ----------
+  // 設計座標 1280 × 720; 角色位置一律是「身體框中心」(cx, cy)。不演玩法、不畫任何字(開始提示與署名除外)
+  // 入場 t 0~2.0 演一次; 之後待機 q = (t − 2.0) mod 4.0 無限循環。只看 state 的 t, 同一個 t 永遠同一幀(t 倒退 = 自然重播入場)
+  var T_INTRO = 2.0, T_IDLE = 4.0;
+  var T_HINT_Y = 668, T_CREDIT_Y = 704;
+  var CREDIT_LINE = 'Music: "Monkeys Spinning Monkeys", "Easy Lemon", "Fluffing a Duck", "Life of Riley" by Kevin MacLeod (incompetech.com) · Licensed under Creative Commons: By Attribution 4.0 License · http://creativecommons.org/licenses/by/4.0/';
+  var CREDIT_SPLIT = [
+    'Music: "Monkeys Spinning Monkeys", "Easy Lemon", "Fluffing a Duck", "Life of Riley" by Kevin MacLeod (incompetech.com)',
+    'Licensed under Creative Commons: By Attribution 4.0 License · http://creativecommons.org/licenses/by/4.0/'
+  ];
+  var T_GLOW = { x: 850, y: 300, r: 330 };
+  var T_G1 = { x: 330, y: 492, w: 66, h: 92, a: 0.45, amp: 5, lead: 0.6, hop: 14 };
+  var T_G2 = { x: 548, y: 384, w: 100, h: 140, a: 0.6, amp: 6, lead: 0.3, hop: 18 };
+  var T_HERO = { x: 850, y: 300, w: 180, h: 252, amp: 8, lead: 0, rot: -4 * Math.PI / 180 };
+  var T_PATH_PTS = [[200, 596], [330, 492], [548, 384], [762, 300]];
+  var T_ORB_DUR = 1.2;                     // 接力光點跑完全程的秒數(q 0 ~ 1.2)
 
-  function ease2(u) { u = Math.max(0, Math.min(1, u)); return u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2; }
   function seg(p, a, b) { return Math.max(0, Math.min(1, (p - a) / (b - a))); }
-  function squash(q) { var k = (q > 0 && q < 1) ? Math.sin(Math.PI * q) : 0; return { sx: 1 + 0.12 * k, sy: 1 - 0.18 * k }; }
+  function smooth(u) { return u * u * (3 - 2 * u); }
+  function easeOut(u) { return 1 - (1 - u) * (1 - u); }
+  function bump(u) { return (u > 0 && u < 1) ? Math.sin(Math.PI * u) : 0; }
 
-  function titleGlow(ctx) {
-    // 標題光暈: 中心 (640, 185), 橫向橢圓約 760 × 280, 幽靈藍 0.25 → 0
+  // 路線: Catmull-Rom 依序通過 4 點(兩端用鏡射補虛擬點), 沿弧長每約 22 px 一顆小圓點, 終點 P3 為空心圈
+  var T_PATH = (function () {
+    var P = T_PATH_PTS, n = P.length;
+    var ext = [[2 * P[0][0] - P[1][0], 2 * P[0][1] - P[1][1]]].concat(P, [[2 * P[n - 1][0] - P[n - 2][0], 2 * P[n - 1][1] - P[n - 2][1]]]);
+    var samp = [], knotS = [0], L = 0, i, j, k, prev = null;
+    for (i = 0; i < n - 1; i++) {
+      var p0 = ext[i], p1 = ext[i + 1], p2 = ext[i + 2], p3 = ext[i + 3];
+      for (j = (i === 0 ? 0 : 1); j <= 200; j++) {
+        var u = j / 200, u2 = u * u, u3 = u2 * u, pt = [];
+        for (k = 0; k < 2; k++) {
+          pt[k] = 0.5 * ((2 * p1[k]) + (-p0[k] + p2[k]) * u + (2 * p0[k] - 5 * p1[k] + 4 * p2[k] - p3[k]) * u2 + (-p0[k] + 3 * p1[k] - 3 * p2[k] + p3[k]) * u3);
+        }
+        if (prev) L += Math.sqrt((pt[0] - prev[0]) * (pt[0] - prev[0]) + (pt[1] - prev[1]) * (pt[1] - prev[1]));
+        samp.push({ x: pt[0], y: pt[1], s: L });
+        prev = pt;
+      }
+      knotS.push(L);
+    }
+    function at(s) {                        // 弧長 s 處的座標
+      if (s <= 0) return { x: samp[0].x, y: samp[0].y };
+      if (s >= L) return { x: samp[samp.length - 1].x, y: samp[samp.length - 1].y };
+      var lo = 0, hi = samp.length - 1;
+      while (hi - lo > 1) { var m = (lo + hi) >> 1; if (samp[m].s < s) lo = m; else hi = m; }
+      var a = samp[lo], b = samp[hi], f = (s - a.s) / Math.max(1e-6, b.s - a.s);
+      return { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f };
+    }
+    var N = Math.max(2, Math.round(L / 22)), dots = [];
+    for (i = 0; i < N; i++) { var d = at(L * i / N); dots.push({ x: d.x, y: d.y, f: i / N }); }
+    return { L: L, at: at, dots: dots, end: at(L), fG1: knotS[1] / L, fG2: knotS[2] / L };
+  })();
+
+  // 星星: 固定種子(每幀一樣); 設計區 0~1280 內 26 顆, 兩側(觸控模式可見範圍最寬到 −200 / 1480)各 4 顆; y 14~640(避開提示與署名)
+  var T_STARS = (function () {
+    var seed = 20261119;
+    function rnd() { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }
+    var out = [], i, x, y;
+    function add(x0, x1, cnt) {
+      for (i = 0; i < cnt; i++) {
+        var tries = 0;
+        do {
+          x = x0 + (x1 - x0) * (i + 0.15 + 0.7 * rnd()) / cnt;
+          y = 14 + 626 * rnd();
+          tries++;
+        } while (tries < 8 && (
+          (x > 1210 && y < 62) ||                                                   // 右上聲音圖示
+          Math.abs(x - T_HERO.x) < 100 && Math.abs(y - T_HERO.y) < 136));             // 本尊身上
+        out.push({ x: x, y: y, r: 1.5 + 1.5 * rnd(), a: 0.3 + 0.5 * rnd(), per: 2 + 2 * rnd(), ph: rnd() * Math.PI * 2 });
+      }
+    }
+    add(0, 1280, 26);
+    add(-200, 0, 4);
+    add(1280, 1480, 4);
+    return out;
+  })();
+
+  function titleSky(ctx, v, t) {
+    var i, s;
     ctx.save();
-    ctx.translate(640, 185);
-    ctx.scale(1, 280 / 760);
-    var g = ctx.createRadialGradient(0, 0, 0, 0, 0, 380);
-    g.addColorStop(0, 'rgba(168,196,255,0.25)');
-    g.addColorStop(0.5, 'rgba(168,196,255,0.11)');
-    g.addColorStop(1, 'rgba(168,196,255,0)');
+    bgFill(ctx, v);
+    for (i = 0; i < T_STARS.length; i++) {
+      s = T_STARS[i];
+      if (s.x < v.x - 4 || s.x > v.x + v.w + 4) continue;
+      var tw = 0.75 + 0.25 * Math.sin(t * Math.PI * 2 / s.per + s.ph);   // × 0.5 ~ 1
+      ctx.globalAlpha = s.a * tw;
+      ctx.fillStyle = C.ghostEdge;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fill();
+      if (s.r > 2.4) {                                              // 大顆的加一點十字微光
+        ctx.globalAlpha = s.a * tw * 0.45;
+        ctx.strokeStyle = C.ghostEdge;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(s.x - s.r * 2.2, s.y); ctx.lineTo(s.x + s.r * 2.2, s.y);
+        ctx.moveTo(s.x, s.y - s.r * 2.2); ctx.lineTo(s.x, s.y + s.r * 2.2);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
+  // 本尊背後的柔光(ghostEdge 淡白藍, 中心 0.22 × k → 外緣 0)
+  function titleGlow(ctx, r, k) {
+    if (!(r > 0) || !(k > 0)) return;
+    var a = Math.min(0.5, 0.22 * k);
+    ctx.save();
+    var g = ctx.createRadialGradient(T_GLOW.x, T_GLOW.y, 0, T_GLOW.x, T_GLOW.y, r);
+    g.addColorStop(0, 'rgba(230,238,255,' + a + ')');
+    g.addColorStop(0.45, 'rgba(230,238,255,' + (a * 0.4) + ')');
+    g.addColorStop(1, 'rgba(230,238,255,0)');
     ctx.fillStyle = g;
     ctx.beginPath();
-    ctx.arc(0, 0, 380, 0, Math.PI * 2);
+    ctx.arc(T_GLOW.x, T_GLOW.y, r, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
 
-  function titleWords(ctx) {
+  // 路線小圓點: 入場時依弧長逐顆彈出; 待機時光球經過的那顆亮白放大 0.3 秒
+  function titlePath(ctx, t, q, idle) {
+    var D = T_PATH.dots, i, d, r, lit;
+    var orbF = idle ? q / T_ORB_DUR : -1;
     ctx.save();
+    for (i = 0; i < D.length; i++) {
+      d = D[i];
+      var st = 0.30 + 0.70 * d.f;                                   // 0.30 ~ 1.0 開始, 每顆 0.1 秒
+      var u = seg(t, st, st + 0.1);
+      if (u <= 0) continue;
+      r = 4 * (u < 1 ? easeOutBack(u) : 1);
+      lit = 0;
+      if (idle) {
+        var dq = q - d.f * T_ORB_DUR;
+        if (dq >= 0 && dq < 0.3) lit = 1 - dq / 0.3;
+      }
+      r += 2 * lit;
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, r + 2, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(8,10,18,0.6)';
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, r, 0, Math.PI * 2);
+      ctx.fillStyle = lit > 0 ? mixHex(C.path, '#ffffff', lit) : C.path;
+      ctx.fill();
+    }
+    // 終點空心圈(1.0 ~ 1.1 點亮)
+    var e = seg(t, 1.0, 1.1);
+    if (e > 0) {
+      var rr9 = 9 * (e < 1 ? easeOutBack(e) : 1);
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = 'rgba(8,10,18,0.6)';
+      ctx.beginPath();
+      ctx.arc(T_PATH.end.x, T_PATH.end.y, rr9, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = C.path;
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  function mixHex(a, b, f) {
+    var pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
+    var r = Math.round(((pa >> 16) & 255) * (1 - f) + ((pb >> 16) & 255) * f);
+    var g = Math.round(((pa >> 8) & 255) * (1 - f) + ((pb >> 8) & 255) * f);
+    var bl = Math.round((pa & 255) * (1 - f) + (pb & 255) * f);
+    return 'rgb(' + r + ',' + g + ',' + bl + ')';
+  }
+
+  // 放大的角色(= 遊戲內 drawFigure 的剪影; 不畫胸口代數、可鉤框、Z 鍵帽、影子)
+  // o: { cx, cy, w, h, ghost, bodyA(幽靈身體不透明度), alpha(整體), pop(以中心縮放), sx, sy(以底邊縮放), rot,
+  //      lx, ly(眼睛看的方向 −1~1), eye(眼睛張開 0.15~1), dash(虛線位移, 畫面 px), lw(外框線寬, 畫面 px) }
+  function titleFigure(ctx, o) {
+    if (!(o.alpha > 0) || !(o.pop > 0)) return;
+    var kx = o.w / 20, ky = o.h / 28, k = (kx + ky) / 2;
+    var gA = o.bodyA, i;
+    ctx.save();
+    ctx.globalAlpha *= Math.min(1, o.alpha);
+    ctx.translate(o.cx, o.cy);
+    if (o.rot) ctx.rotate(o.rot);
+    ctx.scale(o.pop, o.pop);
+    ctx.translate(0, o.h / 2);
+    ctx.scale(o.sx || 1, o.sy || 1);
+    ctx.translate(-o.w / 2, -o.h);
+    ctx.scale(kx, ky);
+    var fs = feet('idle', 1);
+    // 腳
+    ctx.fillStyle = o.ghost ? 'rgba(168,196,255,' + Math.min(1, gA + 0.07) + ')' : '#3a3550';
+    for (i = 0; i < 2; i++) {
+      rr(ctx, fs[i][0], fs[i][1], fs[i][2], fs[i][3], 1.5);
+      ctx.fill();
+      if (!o.ghost) { ctx.lineWidth = o.lw * 0.6 / k; ctx.strokeStyle = C.outline; ctx.stroke(); }
+    }
+    // 身體
+    rr(ctx, 1.5, 0.5, 17, 22.5, 6);
+    ctx.fillStyle = o.ghost ? 'rgba(168,196,255,' + gA + ')' : C.player;
+    ctx.fill();
+    if (o.ghost) {
+      ctx.setLineDash([3, 2]);
+      ctx.lineDashOffset = -(o.dash || 0) / k;
+      ctx.lineWidth = o.lw / k;
+      ctx.strokeStyle = 'rgba(230,238,255,0.85)';
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.lineDashOffset = 0;
+    } else {
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = o.lw / k;
+      ctx.strokeStyle = C.outline;
+      ctx.stroke();
+      // 一點高光(左上), 讓放大的實心身體不是一整片平塗
+      rr(ctx, 4, 2.6, 4.5, 1.6, 0.8);
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      ctx.fill();
+    }
+    // 面罩(依視線方向偏移)+ 兩顆白方眼
+    var lx = o.lx || 0, ly = o.ly || 0;
+    var vx = 4.5 + lx * 2, vy = 5.5 + ly * 0.6;
+    rr(ctx, vx, vy, 11, 5.5, 2.5);
+    ctx.fillStyle = o.ghost ? 'rgba(20,26,45,0.55)' : C.visor;
+    ctx.fill();
+    var ec = vx + 5.5 + lx * 1.7, ey = vy + 2.75 + ly * 0.9;
+    var eh = 2.5 * Math.max(0.15, Math.min(1, num(o.eye, 1)));
+    ctx.fillStyle = o.ghost ? 'rgba(230,238,255,0.9)' : '#ffffff';
+    ctx.fillRect(ec - 2.75, ey - eh / 2, 2, eh);
+    ctx.fillRect(ec + 0.75, ey - eh / 2, 2, eh);
+    // 幽靈: 頭頂可站的實線
+    if (o.ghost) { ctx.fillStyle = C.ghostEdge; ctx.fillRect(0, 0, 20, 2); }
+    ctx.restore();
+  }
+
+  // 眨眼: 區間 [a, a + d] 內眼睛壓到 15% 再張開
+  function blink(q, a, d) { var u = (q - a) / d; return (u > 0 && u < 1) ? 1 - 0.85 * Math.sin(Math.PI * u) : 1; }
+  // 漂浮位移(往上為負): 週期 2.4 秒正弦, lead 秒相位領先; 振幅在 t 2.0 ~ 2.6 漸增
+  function floatY(t, amp, lead) {
+    var ramp = smooth(seg(t, T_INTRO, T_INTRO + 0.6));
+    return -amp * ramp * Math.sin((t - T_INTRO + lead) * Math.PI * 2 / 2.4);
+  }
+  // 入場浮現的縮放: 0.6 → 1.08(中點)→ 1
+  function ghostPop(t, a) {
+    var u = seg(t, a, a + 0.3);
+    if (u <= 0) return 0.6;
+    return u < 0.667 ? 0.6 + 0.48 * easeOut(u / 0.667) : 1.08 - 0.08 * smooth((u - 0.667) / 0.333);
+  }
+  // 一圈星點(金 / 奶白交錯)從中心往外散開: n 顆, 距離 d0 → d1, u 0~1 淡出
+  function titleBurst(ctx, cx, cy, n, d0, d1, u, rot) {
+    if (!(u > 0 && u < 1)) return;
+    var e = easeOut(u), i, ang, d;
+    for (i = 0; i < n; i++) {
+      ang = rot + i * Math.PI * 2 / n;
+      d = d0 + (d1 - d0) * e;
+      sparkle(ctx, cx + Math.cos(ang) * d, cy + Math.sin(ang) * d, 6 - 3 * u, i % 2 ? C.player : C.goal, 1 - u);
+    }
+  }
+
+  function titleScene(ctx, v, t) {
+    var idle = t >= T_INTRO;
+    var q = idle ? (t - T_INTRO) % T_IDLE : -1;
+    var dash = 20 * t;                                                 // 幽靈虛線流動 20 px/秒
+
+    // 背景 + 星星
+    titleSky(ctx, v, t);
+    var dark = 1 - seg(t, 0, 0.4);                                     // 0 ~ 0.4 從全黑淡入
+    if (dark > 0) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,' + dark + ')';
+      ctx.fillRect(v.x, v.y, v.w, v.h);
+      ctx.restore();
+    }
+
+    // 本尊光暈: 1.05 ~ 1.45 半徑 0 → 330; 待機 q 1.2 → 1.4 強度 1 → 1.4, 1.8 回 1
+    var gr = T_GLOW.r * easeOut(seg(t, 1.05, 1.45));
+    var gk = 1;
+    if (idle) gk += 0.4 * (q < 1.4 ? seg(q, 1.2, 1.4) : 1 - seg(q, 1.4, 1.8));
+    titleGlow(ctx, gr, gk);
+
+    // 路線
+    titlePath(ctx, t, q, idle);
+
+    // 兩隻幽靈(浮現 → 漂浮; 待機時光球經過就小跳 + 閃亮)
+    var gs = [T_G1, T_G2], starts = [0.45, 0.75], fr = [T_PATH.fG1, T_PATH.fG2];
+    var blinks = [[3.15, 0.12], [3.00, 0.12]];
+    for (var i = 0; i < 2; i++) {
+      var G = gs[i];
+      var inA = seg(t, starts[i], starts[i] + 0.3);
+      if (inA <= 0) continue;
+      var hopY = 0, flash = 0;
+      if (idle) {
+        var hu = (q - fr[i] * T_ORB_DUR) / 0.3;
+        if (hu > 0 && hu < 1) { hopY = -4 * G.hop * hu * (1 - hu); flash = 0.25 * Math.sin(Math.PI * hu); }
+      }
+      titleFigure(ctx, {
+        cx: G.x, cy: G.y + floatY(t, G.amp, G.lead) + hopY, w: G.w, h: G.h,
+        ghost: true, bodyA: G.a + flash, alpha: inA, pop: ghostPop(t, starts[i]),
+        lx: 0.9, ly: -1, eye: idle ? blink(q, blinks[i][0], blinks[i][1]) : 1,
+        dash: dash, lw: i === 0 ? 2.6 : 3.2
+      });
+    }
+
+    // 接力光點(畫在幽靈之上、本尊之下)
+    if (idle && q < T_ORB_DUR) {
+      var op = T_PATH.at(T_PATH.L * q / T_ORB_DUR);
+      ctx.save();
+      var og = ctx.createRadialGradient(op.x, op.y, 0, op.x, op.y, 22);
+      og.addColorStop(0, 'rgba(168,196,255,0.6)');
+      og.addColorStop(1, 'rgba(168,196,255,0)');
+      ctx.fillStyle = og;
+      ctx.beginPath();
+      ctx.arc(op.x, op.y, 22, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(op.x, op.y, 9, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // 本尊: 1.05 ~ 1.45 縮放 0 → 1.12(1.25)→ 1; 待機漂浮 + q 1.2 被接住一壓一彈
+    var hp = 0;
+    if (t >= 1.05) hp = t < 1.25 ? 1.12 * easeOut(seg(t, 1.05, 1.25)) : 1.12 - 0.12 * smooth(seg(t, 1.25, 1.45));
+    var sx = 1, sy = 1;
+    if (idle && q >= T_ORB_DUR && q < T_ORB_DUR + 0.36) {
+      var d = q - T_ORB_DUR, u;
+      if (d < 0.12) { u = smooth(d / 0.12); sx = 1 + 0.06 * u; sy = 1 - 0.08 * u; }
+      else if (d < 0.24) { u = smooth((d - 0.12) / 0.12); sx = 1.06 - 0.06 * u; sy = 0.92 + 0.12 * u; }
+      else { u = smooth((d - 0.24) / 0.12); sy = 1.04 - 0.04 * u; }
+    }
+    titleFigure(ctx, {
+      cx: T_HERO.x, cy: T_HERO.y + floatY(t, T_HERO.amp, T_HERO.lead), w: T_HERO.w, h: T_HERO.h,
+      ghost: false, alpha: 1, pop: hp, sx: sx, sy: sy, rot: T_HERO.rot,
+      lx: -1, ly: 1, eye: idle ? blink(q, 2.60, 0.15) : 1, lw: 8
+    });
+
+    // 星點: 入場 1.25 起 8 顆(140 → 170, 0.5 秒); 待機接住 6 顆(130 → 170, q 1.2 ~ 1.8)
+    titleBurst(ctx, T_HERO.x, T_HERO.y, 8, 140, 170, seg(t, 1.25, 1.75), -Math.PI / 2);
+    if (idle) titleBurst(ctx, T_HERO.x, T_HERO.y, 6, 130, 170, seg(q, T_ORB_DUR, 1.8), -Math.PI / 2 + Math.PI / 6);
+
+    // 全畫面淡白閃(1.25 起 0.15 秒, 0.12 → 0)
+    var fu = seg(t, 1.25, 1.40);
+    if (fu > 0 && fu < 1) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(255,255,255,' + (0.12 * (1 - fu)) + ')';
+      ctx.fillRect(v.x, v.y, v.w, v.h);
+      ctx.restore();
+    }
+  }
+
+  // 開始提示: 一行小字, 1.4 ~ 1.9 秒淡入, 乘上 0.55 ↔ 1 呼吸(週期 2.4 秒, 依 t; 相乘讓淡入接呼吸不跳格); 不畫鍵帽
+  function titleHint(ctx, touch, t) {
+    var str = touch ? '點擊畫面開始遊戲' : '按任意按鍵開始遊戲';
+    var size = (touch || touchOn()) ? TOUCH_FS : 18;                     // 觸控模式畫布字下限 21 px
+    var fin = seg(t, 1.4, 1.9);
+    if (fin <= 0) return;
+    ctx.save();
+    ctx.globalAlpha *= fin * (0.55 + 0.45 * (0.5 + 0.5 * Math.cos(t * Math.PI * 2 / 2.4)));
+    ctx.font = 'bold ' + size + 'px ' + FONT;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.lineJoin = 'round';
-    // 第一行「接力吉尼」: Zen Maru Gothic 900 104 px(載好前用現有粗體), 兩層幽靈藍殘影往左下(畫在本體後面), 暖白字 + 深描邊 ≈ 7 px
-    ctx.font = '900 104px "' + TITLE_FONT_ZH + '", ' + FONT;
-    ctx.fillStyle = 'rgba(168,196,255,0.15)';
-    ctx.fillText(TITLE_L1, CX - 16, 150 + 8);
-    ctx.fillStyle = 'rgba(168,196,255,0.3)';
-    ctx.fillText(TITLE_L1, CX - 8, 150 + 4);
-    ctx.lineWidth = 14;
+    ctx.lineWidth = 6;                                                     // 約 3 px 深色描邊
     ctx.strokeStyle = STROKE;
-    ctx.strokeText(TITLE_L1, CX, 150);
+    ctx.strokeText(str, CX, T_HINT_Y);
     ctx.fillStyle = C.player;
-    ctx.fillText(TITLE_L1, CX, 150);
-    // 第二行「-Jelly Jinni-」: Mochiy Pop One 40 px, 幽靈藍字 + 深描邊 ≈ 5 px
-    ctx.font = 'bold 40px "' + TITLE_FONT_EN + '", ' + FONT;
-    ctx.lineWidth = 10;
-    ctx.strokeStyle = STROKE;
-    ctx.strokeText(TITLE_L2, CX, 242);
-    ctx.fillStyle = C.ghost;
-    ctx.fillText(TITLE_L2, CX, 242);
+    ctx.fillText(str, CX, T_HINT_Y);
     ctx.restore();
   }
-
-  // 虛線弧(幽靈路線的小圓點畫法放大): (x0, y0) → (x1, y1), 中點再往上抬 h
-  function arcY(y0, y1, h, u) { return y0 + (y1 - y0) * u - 4 * h * u * (1 - u); }
-  function titleArc(ctx, x0, y0, x1, y1, h, alpha) {
-    if (alpha <= 0) return;
+  // 音樂署名: 一行 10 px、不透明度 0.45(0 ~ 0.4 秒隨背景淡入); 量出寬度 > 1240 時改兩行(692 / 708), 不縮字
+  function titleCredits(ctx, t) {
+    var fin = seg(t, 0, 0.4);
+    if (fin <= 0) return;
     ctx.save();
-    ctx.globalAlpha *= alpha;
-    var n = 15, i, u, px, py;
-    for (i = 1; i < n; i++) {
-      u = i / n;
-      px = x0 + (x1 - x0) * u; py = arcY(y0, y1, h, u);
-      ctx.beginPath();
-      ctx.arc(px, py, 4.2, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(8,10,18,0.55)';
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(px, py, 2.6, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(168,196,255,0.9)';
-      ctx.fill();
-    }
-    // 終點空心圈(= 遊戲內路線終點)
-    ctx.beginPath();
-    ctx.arc(x1, y1, 7, 0, Math.PI * 2);
-    ctx.lineWidth = 5;
-    ctx.strokeStyle = 'rgba(8,10,18,0.55)';
-    ctx.stroke();
-    ctx.lineWidth = 2.6;
-    ctx.strokeStyle = 'rgba(168,196,255,0.9)';
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  // 角色(遊玩畫法放大 3 倍): 腳底中點 (fx, fy); ghost = 幽靈(身體 62% 不透明)/ 否則實心本尊
-  function titleFig(ctx, ghost, fx, fy, gen, state, alpha, sq) {
-    if (alpha <= 0) return;
-    sq = sq || { sx: 1, sy: 1 };
-    ctx.save();
-    ctx.globalAlpha *= alpha;
-    ctx.translate(fx, fy);
-    ctx.scale(FIG_K * sq.sx, FIG_K * sq.sy);
-    if (ghost) drawFigure(ctx, -10, -28, 1, state, gen, 'ghost', false, 0.62);
-    else drawFigure(ctx, -10, -28, 1, state, gen, 'player', false);
-    ctx.restore();
-  }
-
-  function titleShadow(ctx, x, lift, alpha) {
-    if (alpha <= 0) return;
-    var k = Math.max(0.4, 1 - lift / 160);
-    ctx.save();
-    ctx.globalAlpha *= alpha;
-    ctx.beginPath();
-    ctx.ellipse(x, RUN_Y + 1, 24 * k, 4.5 * k, 0, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(0,0,0,0.32)';
-    ctx.fill();
-    ctx.restore();
-  }
-
-  // 一輪 3.6 秒(p = t mod 3.6): 1 代跳上 2 代頭 → 2 代跳上 3 代頭 → 3 代跳到旗子旁 → 歡呼 → 重置
-  function titleRun(ctx, p) {
-    var i;
-    ctx.save();
-    // 跑道: 地面線 y 500(x 220~1060)+ 線下淡淡一條地面
-    var gg = ctx.createLinearGradient(0, RUN_Y, 0, 520);
-    gg.addColorStop(0, 'rgba(75,84,112,0.45)');
-    gg.addColorStop(1, 'rgba(75,84,112,0)');
-    ctx.fillStyle = gg;
-    ctx.fillRect(220, RUN_Y, 840, 20);
-    ctx.beginPath();
-    ctx.moveTo(220, RUN_Y); ctx.lineTo(1060, RUN_Y);
-    ctx.lineCap = 'round';
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = C.platformTop;
-    ctx.stroke();
-
-    var headY = RUN_Y - FIG_H;                       // 站姿頭頂 416
-    var fadeIn = seg(p, 3.30, 3.60);                 // 3.3~3.6 三人在原位淡入
-    // ---- 各角色狀態 ----
-    // 第 1 代
-    var g1 = { x: RUN_X[0], y: RUN_Y, a: 1, st: 'idle', lift: 0 };
-    if (p >= 0.25 && p < 0.70) {
-      var U1 = ease2(seg(p, 0.25, 0.70));
-      g1.x = RUN_X[0] + (RUN_X[1] - RUN_X[0]) * U1;
-      g1.y = arcY(headY, headY, ARC_H, U1) + FIG_H * (1 - U1 * U1);
-      g1.st = 'air'; g1.lift = RUN_Y - g1.y;
-    } else if (p >= 0.70 && p < 0.85) {
-      g1.x = RUN_X[1]; g1.st = 'idle'; g1.a = 1 - seg(p, 0.70, 0.85);
-    } else if (p >= 0.85) {
-      g1.a = fadeIn;
-    }
-    // 第 2 代(0.70~0.85 被踩扁一下)
-    var sq2 = squash(seg(p, 0.70, 0.85));
-    if (p >= 0.70 && p < 0.85) g1.y = RUN_Y - FIG_H * sq2.sy;
-    var g2 = { x: RUN_X[1], y: RUN_Y, a: 1, st: 'idle', lift: 0 };
-    if (p >= 0.95 && p < 1.40) {
-      var U2 = ease2(seg(p, 0.95, 1.40));
-      g2.x = RUN_X[1] + (RUN_X[2] - RUN_X[1]) * U2;
-      g2.y = arcY(headY, headY, ARC_H, U2) + FIG_H * (1 - U2 * U2);
-      g2.st = 'air'; g2.lift = RUN_Y - g2.y;
-    } else if (p >= 1.40 && p < 1.55) {
-      g2.x = RUN_X[2]; g2.a = 1 - seg(p, 1.40, 1.55);
-    } else if (p >= 1.55) {
-      g2.a = fadeIn;
-    }
-    // 第 3 代本尊(1.40~1.55 被踩扁一下)
-    var sq3 = squash(seg(p, 1.40, 1.55));
-    if (p >= 1.40 && p < 1.55) g2.y = RUN_Y - FIG_H * sq3.sy;
-    var g3 = { x: RUN_X[2], y: RUN_Y, a: 1, st: 'idle', lift: 0 };
-    if (p >= 1.65 && p < 2.15) {
-      var U3 = ease2(seg(p, 1.65, 2.15));
-      g3.x = RUN_X[2] + (LAND_X - RUN_X[2]) * U3;
-      g3.y = RUN_Y - 4 * 114 * U3 * (1 - U3);         // 腳底最高 386 → 頭頂 302
-      g3.st = 'air'; g3.lift = RUN_Y - g3.y;
-    } else if (p >= 2.15 && p < 3.30) {
-      g3.x = LAND_X;
-      var hq = seg(p, 2.60, 2.90);                     // 開心小跳
-      if (hq > 0 && hq < 1) { g3.y = RUN_Y - 18 * Math.sin(Math.PI * hq); g3.st = 'air'; g3.lift = RUN_Y - g3.y; }
-      if (p >= 3.10) g3.a = 1 - seg(p, 3.10, 3.30);
-    } else if (p >= 3.30) {
-      g3.a = fadeIn;
-    }
-
-    // ---- 終點旗(碰到時左右小晃 ±8°, 0.4 秒) ----
-    var wq = seg(p, 2.15, 2.55);
-    var wob = (wq > 0 && wq < 1) ? (8 * Math.PI / 180) * Math.sin(wq * Math.PI * 3) * (1 - wq) : 0;
-    ctx.save();
-    ctx.translate(FLAG_X, RUN_Y);
-    ctx.rotate(wob);
-    ctx.scale(FIG_K, FIG_K);
-    Art.drawGoal(ctx, { x: -5.75, y: -40 });
-    ctx.restore();
-
-    // ---- 虛線弧 ----
-    var aA = p < 0.25 ? seg(p, 0, 0.25) : (p < 0.70 ? 1 : 1 - seg(p, 0.70, 0.85));
-    var aB = p < 0.70 ? 0 : (p < 0.95 ? seg(p, 0.70, 0.95) : (p < 1.40 ? 1 : 1 - seg(p, 1.40, 1.55)));
-    var aC = p < 1.40 ? 0 : (p < 1.65 ? seg(p, 1.40, 1.65) : (p < 2.15 ? 1 : 1 - seg(p, 2.15, 2.35)));
-    titleArc(ctx, RUN_X[0], headY, RUN_X[1], headY, ARC_H, aA);
-    titleArc(ctx, RUN_X[1], headY, RUN_X[2], headY, ARC_H, aB);
-    titleArc(ctx, RUN_X[2], headY, FLAG_X, RUN_Y - 117, ARC_H, aC);   // 3 代頭頂 → 旗桿頂
-
-    // ---- 影子 + 角色(跳的人畫在被跳的人前面) ----
-    titleShadow(ctx, g3.x, g3.lift, g3.a);
-    if (g2.lift > 0) titleShadow(ctx, g2.x, g2.lift, g2.a);
-    else if (p < 0.95 || p >= 1.55) titleShadow(ctx, g2.x, 0, g2.a);
-    if (g1.lift > 0) titleShadow(ctx, g1.x, g1.lift, g1.a);
-    else if (p < 0.25 || p >= 0.85) titleShadow(ctx, g1.x, 0, g1.a);
-    titleFig(ctx, false, g3.x, g3.y, 3, g3.st, g3.a, sq3);
-    titleFig(ctx, true, g2.x, g2.y, 2, g2.st, g2.a, (p >= 0.70 && p < 0.85) ? sq2 : null);
-    titleFig(ctx, true, g1.x, g1.y, 1, g1.st, g1.a, null);
-
-    // ---- 碰到旗子: 6 顆金色小星點從旗面往外散開淡出 ----
-    var sp = seg(p, 2.15, 2.75);
-    if (sp > 0 && sp < 1) {
-      var e = 1 - Math.pow(1 - sp, 2);
-      var ox = FLAG_X + (13.5 - 5.75) * FIG_K, oy = RUN_Y + (11.5 - 40) * FIG_K;   // 旗面星星 (953, 414)
-      for (i = 0; i < 6; i++) {
-        var ang = -Math.PI / 2 + i * Math.PI / 3;
-        var d = 14 + 44 * e;
-        sparkle(ctx, ox + Math.cos(ang) * d, oy + Math.sin(ang) * d, 3.6 - 1.6 * sp, i % 2 ? '#fff6c8' : C.goal, 1 - sp);
-      }
+    ctx.globalAlpha *= fin;
+    ctx.font = 'normal 10px ' + FONT;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = C.text;
+    ctx.globalAlpha *= 0.45;
+    var m = ctx.measureText(CREDIT_LINE);
+    var w = m && typeof m.width === 'number' ? m.width : 0;
+    if (w > 1240) {
+      ctx.fillText(CREDIT_SPLIT[0], CX, 692);
+      ctx.fillText(CREDIT_SPLIT[1], CX, 708);
+    } else {
+      ctx.fillText(CREDIT_LINE, CX, T_CREDIT_Y);
     }
     ctx.restore();
   }
@@ -1955,23 +2108,15 @@
       return withUiK(function () { pauseBody(ctx, s); });
     },
 
-    // ---------- 開始畫面「接力跑道」(設計區 1280 × 720; 底色畫滿可見範圍) ----------
+    // ---------- 開始畫面(polish-12: 主視覺小動畫, 入場 2 秒 + 4 秒待機循環; 不畫任何標題文字; 底色、星星畫滿可見範圍) ----------
     drawTitle: function (ctx, s) {
       s = s || {};
       var t = Math.max(0, num(s.t, 0));
       var v = view(s);
       ctx.save();
-      bgFill(ctx, v);
-      titleGlow(ctx);
-      titleWords(ctx);
-      titleRun(ctx, t % TITLE_LOOP);
-      // 空白 開始(閃爍, 中線 y 600)
-      var blink = 0.35 + 0.65 * (0.5 + 0.5 * Math.cos(t * Math.PI * 2 / 1.2));
-      ctx.save();
-      ctx.globalAlpha = blink;
-      keyPrompt(ctx, '開始', CX, 600, 32, 28);
-      ctx.restore();
-      credits(ctx);
+      titleScene(ctx, v, t);
+      titleHint(ctx, s.touch === true, t);
+      titleCredits(ctx, t);
       ctx.restore();
     },
 

@@ -30,7 +30,7 @@ test('投票、重新整理仍記得、改投, 倒數歸零自動切成結果', 
   await page.locator('.vr.on[data-k="jelly-jinni"]').waitFor();
   assert.equal(await page.locator('.vr.on').count(), 1);
   // 截止後 3 秒內自動顯示勝出卡(唯一一票)
-  await page.locator('#winbox:has-text("接力吉尼")').waitFor({ timeout: 20000 });
+  await page.locator('#winbox:has-text("平台跳躍＋接力＋解謎")').waitFor({ timeout: 20000 });
   assert.ok(await page.locator('#pg-vote.end').count());
   await ctx.close();
 });
@@ -63,7 +63,7 @@ test('已結束: 勝出卡與 4 列名次只顯示百分比, 全站結束狀態'
   const ctx = await browser.newContext(PC);
   const page = await ctx.newPage();
   await page.goto(srv.url + '#vote');
-  await page.locator('#winbox:has-text("Bubble Tempo")').waitFor();
+  await page.locator('#winbox:has-text("節奏＋分色")').waitFor();
   assert.match(await page.locator('#winbox').textContent(), /75%的玩家投給它/);
   assert.equal(await page.locator('#ranked .rr').count(), 4);
   // 只公布百分比, 頁面上不出現票數

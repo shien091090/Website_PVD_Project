@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>接力吉尼(Jelly Jinni)</title>
+<title>平台跳躍＋接力＋解謎</title>
 <style>
   html, body { margin: 0; padding: 0; height: 100%; background: #05070c; overflow: hidden; }
   body { display: flex; align-items: center; justify-content: center; }
@@ -20,7 +20,7 @@
 <script>
 // 載入進度條(由 game-studio-lab 發布流程產生, 改了遊戲檔要重新產生): FILES = [路徑, 未壓縮位元組]
 (function () {
-  var FILES = [["art/art.js", 99314], ["audio/sound.js", 13577635], ["game.js", 53030], ["touch.js", 20392]];
+  var FILES = [["art/art.js", 100945], ["audio/sound.js", 13577915], ["game.js", 54934], ["touch.js", 20392]];
   var total = 0, got = [], last = -1, i;
   for (i = 0; i < FILES.length; i++) { total += FILES[i][1]; got.push(0); }
   function post(msg) { try { if (window.parent && window.parent !== window) window.parent.postMessage(msg, location.origin); } catch (e) { /* file:// 開啟時略過 */ } }

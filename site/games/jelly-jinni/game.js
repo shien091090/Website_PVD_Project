@@ -1,4 +1,4 @@
-/* 接力吉尼(Jelly Jinni) 打磨版第 10 輪 — 16:9 橫式 1280×720, 五關; 邏輯 + 嵌入式新手教學 + 暫停選單 + 呼叫 Art / Sound; 觸控模式放大 1.4 倍跟隨鏡頭 */
+/* 接力吉尼(Jelly Jinni) 打磨版第 12 輪(開始畫面改主視覺小動畫; 開始輸入沿用任意鍵 / 點擊) — 16:9 橫式 1280×720, 五關; 邏輯 + 嵌入式新手教學 + 暫停選單 + 呼叫 Art / Sound; 觸控模式放大 1.4 倍跟隨鏡頭 */
 (function () {
   'use strict';
 
@@ -86,7 +86,7 @@
     phase: 'play',       // play | dying | win | lose
     gen: 1, recs: [], rec: null, ghost: null, gf: 0,
     W: null, P: null, aiming: false, charge: 0, aimFullDone: false,
-    hookLeft: HOOK_MAX, hooksUsed: 0, minFeetY: 0,
+    hookLeft: HOOK_MAX,
     tickCeil: 99, timeWarned: false,
     dyingT: 0, replay: null,
     camX: 0, camY: 0, arrowStart: null,
@@ -111,7 +111,6 @@
     curMusic = name;
     try { if (window.Sound && Sound.playMusic) Sound.playMusic(name); } catch (e) { console.error(e); }
   }
-
 
   // ===== 工具 =====
   function ov(a0, a1, b0, b1) { return a0 < b1 - 0.001 && a1 > b0 + 0.001; }
@@ -234,7 +233,7 @@
     S.P = { x: SPAWN.x, y: SPAWN.y, vx: 0, vy: 0, facing: 1, state: 'idle', grounded: true, src: 'ground',
             launchT: 0, ropeT: 0, rope: null, dead: false };
     S.aiming = false; S.charge = 0; S.aimFullDone = false;
-    S.hookLeft = HOOK_MAX; S.hooksUsed = 0; S.minFeetY = SPAWN.y + PH;
+    S.hookLeft = HOOK_MAX;
     S.rec = []; S.recs[g - 1] = S.rec;
     S.ghost = g >= 2 ? S.recs[g - 2] : null;
     S.gf = 0;
@@ -251,7 +250,6 @@
     var P = S.P;
     S.rec.push({ x: P.x, y: P.y, f: P.facing, s: P.state === 'aim' ? 'idle' : P.state, g: P.grounded,
       h: P.ropeT > 0 && P.rope ? P.rope : null, gf: S.ghost ? S.gf : -1 });
-    if (P.y + PH < S.minFeetY) S.minFeetY = P.y + PH;
   }
   function gen_end(cause) {
     tHideCond(cause === 'win' ? 'levelEnd' : 'genEnd');
@@ -264,7 +262,7 @@
     snd('death');
     S.phase = 'dying'; S.dyingT = DEATH_T;
   }
-  // 暫停選單「重來」(整關重來的唯一入口); 呼叫時選單已關閉
+  // 暫停選單「重來」(整關重來的唯一入口); 呼叫時選單已關閉、pause_close 已記
   function doRestart() {
     tEvent('R');
     if (S.phase === 'play' && S.P && !S.P.dead) gen_end('restart');
@@ -280,7 +278,7 @@
     snd('pauseOpen');
     if (S.aiming) snd('aimCharge', { stop: true });
   }
-  function closePause(choice, via) {
+  function closePause(choice) {
     if (!S.paused) return;
     S.paused = false;
     cmd.z = cmd.x = false; cmd.jump = false;
@@ -294,7 +292,6 @@
     gen_end('win');
     S.phase = 'win';
     snd('levelClear');
-    // 批次尾端: gen_end → 教學收尾 → 通知網站單關通關
     tOnWin();
     if (window.PVDX) {
       PVDX.levelClear(S.level);
@@ -600,7 +597,7 @@
              ax: px + dx * v * 0.3, ay: py + dy * v * 0.3 };
   }
   function cancelAim() {
-    var ai = aimInfo(), P = S.P;
+    var P = S.P;
     S.aiming = false; snd('hookCancel');
     P.state = P.grounded ? 'idle' : 'air';
   }
@@ -608,7 +605,7 @@
     var ai = aimInfo(), P = S.P;
     S.aiming = false; snd('hookLaunch');
     tEvent('hookFire');
-    S.hookLeft--; S.hooksUsed++;
+    S.hookLeft--;
     P.vx = ai.dx * ai.v; P.vy = ai.dy * ai.v;
     P.grounded = false; P.src = null;
     P.launchT = LAUNCH_T; P.ropeT = ROPE_T;
@@ -922,7 +919,6 @@
   function tComplete(id, silent, auto) {
     var st = T.st[id]; if (st.done) return;
     st.done = true;
-    var P = S.P;
     if (T.cur === id) T.cur = null;
     if (!silent) {
       var d = TD[id];
@@ -1030,7 +1026,7 @@
     if (!(isTouch() && S.screen === 'play')) ctx.translate(OX, 0);
     var vr = { vx: -OX, vy: 0, vw: CW, vh: 720 };   // 可見範圍(電腦版 OX = 0 → 0, 0, 1280, 720)
     try {
-      if (S.screen === 'title') Art.drawTitle(ctx, { t: S.titleT, vx: vr.vx, vy: vr.vy, vw: vr.vw, vh: vr.vh });
+      if (S.screen === 'title') Art.drawTitle(ctx, { t: S.titleT, touch: isTouch(), vx: vr.vx, vy: vr.vy, vw: vr.vw, vh: vr.vh });
       else if (S.screen === 'unlock') Art.drawUnlockPage(ctx, { ability: S.unlockAbility, vx: vr.vx, vy: vr.vy, vw: vr.vw, vh: vr.vh });
       else if (S.screen === 'ending') Art.drawEnding(ctx, { t: S.endT, vx: vr.vx, vy: vr.vy, vw: vr.vw, vh: vr.vh });
       else if (S.screen === 'play') {
@@ -1043,8 +1039,7 @@
   // ===== 輸入(只有鍵盤) =====
   function onSpace() {
     if (S.screen === 'title') {
-      snd('uiPage');
-      S.level = 1; startLevel('first');
+      startFromTitle('pad', null);   // 觸控層「確認」鍵送來的空白
     } else if (S.screen === 'unlock') {
       snd('uiPage');
       S.level++; startLevel('first');
@@ -1064,6 +1059,18 @@
         startLevel('retry');
       }
     }
+  }
+  // 開始畫面 → 第 1 關(任何按鍵 / 點擊 / 觸控確認鍵共用); via: key | pad | click | tap
+  var titleDownId = null;
+  function startFromTitle(via, code) {
+    if (S.screen !== 'title') return;
+    if (!firstInput) {
+      firstInput = true;
+      try { if (window.Sound && Sound.init) Sound.init(); } catch (er) { console.error(er); }
+    }
+    titleDownId = null;
+    snd('uiPage');
+    S.level = 1; startLevel('first');
   }
   function showUnlock(ab) {
     S.unlockAbility = ab;
@@ -1144,7 +1151,31 @@
     if (inR(PAUSE_HIT.resume)) { S.pauseSel = 0; closePause('resume', 'tap'); }
     else if (inR(PAUSE_HIT.restart)) { S.pauseSel = 1; closePause('restart', 'tap'); }
   }
+  var TITLE_IGNORE = { ShiftLeft: 1, ShiftRight: 1, ControlLeft: 1, ControlRight: 1, AltLeft: 1, AltRight: 1, MetaLeft: 1, MetaRight: 1,
+    OSLeft: 1, OSRight: 1, CapsLock: 1, NumLock: 1, ScrollLock: 1, Tab: 1, ContextMenu: 1 };
+  var TITLE_IGNORE_KEY = { Shift: 1, Control: 1, Alt: 1, Meta: 1, OS: 1, CapsLock: 1, NumLock: 1, ScrollLock: 1, Tab: 1, ContextMenu: 1 };
+  // 開始畫面: 任何鍵開始(M 只切靜音); 這一下只用來開始, 不當遊戲輸入
+  function titleKeyDown(e) {
+    if (window.PVDX && PVDX.paused) return true;
+    if (e.code === 'KeyM') return false;   // 交給一般路徑切靜音
+    if (e.repeat || e.ctrlKey || e.altKey || e.metaKey) return true;
+    if (TITLE_IGNORE[e.code] || TITLE_IGNORE_KEY[e.key] || /^F([1-9]|1[0-2])$/.test(e.code || '') || /^F([1-9]|1[0-2])$/.test(e.key || '')) return true;
+    e.preventDefault();
+    startFromTitle('key', e.code || e.key || null);
+    return true;
+  }
+  function titlePointerDown(e) {
+    if (S.screen !== 'title' || (window.PVDX && PVDX.paused)) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    titleDownId = e.pointerId;
+  }
+  function titlePointerUp(e) {
+    if (S.screen !== 'title' || (window.PVDX && PVDX.paused)) { titleDownId = null; return; }
+    if (titleDownId === null || e.pointerId !== titleDownId) return;
+    startFromTitle(e.pointerType === 'mouse' ? 'click' : 'tap', null);
+  }
   function onKeyDown(e) {
+    if (S.screen === 'title' && titleKeyDown(e)) return;
     var n = CODE2NAME[e.code];
     if (!n) return;
     e.preventDefault();
@@ -1206,6 +1237,8 @@
     window.addEventListener('keydown', function (e) { onKeyDown(e); });
     window.addEventListener('keyup', function (e) { onKeyUp(e); });
     window.addEventListener('blur', inputReset);
+    window.addEventListener('pointerdown', titlePointerDown);
+    window.addEventListener('pointerup', titlePointerUp);
     music('title');
     requestAnimationFrame(frame);
   }

@@ -7,7 +7,7 @@ const LIMIT = 25 * 1024 * 1024; // Cloudflare Pages 單檔上限
 const DOWNLOAD = /\bcreateObjectURL\b|\bdownload\s*=/;
 const COLOR = /^#[0-9a-fA-F]{6}$/;
 const RATIO = /^\d+:\d+$/, RATIO_RANGE = /^\d+:\d+(-\d+:\d+)?$/;
-const TEXT = ['code', 'name', 'intro', 'time', 'ratio'];
+const TEXT = ['code', 'tag', 'pitch', 'intro', 'time', 'ratio'];
 
 const files = d => readdirSync(d, { withFileTypes: true })
   .flatMap(e => e.isDirectory() ? files(join(d, e.name)) : [join(d, e.name)]);
@@ -46,7 +46,8 @@ const q = s => `'${String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
 export function applyInfo(src, info, icon, banner, pattern) {
   const re = new RegExp(`  \\{ code: '${info.code}',[\\s\\S]*?\\},\\r?\\n`);
   if (!re.test(src)) throw new Error(`games.js 裡找不到 ${info.code}`);
-  const entry = `  { code: ${q(info.code)}, name: ${q(info.name)}, letter: ${q([...info.name][0])}, time: ${q(info.time)}, `
-    + `bg: ${q(info.color)}, fg: ${q(info.textColor)}, icon: ${q(icon)}, banner: ${q(banner)}, pattern: ${q(pattern)},\n    intro: ${q(info.intro)} },\n`;
+  const name = info.name?.trim() || info.tag; // 名稱選填, 只給後台與讀屏用; 沒給就用標籤
+  const entry = `  { code: ${q(info.code)}, name: ${q(name)}, tag: ${q(info.tag)}, letter: ${q([...name][0])}, time: ${q(info.time)}, `
+    + `bg: ${q(info.color)}, fg: ${q(info.textColor)}, icon: ${q(icon)}, banner: ${q(banner)}, pattern: ${q(pattern)},\n    pitch: ${q(info.pitch)},\n    intro: ${q(info.intro)} },\n`;
   return src.replace(re, () => entry);
 }

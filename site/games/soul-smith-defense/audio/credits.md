@@ -30,11 +30,14 @@
 | LT-COIN | Coin Splash | https://opengameart.org/content/coin-splash | LordTomorrow | CC0 |
 | BSB-SPIN | Coin spinning on a table #2(編號 2698)(第 14 輪) | https://bigsoundbank.com/coin-spinning-on-a-table-2-s2698.html | Joseph Sardin (bigsoundbank.com) | CC0 |
 | BSB-CHM | Chimes "Dream" #1(2079)、#3(2081)、Chimes "butterfly" #1(2087)(第 14 輪) | https://bigsoundbank.com/chimes-dream-1-s2079.html 、https://bigsoundbank.com/chimes-dream-3-s2081.html 、https://bigsoundbank.com/chimes-butterfly-1-s2087.html | Joseph Sardin (bigsoundbank.com) | CC0 |
+| BSB-ANV | Anvil #1(BigSoundBank 編號 3589)(第 15 輪) | https://bigsoundbank.com/anvil-1-s3589.html | Pablo Bergel (bigsoundbank.com) | CC0 |
+| BSB-WHO | Whoosh #4(BigSoundBank 編號 1796, 長繩揮過)(第 15 輪) | https://bigsoundbank.com/whoosh-4-s1796.html | Joseph Sardin (bigsoundbank.com) | CC0 |
 
 ## 檔案清單(每列一個 assets/ 內的檔)
 
 | 檔名 | 對應事件 | 原始素材(代號 / 原檔名) | 作者 | 授權 | 剪輯 |
 |---|---|---|---|---|---|
+| sfx_game_start.mp3 | game_start(第 15 輪) | BSB-ANV / 3589.wav + BSB-TOM / 2338.wav + BSB-WHO / 1796.wav + BSB-CHM / 2079.wav(BWF 原檔 `https://bigsoundbank.com/UPLOAD/bwf-en/<編號>.wav`) | Pablo Bergel、Joseph Sardin | CC0 | 四層疊合, 時間軸固定 0.95 秒: 鐵砧取原檔 8.010 秒起單獨一擊(約 2.5 kHz 清亮餘響)、尾端淡出 0.3 秒; 通鼓升速 1.2 倍、−11 dB、截 0.35 秒墊底; 0.05 秒起繩子呼嘯取原檔 0.12 秒起、速度由 0.85 爬到 1.45(音高往上)、−5 dB; 0.12 秒起風鈴取原檔 0.10 秒起、速度由 1.0 爬到 1.6、−9 dB、淡入 0.25 秒; 前瞻限幅只壓鐵砧起音尖峰(最多 3.7 dB) |
 | sfx_ui_move.mp3 | ui_move | K-UI / tick_002.ogg | Kenney | CC0 | 無 |
 | sfx_ui_confirm.mp3 | ui_confirm | K-UI / confirmation_001.ogg | Kenney | CC0 | 無 |
 | sfx_ui_invalid.mp3 | ui_invalid | K-UI / error_004.ogg | Kenney | CC0 | 無 |

@@ -1,4 +1,4 @@
-import { byCode } from './games.js';
+import { byCode, tagOf } from './games.js';
 import { recHint } from './play.js';
 import * as store from './store.js';
 
@@ -54,7 +54,7 @@ function sync() {
   if (!frame && !portraitQ.matches) {
     frame = document.createElement('iframe');
     frame.src = `/games/${code}/`; // Pages 會把 index.html 轉址成資料夾, 直接用資料夾網址
-    frame.title = byCode(code).name;
+    frame.title = tagOf(byCode(code));
     frame.allow = 'autoplay; fullscreen; gamepad';
     scr.appendChild(frame);
     // 遊戲檔案載完前遊戲框是全黑, 先蓋一層載入中, 免得玩家以為壞掉

@@ -1,4 +1,6 @@
-// 魂匠守衛者(打磨第 14 輪) — 美術(Canvas 2D 幾何繪製, 無外部資源)
+// 魂匠守衛者(打磨第 16 輪) — 美術(Canvas 2D 幾何繪製, 無外部資源)
+// 第 16 輪: drawStartScreen 整個重畫(會動的主視覺: 2.4 秒開場 + 6.0 秒無縫待機循環, 不演玩法); 其他函式不變。
+// 第 15 輪: 新增 drawStartScreen(開始畫面: 9 秒無縫循環的小戰場演出 + 底下一行小字); drawTitle 改成關卡預覽頁(「選擇關卡」取代大標題、刪掉兩側魂柱)。
 // 第 14 輪: 不評星(關卡卡片改「已通關」小牌、結算拿掉星星), 新增 drawAllClear(恭喜過關 + 勳章授予演出)。
 // 全域物件 window.Art; 每個函式自己 save/restore。
 // 第 13 輪: 畫布 1280×720(16:9, 發布加寬上限 1680), 所有函式照設計座標 1024×576 畫(RD 每幀先整體放大 1.25 倍), 不自己乘 1.25。
@@ -859,13 +861,15 @@
     }
     ctx.restore();
   }
-  function playerBody(ctx) {
+  // eye: 眼睛張開比例(第 16 輪開始畫面眨眼用; 不傳 = 1, 和遊戲內完全相同)
+  function playerBody(ctx, eye) {
     // 斗篷底
     ctx.fillStyle = C.playerRim; ctx.beginPath(); ctx.arc(0, 1, 14.5, 0, TAU); ctx.fill();
     ctx.fillStyle = C.player; ctx.beginPath(); ctx.arc(0, 1, 12.5, 0, TAU); ctx.fill();
     // 兜帽
     ctx.fillStyle = C.playerCloak; ctx.beginPath(); ctx.arc(0, -3, 9, PI * 1.05, -PI * 0.05); ctx.lineTo(7, -1); ctx.lineTo(-7, -1); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = '#3a2a1c'; ctx.fillRect(-4.5, -2.5, 3, 3); ctx.fillRect(1.5, -2.5, 3, 3);
+    var eh = eye == null ? 3 : Math.max(0.4, 3 * clamp(eye, 0, 1));
+    ctx.fillStyle = '#3a2a1c'; ctx.fillRect(-4.5, -1 - eh / 2, 3, eh); ctx.fillRect(1.5, -1 - eh / 2, 3, eh);
     // 鍛錘徽記
     ctx.fillStyle = '#5a3a1e'; ctx.fillRect(-1, 3, 2, 9);
     ctx.fillStyle = '#4a4f5c'; rr(ctx, -5, 3, 10, 4, 1); ctx.fill();
@@ -1415,14 +1419,9 @@
   }
 
   // ---------- 單位 ----------
-  function drawCastle(ctx, s) {
-    s = s || {};
-    var x = num(s.x, CASTLE_X), y = num(s.y, CASTLE_Y);
-    ctx.save();
-    var pa = prog(s.attackAge, num(s.attackDuration, 0.15));
-    var dy = pa >= 0 ? -3 * Math.sin(pa * PI) : 0;
-    ctx.translate(x, y + dy);
-    var ph = prog(s.hitAge, num(s.hitDuration, 0.3));
+  // 主堡本體(牆、雙塔、旗、軍旗、左側城門), 以 (0,0) 為中心; 不含血量牌(開始畫面也用這段)
+  // wave: 屋頂藍旗飄動的相位(第 16 輪開始畫面用; 不傳 = 遊戲內的靜止三角旗)
+  function castleBody(ctx, wave) {
     // 牆
     ctx.fillStyle = C.stoneDark; rr(ctx, -48, -34, 96, 86, 6); ctx.fill();
     ctx.fillStyle = C.stone; rr(ctx, -45, -31, 90, 80, 5); ctx.fill();
@@ -1436,7 +1435,13 @@
     tower(-38); tower(38);
     // 旗
     ctx.strokeStyle = '#3a3a3a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, -31); ctx.lineTo(0, -54); ctx.stroke();
-    ctx.fillStyle = C.ally; ctx.beginPath(); ctx.moveTo(1, -54); ctx.lineTo(18, -49); ctx.lineTo(1, -44); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = C.ally;
+    if (wave == null || !isFinite(wave)) { ctx.beginPath(); ctx.moveTo(1, -54); ctx.lineTo(18, -49); ctx.lineTo(1, -44); ctx.closePath(); ctx.fill(); }
+    else {
+      var fw = Math.sin(wave), fm = Math.sin(wave + 1.3), ty = -49 + 2 * fw;
+      ctx.beginPath(); ctx.moveTo(1, -54); ctx.quadraticCurveTo(9.5, -52.5 + 1.8 * fm, 17.5 + 0.6 * Math.cos(wave), ty);
+      ctx.quadraticCurveTo(9.5, -45.5 + 1.8 * fm, 1, -44); ctx.closePath(); ctx.fill();
+    }
     // 牆面石紋
     ctx.strokeStyle = 'rgba(0,0,0,0.15)'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(-25, -14); ctx.lineTo(25, -14); ctx.moveTo(-25, 23); ctx.lineTo(25, 23); ctx.stroke();
@@ -1453,6 +1458,16 @@
     ctx.beginPath(); ctx.moveTo(-50.5, -12); ctx.lineTo(-50.5, 20); ctx.moveTo(-43.5, -12); ctx.lineTo(-43.5, 20); ctx.moveTo(-54, 6); ctx.lineTo(-40, 6); ctx.stroke();
     ctx.restore();
     ctx.strokeStyle = '#2a2d36'; ctx.lineWidth = 1.5; door(); ctx.stroke();
+  }
+  function drawCastle(ctx, s) {
+    s = s || {};
+    var x = num(s.x, CASTLE_X), y = num(s.y, CASTLE_Y);
+    ctx.save();
+    var pa = prog(s.attackAge, num(s.attackDuration, 0.15));
+    var dy = pa >= 0 ? -3 * Math.sin(pa * PI) : 0;
+    ctx.translate(x, y + dy);
+    var ph = prog(s.hitAge, num(s.hitDuration, 0.3));
+    castleBody(ctx);
     // 血量牌: 中心 (0, 38) = 畫面 (900,374), 100×20, 常駐
     var mhp = Math.max(1, Math.floor(num(s.maxHp, 20))), hp = clamp(Math.ceil(num(s.hp, mhp)), 0, mhp);
     var low = hp <= 5;
@@ -3266,12 +3281,18 @@
     grassAndGrid(ctx);
     roads(ctx, TITLE_PATHS);
     ctx.fillStyle = 'rgba(8,12,20,0.55)'; ctx.fillRect(FX0, 0, FW, H);
-    // 兩側裝飾: 遊戲內的魂柱(合法狀態: 裝著遠攻 / 冰霜); 1.4 倍、貼著標題兩側 x 316 / 708(y 79~129, 不碰記號跳躍頂點 143, 不碰右上聲音圖示 x 956~992)
-    ctx.save(); ctx.translate(CX - 196, 104); ctx.scale(1.4, 1.4); pillarBody(ctx, 'ranged'); ctx.restore();
-    ctx.save(); ctx.translate(CX + 196, 104); ctx.scale(1.4, 1.4); pillarBody(ctx, 'frost'); ctx.restore();
-    var wob = Math.sin(t * 1.6) * 1.5;
-    // 大標題 (512,110) 48px(第 13 輪; 字下緣約 134, 在記號跳躍頂點 143 之上)
-    txt(ctx, '魂匠守衛者', CX, 110 + wob, { size: 48, color: C.gold, stroke: '#2a1a00', sw: 6 });
+    // 第 15 輪: 刪掉標題兩側的兩座魂柱裝飾; (512,110) 改畫頁面說明「選擇關卡」30px(y 95~125, 在記號跳躍頂 143 之上)
+    // 低調樣式: 奶白字 + 深色描邊, 兩側各一段短線 + 小菱形(不是遊戲名稱, 不用金色大字)
+    txt(ctx, '選擇關卡', CX, 110, { size: 30, color: C.tutorPaper, stroke: 'rgba(10,12,20,0.85)', sw: 5 });
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,244,214,0.55)'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(CX - 128, 110); ctx.lineTo(CX - 84, 110); ctx.moveTo(CX + 84, 110); ctx.lineTo(CX + 128, 110); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,244,214,0.75)';
+    [-1, 1].forEach(function (sd) {
+      var dx = CX + sd * 76;
+      ctx.beginPath(); ctx.moveTo(dx, 106); ctx.lineTo(dx + 4, 110); ctx.lineTo(dx, 114); ctx.lineTo(dx - 4, 110); ctx.closePath(); ctx.fill();
+    });
+    ctx.restore();
     // 卡片之間的小路(卡片蓋在上面, 只在間隔 40 露出)
     var roadW = TITLE_DX * (TITLE_N - 1);
     ctx.fillStyle = C.pathEdge; ctx.fillRect(TITLE_X0, TITLE_CY - 11, roadW, 22);
@@ -4221,10 +4242,390 @@
     ctx.restore();
   }
 
+  // ---------- 開始畫面(第 16 輪): 會動的主視覺 ----------
+  // 魂匠放大 6 倍站正中, 6 件基本魂件沿橢圓軌道繞他轉, 頭頂高舉組合魂件 + 身後放射金光; 主堡、魂柱、箭塔、4 隻怪物退成壓暗的佈景。
+  // 造型一律呼叫遊戲內同一套畫法放大(不畫血量牌、槽列、血條、按鍵提示、targeted 外框、handItem、搶奪圓環)。
+  // 時間: 開場 age 0~2.4 播一次(ia = 開場時間軸), 之後 t = (age − intro) mod loop 的 6.0 秒待機循環。
+  // 所有週期性動態(呼吸以外的晃動、旗、淡環、魂光點、微光)的週期都整除 6.0, 用 age 驅動 → 跨開場 / 循環都連續;
+  // 軌道角度、光芒角度、呼吸、頭頂浮動與輪替用 t(開場期間照 spec 的開場公式)。
+  var SS_CX = 512, SS_CY = 300, SS_FEET = 396, SS_HEAD = 204, SS_HELD_Y = 150;
+  var SS_ORBIT = ['ranged', 'melee', 'frost', 'shock', 'heal', 'charge'];
+  var SS_RX = 200, SS_RY = 70, SS_W = TAU / 6;
+  var SS_PILLAR = [110, 236], SS_TOWER = [170, 350], SS_ROAD_Y = 470;
+  var SS_NIGHT = '#21352a', SS_NIGHT_DARK = '#1b2c22';
+  // 4 隻怪物: 週期 1.0 / 1.5 / 2.0 / 1.0 秒(都整除 6.0), 相位錯開
+  var SS_ENEMIES = [
+    { type: 'imp', x: 40, S: 32, per: 1.0, ph: 0 },
+    { type: 'archer', x: 120, S: 32, per: 1.5, ph: 0.35 },
+    { type: 'ice', x: 200, S: 32, per: 2.0, ph: 0.6 },
+    { type: 'thunder', x: 280, S: 36, per: 1.0, ph: 0.5 }
+  ];
+  // 頭頂魂件輪替: [換件時刻, 換上的組合, 材料 A, 材料 B](材料照「規則 / 合成」)
+  var SS_SWAPS = [[1.0, 'thunderSlash', 'melee', 'shock'], [3.0, 'healRay', 'heal', 'ranged'], [5.0, 'iceArrow', 'ranged', 'frost']];
+  // 0~1 的淡入淡出包絡: a~b 淡入、c~d 淡出
+  function env(t, a, b, c, d) {
+    if (t < a || t >= d) return 0;
+    if (t < b) return b > a ? (t - a) / (b - a) : 1;
+    if (t < c) return 1;
+    return 1 - (t - c) / (d - c);
+  }
+  // 過衝再回(0 → 1.1 → 1)
+  function easeOutBack(u) { u = clamp(u, 0, 1); var c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(u - 1, 3) + c1 * Math.pow(u - 1, 2); }
+  // 在 (x, y) 以 k 倍呼叫一個「以原點為中心」的繪製
+  function at(ctx, x, y, k, fn) { ctx.save(); ctx.translate(x, y); ctx.scale(k, k); fn(); ctx.restore(); }
+  // 軌道上的位置與前後深度(sin θ < 0 = 後半圈: 0.8 倍、0.7 不透明; ≥ 0 = 前半圈: 1.0 倍全亮; 跨過時在 ±0.25 內連續過渡)
+  function ssOrbitPos(th) {
+    var sn = Math.sin(th), d = clamp((sn + 0.25) / 0.5, 0, 1);
+    d = d * d * (3 - 2 * d);
+    return { x: SS_CX + SS_RX * Math.cos(th), y: SS_CY + SS_RY * sn, back: sn < 0, sc: 0.8 + 0.2 * d, al: 0.7 + 0.3 * d };
+  }
+  // 頭頂魂件(待機 t): 種類、縮放、閃白、金粉進度
+  function ssHeldAt(t) {
+    var kind = t < 1.0 ? 'iceArrow' : t < 3.0 ? 'thunderSlash' : t < 5.0 ? 'healRay' : 'iceArrow';
+    var sc = 1, white = 0, dust = -1;
+    for (var i = 0; i < SS_SWAPS.length; i++) {
+      var c = SS_SWAPS[i][0];
+      if (t >= c - 0.15 && t < c) { var u = (t - (c - 0.15)) / 0.15; sc = 1 - 0.4 * u; white = u; }
+      else if (t >= c && t < c + 0.15) { var v = (t - c) / 0.15; sc = v < 0.6 ? 0.6 + 0.5 * (v / 0.6) : 1.1 - 0.1 * ((v - 0.6) / 0.4); white = 1 - v; }
+      if (t >= c && t < c + 0.5) dust = (t - c) / 0.5;
+    }
+    return { kind: kind, sc: sc, white: white, dust: dust };
+  }
+  // 材料發光強度(待機 t): 換件前 0.4 秒亮起、前 0.15 秒起淡出、換件後 0.15 秒消失
+  function ssMatGlow(t, kind) {
+    var a = 0;
+    for (var i = 0; i < SS_SWAPS.length; i++) {
+      var w = SS_SWAPS[i];
+      if (w[2] === kind || w[3] === kind) a = Math.max(a, env(t, w[0] - 0.4, w[0] - 0.3, w[0] - 0.15, w[0] + 0.15));
+    }
+    return a;
+  }
+  // 一圈金粉 / 小十字閃光往外炸開(u 0 → 1)
+  function ssDust(ctx, x, y, u, r0, r1, n) {
+    if (u < 0 || u >= 1) return;
+    var e = eOut(u);
+    ctx.save();
+    for (var i = 0; i < n; i++) {
+      var a = i * TAU / n + 0.3 + (i % 2) * 0.12, r = r0 + (r1 - r0) * e * (i % 2 ? 0.8 : 1);
+      ctx.globalAlpha = (1 - u) * 0.95;
+      ctx.fillStyle = i % 3 ? C.gold : '#fff6d0';
+      sparkle(ctx, x + Math.cos(a) * r, y + Math.sin(a) * r, (i % 2 ? 4 : 6) * (1 - 0.6 * u));
+    }
+    ctx.restore();
+  }
+  // 地面: 夜色草地(比遊戲草地暗一階)+ 淡格線 + 路(遊戲路的 1.5 倍: 邊 84 / 路面 75 / 中央亮帶 30)
+  function ssGround(ctx) {
+    ctx.fillStyle = SS_NIGHT_DARK;
+    for (var i = 0; i < 60; i++) {
+      var gx = FX0 + 22 + (i * 211) % (FW - 44), gy = 10 + (i * 137) % (H - 20);
+      ctx.beginPath(); ctx.ellipse(gx, gy, 22, 9, 0, 0, TAU); ctx.fill();
+    }
+    ctx.strokeStyle = 'rgba(255,255,255,0.035)'; ctx.lineWidth = 1; ctx.beginPath();
+    for (var c = -3; c <= 24; c++) { ctx.moveTo(c * 48 + 0.5, 0); ctx.lineTo(c * 48 + 0.5, H); }
+    for (var r = 1; r <= 11; r++) { ctx.moveTo(FX0, r * 48 + 0.5); ctx.lineTo(FX0 + FW, r * 48 + 0.5); }
+    ctx.stroke();
+    var pts = [[FX0, SS_ROAD_Y], [900, SS_ROAD_Y], [900, 414]];
+    ctx.lineJoin = 'round'; ctx.lineCap = 'butt'; ctx.setLineDash([]);
+    ctx.strokeStyle = C.pathEdge; ctx.lineWidth = 84; strokeRoute(ctx, pts);
+    ctx.strokeStyle = C.path; ctx.lineWidth = 75; strokeRoute(ctx, pts);
+    ctx.strokeStyle = C.pathLight; ctx.lineWidth = 30; strokeRoute(ctx, pts);
+  }
+  // 佈景: 魂柱 + 共鳴圈 + 淡環、共鳴線、箭塔(冰霜色調)、主堡(旗飄)、4 隻怪物(原地晃、眼睛朝右)
+  function ssBackdrop(ctx, age) {
+    var px = SS_PILLAR[0], py = SS_PILLAR[1];
+    drawPillarRange(ctx, { x: px, y: py, radius: 140, kinds: ['frost'] });
+    // 每 2.0 秒從柱身擴出一道冰藍淡環(半徑 40 → 140 淡出)
+    var pu = ((age % 2) + 2) % 2 / 2;
+    ctx.save();
+    ctx.globalAlpha = 0.55 * (1 - pu); ctx.strokeStyle = C.frost; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(px, py, 40 + 98 * pu, 0, TAU); ctx.stroke();
+    ctx.restore();
+    // 魂柱頂晶石 → 箭塔: active 冰霜共鳴線(光往箭塔流)
+    drawResonanceLine(ctx, { x1: px, y1: py - 27, x2: SS_TOWER[0], y2: SS_TOWER[1], kind: 'frost', active: true });
+    at(ctx, px, py, 2.5, function () { pillarBody(ctx, 'frost'); });
+    // 主堡 1.8 倍: 城體下緣貼路的豎段末端 y 420, 外接框 x 807~993、y 226~420
+    ctx.save(); ctx.translate(906.3, 326.4); ctx.scale(1.8, 1.8);
+    castleBody(ctx, TAU * age / 2.0);
+    ctx.restore();
+    // 箭塔 2 倍(resonating + 冰霜色調), 不射箭
+    at(ctx, SS_TOWER[0], SS_TOWER[1], 2, function () {
+      drawCrossbow(ctx, { x: 0, y: 0, resonating: true });
+      ctx.save();
+      ctx.fillStyle = 'rgba(143,216,255,0.32)'; rr(ctx, -22, -22, 44, 44, 7); ctx.fill();
+      iceShard(ctx, -17, -17, 0.6, 3); iceShard(ctx, 17, -17, 2.4, 3); iceShard(ctx, -17, 17, -0.6, 3); iceShard(ctx, 17, 17, -2.4, 3);
+      ctx.restore();
+    });
+    // 怪物: 路上一排, 原地上下晃 ±4
+    SS_ENEMIES.forEach(function (e) {
+      var by = 4 * Math.sin(TAU * (age / e.per + e.ph));
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,0.28)'; ctx.beginPath(); ctx.ellipse(e.x, SS_ROAD_Y + e.S - 3, e.S * 0.62, 4.5, 0, 0, TAU); ctx.fill();
+      ctx.restore();
+      at(ctx, e.x, SS_ROAD_Y + by, 2, function () {
+        enemyBody(ctx, e.type, e.S);
+        // 眼睛朝右(望向主角): 瞳孔往右移
+        var hs = e.S / 2, ey = -hs * 0.12, ex = e.S * 0.17;
+        ctx.fillStyle = C.enemyDark;
+        ctx.beginPath(); ctx.ellipse(-ex, ey, 4, 4.5, 0, 0, TAU); ctx.ellipse(ex, ey, 4, 4.5, 0, 0, TAU); ctx.fill();
+        ctx.fillStyle = C.enemyEye;
+        ctx.beginPath(); ctx.arc(-ex + 1.4, ey, 2.2, 0, TAU); ctx.arc(ex + 1.4, ey, 2.2, 0, TAU); ctx.fill();
+      });
+    });
+  }
+  // 魂光點: 16 顆, 各 6.0 秒從地面飄到上方一趟, 起點錯開; 只在 x −160~920 內(不進右上角聲音開關一帶)
+  function ssMotes(ctx, age) {
+    ctx.save();
+    for (var i = 0; i < 16; i++) {
+      var f = ((age / 6 + i / 16) % 1 + 1) % 1;
+      var mx = FX0 + 12 + hash(i, 3, 7) * (900 - FX0 - 12) + 8 * Math.sin(TAU * (age / 3 + i * 0.37));
+      var my = 560 - f * 540;
+      ctx.globalAlpha = 0.35 * Math.sin(PI * f);
+      ctx.fillStyle = C[SS_ORBIT[i % 6]];
+      ctx.beginPath(); ctx.arc(mx, my, 2 + 2 * hash(i, 9, 1), 0, TAU); ctx.fill();
+    }
+    ctx.restore();
+  }
+  // 身後 12 道放射金光(內半徑 60、外半徑 150)+ 頭頂魂件背後的金色柔光; k = 不透明度(全亮 0.25)
+  function ssRays(ctx, rot, k) {
+    if (k <= 0) return;
+    ctx.save();
+    ctx.translate(SS_CX, SS_HELD_Y);
+    ctx.globalAlpha = k; ctx.fillStyle = C.gold;
+    for (var i = 0; i < 12; i++) {
+      var a = rot + i * TAU / 12, w0 = 0.07, w1 = 0.13;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a - w0) * 60, Math.sin(a - w0) * 60);
+      ctx.lineTo(Math.cos(a - w1) * 150, Math.sin(a - w1) * 150);
+      ctx.lineTo(Math.cos(a + w1) * 150, Math.sin(a + w1) * 150);
+      ctx.lineTo(Math.cos(a + w0) * 60, Math.sin(a + w0) * 60);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.globalAlpha = Math.min(1, k * 4);
+    var g = ctx.createRadialGradient(0, 0, 10, 0, 0, 74);
+    g.addColorStop(0, 'rgba(255,222,120,0.45)'); g.addColorStop(1, 'rgba(255,222,120,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, 74, 0, TAU); ctx.fill();
+    ctx.restore();
+  }
+  // 環繞魂件(含身後同色淡光尾、材料發光 + 往頭頂的細光線)
+  function ssOrbitPart(ctx, p, age, spd, glow, heldY, popSc) {
+    var col = C[p.kind], sc = p.sc * (popSc == null ? 1 : popSc), al = p.al;
+    ctx.save();
+    // 淡光尾: 沿軌道往回 5 顆, 長度跟著轉速
+    if (spd > 0.01) {
+      for (var i = 5; i >= 1; i--) {
+        var q = ssOrbitPos(p.th - i * 0.075 * spd / SS_W);
+        ctx.globalAlpha = al * 0.2 * (1 - i / 6) * Math.min(1, spd / SS_W);
+        ctx.fillStyle = col; ctx.beginPath(); ctx.arc(q.x, q.y, (22 - i * 2.6) * q.sc, 0, TAU); ctx.fill();
+      }
+    }
+    if (glow > 0) {
+      // 細光線拉到頭頂魂件, 光點往上流
+      ctx.globalAlpha = 0.65 * glow; ctx.strokeStyle = col; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(SS_CX, heldY); ctx.stroke();
+      ctx.globalAlpha = 0.9 * glow; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(SS_CX, heldY); ctx.stroke();
+      ctx.fillStyle = '#ffffff';
+      for (var j = 0; j < 4; j++) {
+        var f = ((age * 1.8 + j / 4) % 1 + 1) % 1;
+        ctx.globalAlpha = glow * Math.sin(PI * f);
+        ctx.beginPath(); ctx.arc(p.x + (SS_CX - p.x) * f, p.y + (heldY - p.y) * f, 3, 0, TAU); ctx.fill();
+      }
+      // 自己意象色的外圈光
+      ctx.globalAlpha = al * glow;
+      var g = ctx.createRadialGradient(p.x, p.y, 20 * sc, p.x, p.y, 40 * sc);
+      g.addColorStop(0, rgba(col, 0.75)); g.addColorStop(1, rgba(col, 0));
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, 40 * sc, 0, TAU); ctx.fill();
+      ctx.strokeStyle = col; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(p.x, p.y, 36 * sc, 0, TAU); ctx.stroke();
+    }
+    ctx.restore();
+    itemIcon(ctx, p.kind, p.x, p.y, 64 * sc, al);
+  }
+  function drawStartScreen(ctx, s) {
+    s = s || {};
+    var age = Math.max(0, num(s.age, 0));
+    var intro = clamp(num(s.intro, 2.4), 0, 30);
+    var loop = num(s.loop, 6); if (!(loop > 0)) loop = 6;
+    var inIntro = age < intro;
+    // ia = 開場時間軸(照 2.4 秒設計; RD 傳別的 intro 時等比伸縮); t = 待機時間軸(照 6.0 秒設計)
+    var ia = inIntro ? age * 2.4 / intro : 2.4;
+    var t = inIntro ? 0 : ((((age - intro) % loop) + loop) % loop) * 6 / loop;
+    var leaving = bool(s.leaving);
+    var ld = num(s.leaveDuration, 0.5); if (!(ld > 0)) ld = 0.5;
+    var la = leaving ? clamp(num(s.leaveAge, 0), 0, ld) : ld, lq = la * 0.5 / ld;
+    // 淡出: 0.1~0.5 整個開始畫面 1 → 0(露出 RD 先畫好的關卡預覽頁)
+    var fade = leaving ? 1 - clamp((lq - 0.1) / 0.4, 0, 1) : 1;
+    if (fade <= 0) return;
+    ctx.save();
+    ctx.globalAlpha = fade;
+    // 底色(不跟著震, 畫滿 x −160~1184)
+    ctx.fillStyle = SS_NIGHT; ctx.fillRect(FX0, 0, FW, H);
+    // 落地震動 0.8~0.95: 只震世界(上下 ±4、左右 ±2), 小字不震
+    var shk = 0;
+    if (inIntro && ia >= 0.8 && ia < 0.95) { var su = (ia - 0.8) / 0.15; shk = 4 * Math.sin(su * PI * 3) * (1 - su * 0.6); }
+    ctx.save(); ctx.translate(shk * 0.5, shk);
+    ssGround(ctx);
+    ssBackdrop(ctx, age);
+    ctx.restore();
+    // 佈景壓暗到約 80% 亮度、略降飽和(偏冷的深色薄紗), 再疊魂匠身後的暖金聚光
+    ctx.fillStyle = 'rgba(10,16,22,0.22)'; ctx.fillRect(FX0, 0, FW, H);
+    var spot = ctx.createRadialGradient(SS_CX, SS_CY, 0, SS_CX, SS_CY, 260);
+    spot.addColorStop(0, 'rgba(255,200,100,0.18)'); spot.addColorStop(1, 'rgba(255,200,100,0)');
+    ctx.fillStyle = spot; ctx.beginPath(); ctx.arc(SS_CX, SS_CY, 260, 0, TAU); ctx.fill();
+
+    ctx.save(); ctx.translate(shk * 0.5, shk);
+    ssMotes(ctx, age);
+    // ---- 主角層的狀態 ----
+    var rayK = inIntro ? 0.25 * seg(ia, 1.8, 2.4) : 0.25;
+    var rot = inIntro ? 0 : (PI / 6) * t / 6;
+    var breath = inIntro ? 1 : 1 + 0.03 * Math.sin(TAU * t / 2.0);
+    var heldY = inIntro ? SS_HELD_Y : SS_HELD_Y - 6 * Math.sin(TAU * t / 2.0);
+    var eye = (!inIntro && t >= 4.4 && t < 4.52) ? 1 - Math.sin(PI * (t - 4.4) / 0.12) : 1;
+    // 魂匠位置與壓扁: 0.2~0.8 從 (512,−120) 加速落下; 0.8~1.1 壓扁(寬 1.25、高 0.8)彈回, 以腳底為基準
+    var py = SS_CY, sx = 1, sy = 1, shs = 1;
+    if (inIntro) {
+      if (ia < 0.2) { py = -120; shs = 0.2; }
+      else if (ia < 0.8) { var fu = (ia - 0.2) / 0.6; py = -120 + 420 * fu * fu; shs = 0.2 + 0.8 * fu * fu; }
+      if (ia >= 0.8 && ia < 1.1) {
+        var qu = (ia - 0.8) / 0.3, gq = Math.pow(1 - qu, 1.5) * Math.cos(qu * 1.5 * PI);
+        sx = 1 + 0.25 * gq; sy = 1 - 0.2 * gq;
+      }
+    }
+    // 軌道: 開場 ≤ 1.7 停在起始角; 1.7~2.4 轉速 0 → ω; 待機 θ = ωt + kπ/3
+    var thBase, spd;
+    if (inIntro) {
+      thBase = -0.35 * SS_W + (ia > 1.7 ? SS_W * (ia - 1.7) * (ia - 1.7) / 1.4 : 0);
+      spd = ia > 1.7 ? SS_W * (ia - 1.7) / 0.7 : 0;
+    } else { thBase = SS_W * t; spd = SS_W; }
+    var parts = [];
+    for (var k = 0; k < 6; k++) {
+      var th = thBase + k * PI / 3, p = ssOrbitPos(th), popSc = null;
+      p.th = th; p.kind = SS_ORBIT[k];
+      if (inIntro) {
+        // 1.0~1.7: 依序從身體中心彈出(間隔 0.06、各 0.4 秒, 過衝再回)
+        var p0 = 1.0 + 0.06 * k, pu2 = (ia - p0) / 0.4;
+        if (pu2 < 0) continue;
+        if (pu2 < 1) {
+          var eb = easeOutBack(pu2);
+          p.pop = pu2; p.fx = SS_CX; p.fy = SS_CY;
+          p.x = SS_CX + (p.x - SS_CX) * eb; p.y = SS_CY + (p.y - SS_CY) * eb;
+          popSc = 0.35 + 0.65 * Math.min(1, pu2 * 2.5);
+          p.back = false;
+        }
+      }
+      p.popSc = popSc;
+      p.glow = inIntro ? 0 : ssMatGlow(t, p.kind);
+      parts.push(p);
+    }
+    var drawPart = function (p) {
+      if (p.pop != null) {
+        // 彈出沿途的小閃光
+        ctx.save(); ctx.fillStyle = '#fff6d0';
+        for (var j = 1; j <= 3; j++) {
+          var uu = p.pop - j * 0.1; if (uu <= 0) continue;
+          var e2 = easeOutBack(uu), tx = SS_CX + (ssOrbitPos(p.th).x - SS_CX) * e2, ty = SS_CY + (ssOrbitPos(p.th).y - SS_CY) * e2;
+          ctx.globalAlpha = 0.8 * (1 - j / 4) * (1 - p.pop);
+          sparkle(ctx, tx, ty, 7 - j * 1.5);
+        }
+        ctx.restore();
+      }
+      ssOrbitPart(ctx, p, age, p.pop != null ? 0 : spd, p.glow, heldY, p.popSc);
+    };
+    ssRays(ctx, rot, rayK);
+    // 後半圈魂件(被身體擋住)
+    parts.forEach(function (p) { if (p.back) drawPart(p); });
+    // 影子 + 落地塵土環
+    ctx.save();
+    ctx.globalAlpha = 0.38 * shs; ctx.fillStyle = '#000000';
+    ctx.beginPath(); ctx.ellipse(SS_CX, 398, 60 * shs * sx, 12 * shs, 0, 0, TAU); ctx.fill();
+    ctx.restore();
+    if (inIntro && ia >= 0.8 && ia < 1.2) {
+      var du = (ia - 0.8) / 0.4, dr = 40 + 120 * eOut(du);
+      ctx.save();
+      ctx.globalAlpha = 0.65 * (1 - du); ctx.strokeStyle = '#d8c49a'; ctx.lineWidth = 2 + 6 * (1 - du);
+      ctx.beginPath(); ctx.ellipse(SS_CX, 398, dr, dr * 0.22, 0, 0, TAU); ctx.stroke();
+      ctx.fillStyle = '#cbb68a';
+      for (var di = 0; di < 10; di++) {
+        var da = di * TAU / 10 + 0.3;
+        ctx.globalAlpha = 0.5 * (1 - du);
+        ctx.beginPath(); ctx.arc(SS_CX + Math.cos(da) * dr * 0.9, 398 + Math.sin(da) * dr * 0.2 - 8 * du, 6 + 6 * du, 0, TAU); ctx.fill();
+      }
+      ctx.restore();
+    }
+    // 魂匠(drawPlayer 的造型放大 6 倍 + 共鳴微光; 不畫手上物品與搶奪圓環)
+    ctx.save();
+    ctx.translate(SS_CX, py + 96); ctx.scale(6 * sx, 6 * sy * breath); ctx.translate(0, -16);
+    playerBody(ctx, eye);
+    var rg = 0.6 + 0.4 * Math.sin(TAU * age / 1.5);
+    ctx.globalAlpha = 0.6 * rg; ctx.strokeStyle = C.resonance; ctx.lineWidth = 1.1;
+    ctx.beginPath(); ctx.arc(0, 1, 15, 0, TAU); ctx.stroke();
+    ctx.globalAlpha = 0.12 * rg; ctx.fillStyle = C.resonance;
+    ctx.beginPath(); ctx.arc(0, 1, 15, 0, TAU); ctx.fill();
+    ctx.restore();
+    // 前半圈魂件
+    parts.forEach(function (p) { if (!p.back) drawPart(p); });
+    // 頭頂: 淡金光柱 + 組合魂件
+    var held = null, hsc = 1, hy = heldY;
+    if (inIntro) {
+      if (ia >= 1.6) { var hu = seg(ia, 1.6, 2.2); held = { kind: 'iceArrow', sc: easeOutBack(hu), white: 0, dust: -1 }; hy = SS_HEAD - (SS_HEAD - SS_HELD_Y) * eOut(hu); }
+    } else held = ssHeldAt(t);
+    if (rayK > 0) {
+      ctx.save();
+      var cg = ctx.createLinearGradient(0, SS_HEAD + 6, 0, heldY);
+      cg.addColorStop(0, 'rgba(255,214,110,0)'); cg.addColorStop(0.35, 'rgba(255,214,110,1)'); cg.addColorStop(1, 'rgba(255,240,190,1)');
+      ctx.globalAlpha = rayK * 1.3; ctx.fillStyle = cg;
+      ctx.beginPath(); ctx.moveTo(SS_CX - 20, SS_HEAD + 6); ctx.lineTo(SS_CX + 20, SS_HEAD + 6); ctx.lineTo(SS_CX + 13, heldY); ctx.lineTo(SS_CX - 13, heldY); ctx.closePath(); ctx.fill();
+      ctx.restore();
+    }
+    if (held && held.sc > 0.01) {
+      hsc = held.sc;
+      itemIcon(ctx, held.kind, SS_CX, hy, 84 * hsc);
+      if (held.white > 0) {
+        ctx.save(); ctx.translate(SS_CX, hy); ctx.globalAlpha = 0.9 * held.white; ctx.fillStyle = '#ffffff';
+        octPath(ctx, 42 * hsc / Math.cos(PI / 8)); ctx.fill(); ctx.restore();
+      }
+      if (held.dust >= 0) ssDust(ctx, SS_CX, hy, held.dust, 34, 84, 14);
+    }
+    // 開場 2.0: 冰箭升到頂的金色閃光 + 金粉
+    if (inIntro && ia >= 2.0) {
+      var fu2 = (ia - 2.0) / 0.4;
+      ctx.save();
+      ctx.globalAlpha = 0.85 * (1 - fu2);
+      var fg = ctx.createRadialGradient(SS_CX, hy, 0, SS_CX, hy, 40 + 50 * fu2);
+      fg.addColorStop(0, 'rgba(255,255,240,1)'); fg.addColorStop(0.5, 'rgba(255,214,90,0.7)'); fg.addColorStop(1, 'rgba(255,214,90,0)');
+      ctx.fillStyle = fg; ctx.beginPath(); ctx.arc(SS_CX, hy, 40 + 50 * fu2, 0, TAU); ctx.fill();
+      ctx.restore();
+      ssDust(ctx, SS_CX, hy, fu2, 34, 92, 16);
+    }
+    ctx.restore();
+
+    // 底下一行小字(RD 傳字串): (512,544) 22px 白字 + 深描邊; 呼吸 0.55 ↔ 1.0(週期 2 秒, 用 age); 開場 1.8~2.4 淡入
+    // 按下後 0~0.15 亮到全白不透明並放大到 1.15 倍(不管淡入係數)
+    var prompt = str(s.prompt);
+    if (prompt) {
+      var pa = (0.55 + 0.45 * (1 - Math.cos(PI * age)) / 2) * (inIntro ? seg(ia, 1.8, 2.4) : 1);
+      var lp = leaving ? clamp(lq / 0.15, 0, 1) : 0;
+      var a2 = pa + (1 - pa) * lp;
+      if (a2 > 0) {
+        ctx.save();
+        ctx.globalAlpha *= a2;
+        ctx.translate(CX, 544); ctx.scale(1 + 0.15 * lp, 1 + 0.15 * lp);
+        txt(ctx, prompt, 0, 0, { size: 22, color: '#ffffff', stroke: 'rgba(10,14,22,0.85)', sw: 5, maxW: 220 });
+        ctx.restore();
+      }
+    }
+    // 開場 0~0.5: 從黑淡入(黑色疊層 1 → 0)
+    if (inIntro && ia < 0.5) {
+      ctx.fillStyle = 'rgba(0,0,0,' + (1 - ia / 0.5) + ')'; ctx.fillRect(FX0, 0, FW, H);
+    }
+    ctx.restore();
+  }
+
   window.Art = {
     // 第 13 輪: 設計畫布 1280×720(16:9); 發布時依裝置加寬, 上限 1680(screen-width 規範), 本輪不做加寬
     canvas: { width: VW, height: 720 },
     palette: C,
+    drawStartScreen: drawStartScreen,
     drawTitle: drawTitle,
     drawTutorialClear: drawTutorialClear,
     drawTutorialChoice: drawTutorialChoice,

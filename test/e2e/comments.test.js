@@ -15,7 +15,7 @@ test('送出留言後出現在最上面, 別的瀏覽器也看得到, 連送被�
   const ctx = await browser.newContext(PC);
   const page = await ctx.newPage();
   await page.goto(srv.url + '#play');
-  await pick(page, '魂匠守衛者');
+  await pick(page, '塔防＋組裝');
   await page.fill('.board .cform textarea', '好玩');
   await page.click('.board .cform button:has-text("送出")');
   await page.waitForFunction(() => document.querySelector('.board .cms .cm .t')?.textContent === '好玩', null, { timeout: 15000 });
@@ -74,7 +74,7 @@ test('手機抽屜裡也能留言', async () => {
   const ctx = await browser.newContext(PHONE);
   const page = await ctx.newPage();
   await page.goto(srv.url + '#play');
-  await pick(page, '接力吉尼');
+  await pick(page, '平台跳躍＋接力＋解謎');
   await page.fill('.psheet .cform textarea', '手機留言');
   await page.click('.psheet .cform button:has-text("送出")');
   await page.waitForFunction(() => document.querySelector('.psheet .cms .cm .t')?.textContent === '手機留言', null, { timeout: 15000 });
@@ -124,7 +124,7 @@ test('手機抽屜的留言維持單欄', async () => {
   const page = await ctx.newPage();
   await page.route('**/api/comments?game=*', fakeList);
   await page.goto(srv.url + '#play');
-  await pick(page, 'Bubble Tempo');
+  await pick(page, '節奏＋分色');
   await page.waitForFunction(n => document.querySelectorAll('.psheet .cms .cm').length === n, LENS.length, { timeout: 15000 });
   assert.equal(await page.locator('.psheet .cms .col').count(), 0);
   await ctx.close();
@@ -157,7 +157,7 @@ test('手機打到一半轉成電腦版面, 文字還在', async () => {
   const ctx = await browser.newContext(PHONE);
   const page = await ctx.newPage();
   await page.goto(srv.url + '#play');
-  await page.click('.gh:has-text("Bubble Tempo")');
+  await page.click('.gh:has-text("節奏＋分色")');
   await page.locator('.psheet .cform textarea').waitFor();
   await page.fill('.psheet .cform textarea', '轉向前打的字');
   await page.setViewportSize({ width: 1280, height: 800 });
@@ -214,9 +214,9 @@ test('打開留言板就先做驗證, 不用等點進留言框', async () => {
   const page = await ctx.newPage();
   await page.route('**/turnstile/v0/api.js*', r => r.fulfill({ contentType: 'text/javascript', body: SLOW_TS }));
   await page.goto(srv.url + '#play');
-  await page.click('.gh:has-text("接力吉尼")');
+  await page.click('.gh:has-text("平台跳躍＋接力＋解謎")');
   await page.waitForFunction(() => window.__ex === 1, null, { timeout: 5000 });
-  await page.click('.gh:has-text("Bubble Tempo")');
+  await page.click('.gh:has-text("節奏＋分色")');
   await page.waitForTimeout(500);
   assert.equal(await page.evaluate(() => window.__ex), 1, '備用的驗證還沒用掉, 換一款不再驗證');
   await ctx.close();
@@ -227,7 +227,7 @@ for (const [name, dev, sel] of [['電腦版', PC, '.board'], ['手機版', PHONE
     const ctx = await browser.newContext(dev);
     const page = await ctx.newPage();
     await page.goto(srv.url + '#play');
-    await pick(page, '魂匠守衛者');
+    await pick(page, '塔防＋組裝');
     if (sel === '.psheet') await page.locator('.psheet .cform textarea').waitFor();
     const box = page.locator(`${sel} .cform textarea`), count = page.locator(`${sel} .cform .ccount`);
     assert.equal(await count.textContent(), '0/200');

@@ -1,4 +1,4 @@
-import { GAMES } from './games.js';
+import { GAMES, tagOf } from './games.js';
 import { AV, avHtml } from './avatars.js';
 import * as store from './store.js';
 import { esc } from './format.js';
@@ -33,16 +33,18 @@ if (!(myAv >= 0 && myAv < AV.length)) myAv = Math.floor(Math.random() * AV.lengt
 
 // 介紹頂端的色帶: 有圖樣鋪圖樣, 沒有用純主色; 名稱和時長放在色帶下方的白底, 圖示壓在色帶下緣
 const band = (g, extra = '') => `<div class="band"${g.pattern ? ` style="background-image:url('${esc(g.pattern)}')"` : ''}>${extra}</div>`;
-const head = (g, meta) => `<div class="hd">${ico(g)}<div class="ht"><b>${esc(g.name)}</b>${meta}</div></div>`;
+// 標題是核心玩法標籤, 正下方一行「遊戲玩法」當副標題, 再下面才是時長與介紹
+const how = g => g.pitch ? `<span class="how"><span>遊戲玩法：</span>${esc(g.pitch)}</span>` : '';
+const head = (g, meta) => `<div class="hd">${ico(g)}<div class="ht"><b>${esc(tagOf(g))}</b>${how(g)}${meta}</div></div>`;
 
 export function renderPlay() {
   const mob = mobileQ.matches;
-  // 清單按鈕直接用橫幅(名稱藏起來給讀屏), 時長縮成左下角小標籤; 還沒有橫幅的用主色斜紋加圖示名稱暫代
+  // 清單按鈕直接用橫幅(橫幅不含文字), 左上角疊標籤膠囊, 時長縮成左下角小標籤; 還沒有橫幅的用主色斜紋加圖示名稱暫代
   glist.innerHTML = GAMES.map((g, i) => `
     <div class="gi${!mob && i === sel ? ' sel' : ''}" style="--c:${g.bg};--fc:${g.fg}">
       <button class="gh bn" data-i="${i}" ${mob ? 'aria-haspopup="dialog"' : `aria-pressed="${i === sel}"`}>${g.banner
-        ? `<img class="cv" src="${esc(g.banner)}" alt=""><b class="sr">${esc(g.name)}</b>`
-        : `<span class="fb">${ico(g)}<b>${esc(g.name)}</b></span>`}
+        ? `<img class="cv" src="${esc(g.banner)}" alt=""><b class="tagp"><i></i>${esc(tagOf(g))}</b>`
+        : `<span class="fb">${ico(g)}<b>${esc(tagOf(g))}</b></span>`}
         <span class="chip">${esc(g.time)}</span></button>
     </div>`).join('');
   const open = mob && sel != null;
@@ -50,7 +52,7 @@ export function renderPlay() {
   if (open) {
     const g = GAMES[sel];
     psheet.innerHTML = `<div class="bd"></div>
-      <div class="pn" role="dialog" aria-modal="true" aria-label="${esc(g.name)}" style="--c:${g.bg};--fc:${g.fg}">
+      <div class="pn" role="dialog" aria-modal="true" aria-label="${esc(tagOf(g))}" style="--c:${g.bg};--fc:${g.fg}">
         ${band(g, '<button class="x" aria-label="關閉">✕</button>')}${head(g, `<span class="tm">${esc(g.time)}</span>`)}
         <div class="gb"><p>${esc(g.intro)}</p>${startBtn(g)}${voteBtn}<div class="board" data-code="${g.code}" style="display:contents">${board.html(g.code)}</div></div>
       </div>`;
