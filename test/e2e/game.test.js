@@ -24,7 +24,7 @@ test('電腦開遊玩頁載入遊戲並記成玩過', async () => {
   await frame.waitFor();
   assert.match(await frame.getAttribute('src'), /\/games\/jelly-jinni\/$/);
   const title = await page.frameLocator('#pg-game iframe').locator('title').textContent({ timeout: 10000 });
-  assert.match(title, /平台跳躍＋接力＋解謎/);
+  assert.match(title, /靠死亡推進＋平台跳躍/);
   const played = await page.evaluate(() => JSON.parse(localStorage.getItem('pvd:played')));
   assert.ok(played.includes('jelly-jinni'));
   await ctx.close();
@@ -64,7 +64,7 @@ test('返回回到試玩頁並選回該款', async () => {
   await page.click('text=‹ 返回');
   await page.waitForFunction(() => location.hash === '#play/jelly-jinni');
   assert.equal(await page.locator('#pg-game iframe').count(), 0);
-  assert.match(await page.locator('.gi.sel .gh').textContent(), /平台跳躍＋接力＋解謎/);
+  assert.match(await page.locator('.gi.sel .gh').textContent(), /靠死亡推進＋平台跳躍/);
   await ctx.close();
 });
 
@@ -149,7 +149,7 @@ test('試玩頁介紹: 頂端是主題色圖樣色帶(沒圖樣用純主色), �
   assert.ok(t.y >= c.y + c.height, '名稱在色帶下方');
   assert.equal(await page.locator('#detail .hd b').textContent(), '節奏＋分色');
   await page.goto(srv.url + '#play/jelly-jinni');
-  await page.locator('#detail .hd b:has-text("平台跳躍＋接力＋解謎")').waitFor();
+  await page.locator('#detail .hd b:has-text("靠死亡推進＋平台跳躍")').waitFor();
   assert.deepEqual(await band.evaluate(el => [getComputedStyle(el).backgroundImage, getComputedStyle(el).backgroundColor]), ['none', 'rgb(71, 118, 195)']);
   await ctx.close();
 });
@@ -253,7 +253,7 @@ test('遊戲清單電腦手機都用橫幅當按鈕, 沒橫幅的用主色暫代
     await page.waitForFunction(() => [...document.querySelectorAll('#glist img.cv')].every(i => i.complete));
     const box = await zoo.boundingBox();
     assert.ok(Math.abs(box.width / box.height - 21 / 9) < 0.35, `${w} 格子 ${box.width}x${box.height}`);
-    const nob = page.locator('.gh:has-text("平台跳躍＋接力＋解謎")');
+    const nob = page.locator('.gh:has-text("靠死亡推進＋平台跳躍")');
     assert.equal(await nob.locator('img.cv').count(), 0);
     assert.ok(await nob.locator('.fb').isVisible());
     if (w === 'phone') {

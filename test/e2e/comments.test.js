@@ -74,7 +74,7 @@ test('手機抽屜裡也能留言', async () => {
   const ctx = await browser.newContext(PHONE);
   const page = await ctx.newPage();
   await page.goto(srv.url + '#play');
-  await pick(page, '平台跳躍＋接力＋解謎');
+  await pick(page, '靠死亡推進＋平台跳躍');
   await page.fill('.psheet .cform textarea', '手機留言');
   await page.click('.psheet .cform button:has-text("送出")');
   await page.waitForFunction(() => document.querySelector('.psheet .cms .cm .t')?.textContent === '手機留言', null, { timeout: 15000 });
@@ -214,7 +214,7 @@ test('打開留言板就先做驗證, 不用等點進留言框', async () => {
   const page = await ctx.newPage();
   await page.route('**/turnstile/v0/api.js*', r => r.fulfill({ contentType: 'text/javascript', body: SLOW_TS }));
   await page.goto(srv.url + '#play');
-  await page.click('.gh:has-text("平台跳躍＋接力＋解謎")');
+  await page.click('.gh:has-text("靠死亡推進＋平台跳躍")');
   await page.waitForFunction(() => window.__ex === 1, null, { timeout: 5000 });
   await page.click('.gh:has-text("節奏＋分色")');
   await page.waitForTimeout(500);

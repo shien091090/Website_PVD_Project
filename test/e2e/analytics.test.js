@@ -55,7 +55,7 @@ test('不在正式網址(預覽網址)時不載入數據服務, 頁面照常出�
   await page.route('**/static/array.full.js', r => { loaded = true; r.fulfill({ contentType: 'text/javascript', body: FAKE('dark') }); });
   await page.goto(srv.url + '#play');
   await page.waitForFunction(() => !document.documentElement.classList.contains('pvd-wait'));
-  await page.click('.gh:has-text("平台跳躍＋接力＋解謎")');
+  await page.click('.gh:has-text("靠死亡推進＋平台跳躍")');
   await page.waitForTimeout(500);
   assert.equal(loaded, false);
   assert.equal(await page.evaluate(() => window.posthog), undefined);
@@ -96,7 +96,7 @@ test('旗標沒回來: 1.5 秒內頁面出現並隨機分組', async () => {
 test('點遊戲、開始玩、離開都有事件', async () => {
   const { ctx, page, calls } = await open('light', '#play');
   await page.waitForFunction(() => window.posthog?.calls.some(c => c[1] === '$pageview'));
-  await page.click('.gh:has-text("平台跳躍＋接力＋解謎")');
+  await page.click('.gh:has-text("靠死亡推進＋平台跳躍")');
   await page.click('.detail .startbtn');
   await page.waitForFunction(() => location.hash === '#game/jelly-jinni');
   await page.click('text=‹ 返回');
@@ -133,7 +133,7 @@ test('玩到一半關分頁也送離開事件, 從返回快取回來後重新計
 test('分頁隱藏時送 engaged 前景時間', async () => {
   const { ctx, page, calls } = await open('light', '#play');
   await page.waitForFunction(() => window.posthog?.calls.some(c => c[1] === '$pageview'));
-  await page.click('.gh:has-text("平台跳躍＋接力＋解謎")');
+  await page.click('.gh:has-text("靠死亡推進＋平台跳躍")');
   await page.evaluate(() => {
     Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
     document.dispatchEvent(new Event('visibilitychange'));
