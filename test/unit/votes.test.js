@@ -211,5 +211,6 @@ test('得票百分比四捨五入成整數且加總剛好 100', () => {
   assert.deepEqual(percents([1, 1, 1]), [34, 33, 33]);
   assert.deepEqual(percents([2, 1, 0]), [67, 33, 0]);
   assert.deepEqual(percents([0, 0]), [0, 0]);
+  assert.deepEqual(percents([4, 1, 1]), [67, 17, 16], '同樣的餘數由排前面的拿, 不受小數誤差影響');
   for (const n of [[7, 3, 5, 9], [1, 2, 3, 4, 5], [999, 1]]) assert.equal(percents(n).reduce((a, b) => a + b, 0), 100);
 });

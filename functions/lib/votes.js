@@ -50,8 +50,9 @@ export async function myVote(db, roundId, vid) {
 export function percents(nums) {
   const total = nums.reduce((a, b) => a + b, 0);
   if (!total) return nums.map(() => 0);
-  const raw = nums.map(n => n / total * 100), out = raw.map(Math.floor);
+  // 用整數算餘數, 避免小數誤差讓同樣的餘數比出大小(4:1:1 會變成 66/17/17)
+  const out = nums.map(n => Math.floor(n * 100 / total));
   const left = 100 - out.reduce((a, b) => a + b, 0);
-  raw.map((r, i) => [r - out[i], i]).sort((a, b) => b[0] - a[0] || a[1] - b[1]).slice(0, left).forEach(([, i]) => out[i]++);
+  nums.map((n, i) => [n * 100 % total, i]).sort((a, b) => b[0] - a[0] || a[1] - b[1]).slice(0, left).forEach(([, i]) => out[i]++);
   return out;
 }
