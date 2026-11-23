@@ -2,7 +2,7 @@ import { byCode, tagOf } from './games.js';
 import { esc } from './format.js';
 import { track } from './analytics.js';
 
-// 30 秒介紹影片: 點遊戲清單橫幅或介紹卡片上的「30 秒介紹」, 跳出置中彈窗播放(不是全螢幕)
+// 30 秒介紹影片: 點遊戲清單橫幅上的「30 秒介紹」(有影片的遊戲才有按鈕), 跳出置中彈窗播放(不是全螢幕)
 // 影片跟網站放在一起(media/trailer-<代號>.mp4); 還沒有影片的遊戲先顯示「製作中」示意
 let el = null, opener = null;
 

@@ -339,10 +339,23 @@ test('遊戲有回報載入進度時, 載入畫面顯示百分比, 等遊戲說�
   await ctx.close();
 });
 
+test('30 秒介紹: 還沒有影片的遊戲不放按鈕', async () => {
+  const ctx = await browser.newContext(PC);
+  const page = await ctx.newPage();
+  await page.goto(srv.url + '#play');
+  await page.locator('#glist .gi').first().waitFor();
+  assert.equal(await page.locator('[data-trailer]').count(), 0);
+  await ctx.close();
+});
+
 test('30 秒介紹: 清單橫幅開彈窗, 不是全螢幕, Esc 關掉後焦點回到按鈕; 手機點它不會拉出抽屜', async () => {
   for (const opt of [PC, PHONE]) {
     const ctx = await browser.newContext(opt);
     const page = await ctx.newPage();
+    await page.route('**/js/games.js', async r => { // 假裝這款已經有影片
+      const res = await r.fetch();
+      r.fulfill({ response: res, body: (await res.text()).replace("code: 'bubble-tempo',", "code: 'bubble-tempo', trailer: 'media/trailer-bubble-tempo.mp4',") });
+    });
     await page.goto(srv.url + '#play/soul-smith-defense');
     await page.locator('#glist .gi').first().waitFor();
     if (opt === PHONE) await page.goto(srv.url + '#play');

@@ -42,7 +42,7 @@ const head = g => `<div class="hd">${ico(g)}<div class="ht"><b>${esc(tagOf(g))}<
 
 export function renderPlay() {
   const mob = mobileQ.matches;
-  // 清單按鈕直接用橫幅(橫幅不含文字), 類型標籤在左上角往外突出(放在按鈕外才不會被裁掉, 按鈕名稱另給讀屏), 右下角是 30 秒介紹;
+  // 清單按鈕直接用橫幅(橫幅不含文字), 類型標籤在左上角往外突出(放在按鈕外才不會被裁掉, 按鈕名稱另給讀屏), 右下角是 30 秒介紹(有影片的遊戲才放);
   // 時長只在介紹卡片顯示。還沒有橫幅的用主色斜紋加圖示名稱暫代
   glist.innerHTML = GAMES.map((g, i) => `
     <div class="gi${!mob && i === sel ? ' sel' : ''}" style="--c:${g.bg};--fc:${g.fg}">
@@ -50,7 +50,7 @@ export function renderPlay() {
         ? `<img class="cv" src="${esc(g.banner)}" alt=""><b class="sr">${esc(tagOf(g))}</b>`
         : `<span class="fb">${ico(g)}<b>${esc(tagOf(g))}</b></span>`}</button>
       ${g.banner ? `<b class="tagp" aria-hidden="true"><i></i>${esc(tagOf(g))}</b>` : ''}
-      ${trBtn(g, 'vb', '<span class="p"></span>30 秒介紹')}
+      ${g.trailer ? trBtn(g, 'vb', '<span class="p"></span>30 秒介紹') : ''}
     </div>`).join('');
   const open = mob && sel != null;
   psheet.classList.toggle('on', open);
