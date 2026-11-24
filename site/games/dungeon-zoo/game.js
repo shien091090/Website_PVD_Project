@@ -11,7 +11,9 @@ const CH = (Art.canvas && Art.canvas.height) || 720;
 const DW = 1280, OX = (CW - DW) / 2;
 function VEX() { return (window.PVDX && PVDX.on) ? 0 : OX; }
 const DAY_MAX = 4;
-const START_GOLD = 40;                     // 第 1 天開局 / 重來開局的底金(見習表演沒有金幣)
+// 舊版留在瀏覽器的試玩紀錄暫存(網站版已不記錄): 只清自己的兩個舊鍵, 儲存不能用就略過
+try { localStorage.removeItem('dungeon-zoo:gamelogPending'); localStorage.removeItem('gamelog-WebGame_DungeonZoo-pending'); } catch (e) { /* 略過 */ }
+const START_GOLD = 40;                    // 第 1 天開局 / 重來開局的底金(見習表演沒有金幣)
 const WAIT_SECS = 5;                       // 暗號「過 5 秒」
 const GUIDE_SHOW_AT = 4.0;                 // 見習表演暫停式引導開演後幾秒暫停
 const SHOW_SECS = 30;                     // 正式表演秒數
@@ -2858,18 +2860,10 @@ function updateShow(dt) {
 function finishShow(reason) {
   const sat = S.sat, gold = S.tutorial ? 0 : 20 + Math.round(8 * Math.sqrt(sat));   // 收場: 觀眾滿意度換金幣, 同時加進名聲; 見習表演沒有金幣收入
   const loose = reason === 'loose';
-  const L = S.loose;
-  rushEnd(true);   // 時間到時衝撞還在進行: 記中斷(失控已在開始時記過)
+  rushEnd(true);   // 時間到時衝撞還在進行(失控已在開始時處理過)
   G.rep += sat; G.gold += gold; G.goldEarned += gold;
   if (S.best > G.bestChain) G.bestChain = S.best;
   SR = { sat, gold, fameGain: sat, tallyT: 0, tallyDur: 1.5, loose, timeLeft: loose ? Math.round(Math.max(0, S.left)) : 0, bestChain: S.best, tutorial: S.tutorial, tickT: 0 };
-  const o = { day: G.day, reason, dur: +(S.total - Math.max(0, S.left)).toFixed(1), satisfaction: sat, gold, fameGain: sat, bestChain: S.best, performs: S.performs, angryPerforms: S.angryPerforms,
-    onStage: S.mons.length,
-    heatAvg: S.heatDt > 0 ? Math.round(S.heatSum / S.heatDt) : Math.round(S.heat), heatMax: Math.round(S.heatMax),
-    tierSec: { quiet: +S.tierSec[0].toFixed(1), clap: +S.tierSec[1].toFixed(1), cheer: +S.tierSec[2].toFixed(1), frenzy: +S.tierSec[3].toFixed(1) },
-    marksPeak: S.marksPeak, looseHeat: loose ? (S.looseHeat != null ? S.looseHeat : Math.round(S.heat)) : null,
-    waitMax: +S.waitMax.toFixed(1), waitCue: S.waitCue };
-  if (loose) { o.looseSpecies = L.m.sp; o.looseNum = L.m.num; o.looseX = Math.round(L.m.x); o.looseY = Math.round(L.m.y); }
   if (!loose) Snd.play('show_end');
   tutCutShow();   // 表演收場: 還在顯示的表演泡泡(17、18)直接算完成
   S = null;

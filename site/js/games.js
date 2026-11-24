@@ -14,7 +14,8 @@ export const ALL_GAMES = [
   { code: 'bubble-tempo', name: 'Bubble Tempo', tag: '節奏＋分色', letter: 'B', time: '2–5 分鐘', bg: '#aaefd5', fg: '#2d2144', icon: 'media/games/bubble-tempo.png', banner: 'media/games/bubble-tempo-banner.png', pattern: 'media/games/bubble-tempo-pattern.png',
     pitch: '拖泡泡染色，跟著拍子送進光門',
     intro: '指尖拖著節奏泡泡，染色、瞄準、對上拍子！在風格各異的關卡裡跟上越來越快的音樂，挑戰你的反應力與節奏感！' },
-  { code: 'dungeon-zoo', name: '來馬戲團看一點大場面', letter: '來', time: '12–22 分鐘', bg: '#f29cac', fg: '#2d2144', icon: 'media/games/dungeon-zoo.png', banner: 'media/games/dungeon-zoo-banner.png', pattern: 'media/games/dungeon-zoo-pattern.png',
+  { code: 'dungeon-zoo', name: '來馬戲團看一點大場面', tag: '搜打撤＋自動經營', letter: '來', time: '12–22 分鐘', bg: '#f29cac', fg: '#2d2144', icon: 'media/games/dungeon-zoo.png', banner: 'media/games/dungeon-zoo-banner.png', pattern: 'media/games/dungeon-zoo-pattern.png',
+    pitch: '在地下城戰鬥、捕捉怪物，再讓怪物去馬戲團表演獲得收益',
     intro: '深入地下城戰鬥、捕捉怪物，再送牠們上馬戲團舞台賺取掌聲和收益。攻略越深，陣容越熱鬧，一起炒熱全場氣氛吧！' },
   { code: 'jelly-jinni', name: '接力吉尼(Jelly Jinni)', tag: '靠死亡推進＋平台跳躍', letter: '接', time: '5–10 分鐘', bg: '#4776c3', fg: '#ffffff', icon: 'media/games/jelly-jinni.png', banner: 'media/games/jelly-jinni-banner.png', pattern: 'media/games/jelly-jinni-pattern.png',
     pitch: '靠死亡推進關卡，和死前的自己一同解謎',
@@ -24,7 +25,7 @@ export const ALL_GAMES = [
     intro: '會衝上前砍怪的箭塔？拔敵人的攻擊招式來用？一款所有能力都能自由拼裝的塔防，發揮想像力守住主堡！' },
 ].sort(byTime);
 // 暫時下架: 遊戲檔與資料留著, 試玩頁、遊玩網址、後台候選都不出現; 要恢復就從這裡拿掉
-export const HIDDEN = ['dungeon-zoo'];
+export const HIDDEN = ['bubble-tempo', 'soul-smith-defense'];
 export const GAMES = ALL_GAMES.filter(g => !HIDDEN.includes(g.code));
 export const GAME_CODES = GAMES.map(g => g.code);
 export const ALL_GAME_CODES = ALL_GAMES.map(g => g.code); // 同步發布版用, 含暫時下架的

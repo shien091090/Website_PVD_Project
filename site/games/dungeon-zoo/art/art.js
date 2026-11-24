@@ -3868,11 +3868,6 @@
     // 舞台
     ell(ctx, 640, 520, 820, 110, 0); ctx.fillStyle = '#2b2a35'; ctx.fill(); ctx.strokeStyle = '#4a4458'; ctx.lineWidth = 3; ctx.stroke();
     ell(ctx, 640, 520, 380, 64, 0); ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 2; ctx.stroke();
-    // 遊戲名
-    ctx.save(); ctx.translate(640, 170);
-    var bob = Math.sin(t * 1.6) * 3;
-    T(ctx, '來馬戲團看一點大場面', 0, bob, { size: 74, color: '#ffe08a', strokeColor: '#3a1a10', strokeW: 12 });
-    ctx.restore();
     for (var st = 0; st < 5; st++) {
       var sa = t * 1.2 + st * 1.3, sx = 300 + st * 170, sy = 92 + Math.sin(sa) * 6;
       starPath(ctx, sx, sy, 7 + 2 * Math.sin(sa * 1.7)); ctx.fillStyle = 'rgba(255,224,138,0.7)'; ctx.fill();
