@@ -11,7 +11,7 @@ after(async () => { await browser?.close(); await srv?.stop(); });
 const editGames = (page, edit) => page.route(/\/js\/games\.js$/, async route => {
   await route.fulfill({ body: edit(await (await route.fetch()).text()), contentType: 'text/javascript' });
 });
-// 4 款都有橫幅了, 把接力吉尼的橫幅拿掉來測沒有橫幅的樣子
+// 每款都有橫幅了, 把接力吉尼的橫幅拿掉來測沒有橫幅的樣子
 const dropJellyBanner = page => editGames(page, js => js.replace("banner: 'media/games/jelly-jinni-banner.png'", 'banner: null'));
 // 把接力吉尼的主題色圖樣拿掉來測沒有圖樣的樣子
 const dropJellyPattern = page => editGames(page, js => js.replace("pattern: 'media/games/jelly-jinni-pattern.png'", 'pattern: null'));
@@ -86,7 +86,7 @@ test('遊戲收到暫停訊息', async () => {
 
 test('遊戲圖示塞滿圓角框, 不會撐出框外', async () => {
   // 手機清單改用橫幅, 圖示改看抽屜裡的
-  for (const [opts, hash] of [[PC, '#play'], [PHONE, '#play/soul-smith-defense']]) {
+  for (const [opts, hash] of [[PC, '#play'], [PHONE, '#play/dungeon-zoo']]) {
     const ctx = await browser.newContext(opts);
     const page = await ctx.newPage();
     await page.goto(srv.url + hash);
@@ -139,15 +139,15 @@ test('試玩頁介紹: 頂端是主題色圖樣色帶(沒圖樣用純主色), �
   const ctx = await browser.newContext(PC);
   const page = await ctx.newPage();
   await dropJellyPattern(page);
-  await page.goto(srv.url + '#play/bubble-tempo');
+  await page.goto(srv.url + '#play/dungeon-zoo');
   const band = page.locator('#detail .band');
   await band.waitFor();
-  assert.match(await band.evaluate(el => getComputedStyle(el).backgroundImage), /media\/games\/bubble-tempo-pattern\.png/);
+  assert.match(await band.evaluate(el => getComputedStyle(el).backgroundImage), /media\/games\/dungeon-zoo-pattern\.png/);
   assert.equal(await page.locator('#detail img[src*="banner"]').count(), 0, '介紹不放橫幅');
   const c = await band.boundingBox(), ic = await page.locator('#detail .hd .icon').boundingBox(), t = await page.locator('#detail .hd b').boundingBox();
   assert.ok(ic.y < c.y + c.height && ic.y + ic.height > c.y + c.height, '圖示跨在色帶下緣');
   assert.ok(t.y >= c.y + c.height, '名稱在色帶下方');
-  assert.equal(await page.locator('#detail .hd b').textContent(), '節奏＋分色');
+  assert.equal(await page.locator('#detail .hd b').textContent(), '搜打撤＋自動經營');
   await page.goto(srv.url + '#play/jelly-jinni');
   await page.locator('#detail .hd b:has-text("靠死亡推進＋平台跳躍")').waitFor();
   assert.deepEqual(await band.evaluate(el => [getComputedStyle(el).backgroundImage, getComputedStyle(el).backgroundColor]), ['none', 'rgb(71, 118, 195)']);
@@ -157,7 +157,7 @@ test('試玩頁介紹: 頂端是主題色圖樣色帶(沒圖樣用純主色), �
 test('電腦版介紹收成上方橫條: 按鈕在介紹右側, 去投票是靠右的小按鈕, 留言板在下方全寬', async () => {
   const ctx = await browser.newContext(PC);
   const page = await ctx.newPage();
-  await page.goto(srv.url + '#play/bubble-tempo');
+  await page.goto(srv.url + '#play/dungeon-zoo');
   const vote = page.locator('#detail .votebtn');
   await vote.waitFor();
   assert.equal(await vote.getAttribute('href'), '#vote');
@@ -176,7 +176,7 @@ test('手機抽屜也有去投票按鈕', async () => {
   const ctx = await browser.newContext(PHONE);
   const page = await ctx.newPage();
   await page.goto(srv.url + '#play');
-  await page.click('.gh:has-text("節奏＋分色")');
+  await page.click('.gh:has-text("搜打撤＋自動經營")');
   const vote = page.locator('.psheet .votebtn');
   await vote.waitFor();
   assert.equal(await vote.getAttribute('href'), '#vote');
@@ -245,10 +245,10 @@ test('遊戲清單電腦手機都用橫幅當按鈕, 沒橫幅的用主色暫代
     await dropJellyBanner(page);
     await page.goto(srv.url + '#play');
     await page.locator('#glist .gh').first().waitFor();
-    const zoo = page.locator('.gh:has-text("塔防＋組裝")');
-    assert.match(await zoo.locator('img.cv').getAttribute('src'), /soul-smith-defense-banner\.png$/, w);
+    const zoo = page.locator('.gh:has-text("搜打撤＋自動經營")');
+    assert.match(await zoo.locator('img.cv').getAttribute('src'), /dungeon-zoo-banner\.png$/, w);
     assert.equal(await zoo.locator('.chip').count(), 0, '清單不放時長');
-    const tag = await page.locator('.gi:has(.gh:has-text("塔防＋組裝")) .tagp').boundingBox(), card = await zoo.boundingBox();
+    const tag = await page.locator('.gi:has(.gh:has-text("搜打撤＋自動經營")) .tagp').boundingBox(), card = await zoo.boundingBox();
     assert.ok(tag.x < card.x && tag.y < card.y, '類型標籤突出卡片左上角');
     await page.waitForFunction(() => [...document.querySelectorAll('#glist img.cv')].every(i => i.complete));
     const box = await zoo.boundingBox();
@@ -288,7 +288,7 @@ test('遊戲還在載入時遊戲框顯示載入中, 載完就收起', async () 
 test('不顯示建議裝置; 用手機看才提示建議用電腦, 放在開始試玩正上方', async () => {
   const ctx = await browser.newContext(PC);
   const page = await ctx.newPage();
-  await page.goto(srv.url + '#play/bubble-tempo');
+  await page.goto(srv.url + '#play/dungeon-zoo');
   await page.locator('.detail .startbtn').waitFor();
   assert.doesNotMatch(await page.locator('.detail .info').textContent(), /裝置/);
   assert.equal(await page.locator('.detail .rec').count(), 0, '電腦不提示');
@@ -296,7 +296,7 @@ test('不顯示建議裝置; 用手機看才提示建議用電腦, 放在開始�
 
   const ph = await browser.newContext(PHONE);
   const p2 = await ph.newPage();
-  await p2.goto(srv.url + '#play/bubble-tempo');
+  await p2.goto(srv.url + '#play/dungeon-zoo');
   await p2.locator('.psheet .startbtn').waitFor();
   assert.equal(await p2.locator('.psheet .rec').textContent(), '建議使用電腦遊玩，以獲得最佳體驗');
   assert.ok(await p2.locator('.psheet .rec + .startbtn').isVisible(), '提示放在開始試玩正上方');
@@ -306,8 +306,8 @@ test('不顯示建議裝置; 用手機看才提示建議用電腦, 放在開始�
 test('用手機玩時, 遊戲載入畫面也提示建議用電腦', async () => {
   const ctx = await browser.newContext(PHONE_L);
   const page = await ctx.newPage();
-  await page.route(/\/games\/bubble-tempo\/.+\.js/, () => {});
-  await page.goto(srv.url + '#game/bubble-tempo', { waitUntil: 'commit' });
+  await page.route(/\/games\/dungeon-zoo\/.+\.js/, () => {});
+  await page.goto(srv.url + '#game/dungeon-zoo', { waitUntil: 'commit' });
   await page.locator('#pg-game .gload').waitFor();
   assert.match(await page.locator('#pg-game .gload').textContent(), /建議使用電腦遊玩，以獲得最佳體驗/);
   await ctx.close();
@@ -318,13 +318,13 @@ test('遊戲有回報載入進度時, 載入畫面顯示百分比, 等遊戲說�
   const page = await ctx.newPage();
   let release;
   const gate = new Promise(r => { release = r; });
-  await page.route(/\/games\/soul-smith-defense\/audio\/sound\.js/, async route => { await gate; await route.continue(); });
+  await page.route(/\/games\/dungeon-zoo\/audio\/sound\.js/, async route => { await gate; await route.continue(); });
   // 遊戲回報進度可能比測試讀文字快, 改記下載入畫面剛出現時的文字
   await page.addInitScript(() => new MutationObserver((_, ob) => {
     const el = document.querySelector('#pg-game .gload');
     if (el) { window.firstLoad = el.textContent; ob.disconnect(); }
   }).observe(document, { childList: true, subtree: true }));
-  await page.goto(srv.url + '#game/soul-smith-defense', { waitUntil: 'commit' });
+  await page.goto(srv.url + '#game/dungeon-zoo', { waitUntil: 'commit' });
   const ld = page.locator('#pg-game .gload');
   await ld.waitFor({ state: 'visible' });
   assert.match(await page.evaluate(() => window.firstLoad), /遊戲載入中 0%/);
@@ -354,20 +354,20 @@ test('30 秒介紹: 清單橫幅開彈窗, 不是全螢幕, Esc 關掉後焦點�
     const page = await ctx.newPage();
     await page.route('**/js/games.js', async r => { // 假裝這款已經有影片
       const res = await r.fetch();
-      r.fulfill({ response: res, body: (await res.text()).replace("code: 'bubble-tempo',", "code: 'bubble-tempo', trailer: 'media/trailer-bubble-tempo.mp4',") });
+      r.fulfill({ response: res, body: (await res.text()).replace("code: 'dungeon-zoo',", "code: 'dungeon-zoo', trailer: 'media/trailer-dungeon-zoo.mp4',") });
     });
-    await page.goto(srv.url + '#play/soul-smith-defense');
+    await page.goto(srv.url + '#play/jelly-jinni');
     await page.locator('#glist .gi').first().waitFor();
     if (opt === PHONE) await page.goto(srv.url + '#play');
-    const btn = page.locator('#glist .gi:has-text("節奏＋分色") .vb');
+    const btn = page.locator('#glist .gi:has-text("搜打撤＋自動經營") .vb');
     await btn.click();
     const dlg = page.locator('.trl.on');
     await dlg.waitFor();
-    assert.equal(await dlg.locator('.top b').textContent(), '節奏＋分色');
+    assert.equal(await dlg.locator('.top b').textContent(), '搜打撤＋自動經營');
     const box = await dlg.locator('.box').boundingBox(), vp = page.viewportSize();
     assert.ok(box.width < vp.width && box.height < vp.height, `彈窗 ${box.width}x${box.height} 小於畫面`);
     if (opt === PHONE) assert.equal(await page.locator('.psheet.on').count(), 0, '沒有拉出抽屜');
-    else assert.match(await page.locator('#detail .hd b').textContent(), /塔防＋組裝/, '沒有切換選取的遊戲');
+    else assert.match(await page.locator('#detail .hd b').textContent(), /靠死亡推進＋平台跳躍/, '沒有切換選取的遊戲');
     await page.keyboard.press('Escape');
     await dlg.waitFor({ state: 'detached' }).catch(() => {});
     assert.equal(await page.locator('.trl.on').count(), 0);

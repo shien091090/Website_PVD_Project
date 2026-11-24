@@ -1,6 +1,7 @@
 import { test, beforeEach, afterEach, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { startServer, openBrowser, PC, PHONE } from './server.js';
+import { GAMES, HIDDEN } from '../../site/js/games.js';
 
 let srv, browser;
 before(async () => { browser = await openBrowser(); });
@@ -45,7 +46,7 @@ test('已投的那款再點一次就取消投票, 重新整理後也沒有票', 
   await page.locator('#vhead:has-text("不用另外按送出")').waitFor();
   await Promise.all([voted(), page.click('.vr[data-k="dungeon-zoo"]')]);
   await page.locator('#vhead.done:has-text("已完成投票")').waitFor();
-  assert.match(await page.textContent('#vhead'), /你投給了.*來馬戲團看一點大場面/);
+  assert.match(await page.textContent('#vhead'), /你投給了.*搜打撤＋自動經營/);
   assert.ok(await page.locator('#vhead .icon').count());
   await Promise.all([voted(), page.click('.vr[data-k="dungeon-zoo"]')]);
   assert.equal(await page.locator('.vr.on').count(), 0);
@@ -176,13 +177,13 @@ test('後台開新一輪只勾 2 款候選, 投票頁只出現這 2 款', async 
   };
   assert.equal(await page.locator('.nstart select').first().locator('option').count(), 24);
   await setDt('nstart', Date.now() - 3600000); await setDt('nend', Date.now() + 3600000);
-  assert.equal(await page.locator('.nopt[value="dungeon-zoo"]').count(), 0, '暫時下架的遊戲不在候選裡');
-  await page.uncheck('.nopt[value="soul-smith-defense"]');
+  assert.equal(await page.locator(`.nopt[value="${HIDDEN[0]}"]`).count(), 0, '暫時下架的遊戲不在候選裡');
+  for (const g of GAMES.slice(2)) await page.uncheck(`.nopt[value="${g.code}"]`); // 上架的只留前 2 款
   await page.click('#nadd');
   await page.locator('.card[data-id="1"]').waitFor();
   await page.goto(srv.url + '#vote');
   await page.locator('#vrows .vr').first().waitFor();
-  assert.deepEqual(await page.locator('#vrows .vr').evaluateAll(els => els.map(e => e.dataset.k)), ['bubble-tempo', 'jelly-jinni']);
+  assert.deepEqual(await page.locator('#vrows .vr').evaluateAll(els => els.map(e => e.dataset.k)), GAMES.slice(0, 2).map(g => g.code));
   await ctx.close();
 });
 

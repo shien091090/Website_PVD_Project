@@ -15,7 +15,7 @@ test('送出留言後出現在最上面, 別的瀏覽器也看得到, 連送被�
   const ctx = await browser.newContext(PC);
   const page = await ctx.newPage();
   await page.goto(srv.url + '#play');
-  await pick(page, '塔防＋組裝');
+  await pick(page, '搜打撤＋自動經營');
   await page.fill('.board .cform textarea', '好玩');
   await page.click('.board .cform button:has-text("送出")');
   await page.waitForFunction(() => document.querySelector('.board .cms .cm .t')?.textContent === '好玩', null, { timeout: 15000 });
@@ -29,17 +29,17 @@ test('送出留言後出現在最上面, 別的瀏覽器也看得到, 連送被�
 
   const other = await browser.newContext(PC);
   const p2 = await other.newPage();
-  await p2.goto(srv.url + '#play/soul-smith-defense');
+  await p2.goto(srv.url + '#play/dungeon-zoo');
   await p2.waitForFunction(() => document.querySelector('.board .cms .cm .t')?.textContent === '好玩');
   await other.close();
   await ctx.close();
 });
 
 test('鎖住的遊戲沒有輸入框, 只顯示一行說明', async () => {
-  srv.sql("INSERT INTO locks (game, locked) VALUES ('bubble-tempo', 1)");
+  srv.sql("INSERT INTO locks (game, locked) VALUES ('dungeon-zoo', 1)");
   const ctx = await browser.newContext(PC);
   const page = await ctx.newPage();
-  await page.goto(srv.url + '#play/bubble-tempo');
+  await page.goto(srv.url + '#play/dungeon-zoo');
   await page.locator('.board .clock:has-text("留言功能暫時無法使用")').waitFor();
   assert.equal(await page.locator('.board .cform').count(), 0);
   await ctx.close();
@@ -60,11 +60,11 @@ test('伺服器錯誤時顯示失敗且保留文字', async () => {
 });
 
 test('HTML 以純文字顯示', async () => {
-  srv.sql("INSERT INTO comments (game, avatar, body, vid, ip_hash, created_at) VALUES ('bubble-tempo', 0, '<img src=x onerror=window.__xss=1>', 'z', 'z', 1)");
+  srv.sql("INSERT INTO comments (game, avatar, body, vid, ip_hash, created_at) VALUES ('dungeon-zoo', 0, '<img src=x onerror=window.__xss=1>', 'z', 'z', 1)");
   const ctx = await browser.newContext(PC);
   const page = await ctx.newPage();
-  await page.goto(srv.url + '#play/bubble-tempo');
-  await page.waitForFunction(() => document.querySelector('.board .cms .cm .t')?.textContent.includes('<img'));
+  await page.goto(srv.url + '#play/dungeon-zoo');
+  await page.waitForFunction(() => [...document.querySelectorAll('.board .cms .cm .t')].some(t => t.textContent.includes('<img')));
   assert.equal(await page.evaluate(() => window.__xss), undefined);
   assert.equal(await page.locator('.board .cms .t img').count(), 0);
   await ctx.close();
@@ -92,7 +92,7 @@ test('電腦版留言排兩欄: 依新到舊放進較短的那欄, 兩欄高度�
   const ctx = await browser.newContext(PC);
   const page = await ctx.newPage();
   await page.route('**/api/comments?game=*', fakeList);
-  await page.goto(srv.url + '#play/bubble-tempo');
+  await page.goto(srv.url + '#play/dungeon-zoo');
   await page.waitForFunction(n => document.querySelectorAll('#detail .cms .col .cm').length === n, LENS.length, { timeout: 15000 });
   const check = () => page.evaluate(() => {
     const cols = [...document.querySelectorAll('#detail .cms .col')];
@@ -124,7 +124,7 @@ test('手機抽屜的留言維持單欄', async () => {
   const page = await ctx.newPage();
   await page.route('**/api/comments?game=*', fakeList);
   await page.goto(srv.url + '#play');
-  await pick(page, '節奏＋分色');
+  await pick(page, '搜打撤＋自動經營');
   await page.waitForFunction(n => document.querySelectorAll('.psheet .cms .cm').length === n, LENS.length, { timeout: 15000 });
   assert.equal(await page.locator('.psheet .cms .col').count(), 0);
   await ctx.close();
@@ -142,7 +142,7 @@ test('送出途中留言板重畫, 錯誤訊息仍看得到且保留文字', asy
     r.fulfill({ status: 429, contentType: 'application/json', body: '{"error":{"code":"too_fast"}}' });
     answered();
   });
-  await page.goto(srv.url + '#play/bubble-tempo');
+  await page.goto(srv.url + '#play/dungeon-zoo');
   await page.fill('.board .cform textarea', '讀取中送出');
   await page.click('.board .cform button:has-text("送出")');
   await page.waitForFunction(() => !document.querySelector('.board .cmsg')?.textContent.includes('讀取中'), null, { timeout: 15000 });
@@ -157,7 +157,7 @@ test('手機打到一半轉成電腦版面, 文字還在', async () => {
   const ctx = await browser.newContext(PHONE);
   const page = await ctx.newPage();
   await page.goto(srv.url + '#play');
-  await page.click('.gh:has-text("節奏＋分色")');
+  await page.click('.gh:has-text("搜打撤＋自動經營")');
   await page.locator('.psheet .cform textarea').waitFor();
   await page.fill('.psheet .cform textarea', '轉向前打的字');
   await page.setViewportSize({ width: 1280, height: 800 });
@@ -195,7 +195,7 @@ test('點進留言框就先做驗證, 按送出時不用再等驗證', async () 
   const ctx = await browser.newContext(PC);
   const page = await ctx.newPage();
   await page.route('**/turnstile/v0/api.js*', r => r.fulfill({ contentType: 'text/javascript', body: SLOW_TS }));
-  await page.goto(srv.url + '#play/soul-smith-defense');
+  await page.goto(srv.url + '#play/dungeon-zoo');
   await page.locator('.board .cms').waitFor();
   await page.click('.board .cform textarea');
   await page.waitForFunction(() => window.__ex === 1);
@@ -216,7 +216,7 @@ test('打開留言板就先做驗證, 不用等點進留言框', async () => {
   await page.goto(srv.url + '#play');
   await page.click('.gh:has-text("靠死亡推進＋平台跳躍")');
   await page.waitForFunction(() => window.__ex === 1, null, { timeout: 5000 });
-  await page.click('.gh:has-text("節奏＋分色")');
+  await page.click('.gh:has-text("搜打撤＋自動經營")');
   await page.waitForTimeout(500);
   assert.equal(await page.evaluate(() => window.__ex), 1, '備用的驗證還沒用掉, 換一款不再驗證');
   await ctx.close();
@@ -227,7 +227,7 @@ for (const [name, dev, sel] of [['電腦版', PC, '.board'], ['手機版', PHONE
     const ctx = await browser.newContext(dev);
     const page = await ctx.newPage();
     await page.goto(srv.url + '#play');
-    await pick(page, '塔防＋組裝');
+    await pick(page, '搜打撤＋自動經營');
     if (sel === '.psheet') await page.locator('.psheet .cform textarea').waitFor();
     const box = page.locator(`${sel} .cform textarea`), count = page.locator(`${sel} .cform .ccount`);
     assert.equal(await count.textContent(), '0/200');

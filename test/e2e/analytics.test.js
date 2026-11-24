@@ -113,21 +113,21 @@ test('點遊戲、開始玩、離開都有事件', async () => {
 test('玩到一半關分頁也送離開事件, 從返回快取回來後重新計時', async () => {
   const { ctx, page, calls } = await open('light', '#play');
   await page.waitForFunction(() => window.posthog?.calls.some(c => c[1] === '$pageview'));
-  await page.click('.gh:has-text("節奏＋分色")');
+  await page.click('.gh:has-text("搜打撤＋自動經營")');
   await page.click('.detail .startbtn');
-  await page.waitForFunction(() => location.hash === '#game/bubble-tempo');
+  await page.waitForFunction(() => location.hash === '#game/dungeon-zoo');
   await page.evaluate(() => dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true })));
   const leaves = async () => events(await calls()).filter(c => c[1] === 'game_leave');
   const [first] = await leaves();
   assert.ok(first, '關分頁時送出');
-  assert.equal(first[2].game, 'bubble-tempo');
+  assert.equal(first[2].game, 'dungeon-zoo');
   assert.equal(typeof first[2].seconds, 'number');
   assert.deepEqual(first[3], { transport: 'sendBeacon' });
   // 從返回快取回到遊玩頁: 之後正常離開再記一次, 秒數從回來時起算
   await page.evaluate(() => dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })));
   await page.click('text=‹ 返回');
   await page.waitForFunction(() => window.posthog.calls.filter(c => c[1] === 'game_leave').length === 2);
-  assert.equal((await leaves())[1][2].game, 'bubble-tempo');
+  assert.equal((await leaves())[1][2].game, 'dungeon-zoo');
   await ctx.close();
 });
 
@@ -288,17 +288,17 @@ test('透明人連結: 進站後完全不載入 PostHog, 角落顯示透明模�
 test('30 秒介紹: 點開送一筆, 關掉送一筆開了多久、實際播放幾秒、最遠看到幾 %、有沒有看完、怎麼關的; 開著直接離開也會送', async () => {
   const { ctx, page, calls } = await open('dark', '#play', p => p.route('**/js/games.js', async r => { // 假裝這款已經有影片(借首頁影片來播)
     const res = await r.fetch();
-    r.fulfill({ response: res, body: (await res.text()).replace("code: 'bubble-tempo',", "code: 'bubble-tempo', trailer: 'media/pvd-dark.mp4',") });
+    r.fulfill({ response: res, body: (await res.text()).replace("code: 'dungeon-zoo',", "code: 'dungeon-zoo', trailer: 'media/pvd-dark.mp4',") });
   }));
   const ev = async name => events(await calls()).filter(c => c[1] === name).map(c => c[2]);
-  const btn = page.locator('#glist .gi:has-text("節奏＋分色") .vb');
+  const btn = page.locator('#glist .gi:has-text("搜打撤＋自動經營") .vb');
   await page.waitForFunction(() => window.posthog?.calls.some(c => c[1] === '$pageview'));
   await btn.click();
   await page.locator('.trl.on').waitFor();
-  assert.deepEqual(await ev('trailer_open'), [{ game: 'bubble-tempo' }]);
+  assert.deepEqual(await ev('trailer_open'), [{ game: 'dungeon-zoo' }]);
   await page.keyboard.press('Escape');
   let [c] = await ev('trailer_close');
-  assert.equal(c.game, 'bubble-tempo'); assert.equal(c.how, 'esc'); assert.equal(c.completed, false);
+  assert.equal(c.game, 'dungeon-zoo'); assert.equal(c.how, 'esc'); assert.equal(c.completed, false);
   assert.ok(c.open_ms >= 0 && c.open_ms < 10000, `開了 ${c.open_ms}ms`);
   assert.ok(c.played_ms < 3000 && c.watched_pct < 95, `播了 ${c.played_ms}ms, 看到 ${c.watched_pct}%`);
 

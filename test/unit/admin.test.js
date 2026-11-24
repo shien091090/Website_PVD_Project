@@ -5,6 +5,10 @@ import { onRequest as guard } from '../../functions/api/admin/_middleware.js';
 import * as adminComments from '../../functions/api/admin/comments.js';
 import * as adminLocks from '../../functions/api/admin/locks.js';
 import * as pub from '../../functions/api/comments.js';
+import { GAME_CODES } from '../../site/js/games.js';
+
+// 測試用目前上架的遊戲(A、B 是上架的前兩款), 換一輪陣容不用改測試
+const [A, B] = GAME_CODES;
 
 const ctxOf = (db, method, path, body, extra = {}) => ({
   request: new Request('https://x.test' + path, { method, body: body === undefined ? undefined : JSON.stringify(body) }),
@@ -21,12 +25,12 @@ test('後台 middleware 驗不過回 401, 驗過放行', async () => {
 
 test('刪除留言: 前台看不到, 後台看得到且標記已刪', async () => {
   const db = makeD1();
-  const posted = await run(pub.onRequestPost, ctxOf(db, 'POST', '/api/comments', { game: 'bubble-tempo', avatar: 1, body: '要刪的', token: 't' }));
+  const posted = await run(pub.onRequestPost, ctxOf(db, 'POST', '/api/comments', { game: A, avatar: 1, body: '要刪的', token: 't' }));
   const id = posted.body.comment.id;
   assert.equal((await run(adminComments.onRequestDelete, ctxOf(db, 'DELETE', `/api/admin/comments?id=${id}`))).status, 200);
-  const front = await run(pub.onRequestGet, ctxOf(db, 'GET', '/api/comments?game=bubble-tempo'));
+  const front = await run(pub.onRequestGet, ctxOf(db, 'GET', '/api/comments?game=' + A));
   assert.equal(front.body.count, 0);
-  const back = await run(adminComments.onRequestGet, ctxOf(db, 'GET', '/api/admin/comments?game=bubble-tempo'));
+  const back = await run(adminComments.onRequestGet, ctxOf(db, 'GET', '/api/admin/comments?game=' + A));
   assert.equal(back.body.comments.length, 1);
   assert.equal(back.body.comments[0].deleted, 1);
   assert.equal(back.body.comments[0].body, '要刪的');
@@ -39,11 +43,11 @@ test('刪除不存在的留言 404', async () => {
 
 test('鎖留言開關: 鎖住後前台不能留言, 解鎖後可以', async () => {
   const db = makeD1();
-  const put = locked => run(adminLocks.onRequestPut, ctxOf(db, 'PUT', '/api/admin/locks', { game: 'jelly-jinni', locked }));
+  const put = locked => run(adminLocks.onRequestPut, ctxOf(db, 'PUT', '/api/admin/locks', { game: B, locked }));
   assert.equal((await put(true)).status, 200);
   const list = await run(adminLocks.onRequestGet, ctxOf(db, 'GET', '/api/admin/locks'));
-  assert.deepEqual(list.body, { 'bubble-tempo': false, 'jelly-jinni': true, 'soul-smith-defense': false });
-  const post = () => run(pub.onRequestPost, ctxOf(db, 'POST', '/api/comments', { game: 'jelly-jinni', avatar: 0, body: 'x', token: 't' }));
+  assert.deepEqual(list.body, Object.fromEntries(GAME_CODES.map(c => [c, c === B])));
+  const post = () => run(pub.onRequestPost, ctxOf(db, 'POST', '/api/comments', { game: B, avatar: 0, body: 'x', token: 't' }));
   assert.equal((await post()).body.error.code, 'locked');
   await put(false);
   assert.equal((await post()).status, 201);
