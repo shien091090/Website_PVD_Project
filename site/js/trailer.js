@@ -28,22 +28,28 @@ export function openTrailer(code, btn) {
   document.body.classList.add('trl-on');
   el.querySelector('.x').focus();
   sendClose('reopen');
-  ses = { game: code, t0: performance.now(), maxSec: 0, dur: 0, done: false };
+  ses = { game: code, t0: performance.now(), maxSec: 0, dur: 0, played: 0, done: false };
   const v = el.querySelector('video');
   if (v) {
-    const s = ses;
-    v.addEventListener('timeupdate', () => { s.maxSec = Math.max(s.maxSec, v.currentTime); s.dur = v.duration || s.dur; });
+    // 實際播放秒數: 只加正常往前播的那一小段, 拉進度條跳過去的不算(載入、暫停時時間不動, 也不算)
+    const s = ses; let last = 0;
+    v.addEventListener('timeupdate', () => {
+      const d = v.currentTime - last;
+      if (!v.seeking && d > 0 && d < 1.5) s.played += d;
+      last = v.currentTime; s.maxSec = Math.max(s.maxSec, v.currentTime); s.dur = v.duration || s.dur;
+    });
+    v.addEventListener('seeked', () => { last = v.currentTime; });
     v.addEventListener('ended', () => { s.done = true; });
   }
   track('trailer_open', { game: code });
 }
 
-// 關掉時送一筆: 開著多久(從點開算, 含載入)、看到影片的幾 %、有沒有播到結尾、怎麼關的
+// 關掉時送一筆: 開著多久(從點開算, 含載入)、實際播放幾秒、最遠看到影片的幾 %(跳著看也算)、有沒有播到結尾、怎麼關的
 function sendClose(how) {
   if (!ses) return;
   const s = ses; ses = null;
   track('trailer_close', {
-    game: s.game, how, open_ms: Math.round(performance.now() - s.t0),
+    game: s.game, how, open_ms: Math.round(performance.now() - s.t0), played_ms: Math.round(s.played * 1000),
     watched_pct: s.done ? 100 : s.dur ? Math.min(100, Math.round(s.maxSec / s.dur * 100)) : 0, completed: s.done,
   }, how === 'leave' ? { transport: 'sendBeacon' } : undefined);
 }

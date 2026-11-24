@@ -121,22 +121,32 @@ FROM (
   GROUP BY person_id
 ) GROUP BY theme ORDER BY theme`);
 
-// 30 秒介紹影片: 點擊看 trailer_open; 關閉方式、觀看進度看 trailer_close(每開一次送一筆, 關分頁也會送)
-await upsert('各遊戲 30 秒介紹影片', '點擊率 = 點擊人數 / 到過試玩頁的人數; 十秒內關閉 = 從點開到關掉不到 10 秒(含載入時間); 看完 = 播到結尾; 平均觀看 = 每次關掉時看到影片的幾 %, 拖拉跳過的也算看到', `
-SELECT o.g AS 遊戲, o.u AS 點擊人數, round(100 * o.u / (SELECT count(DISTINCT person_id) FROM events
-    WHERE event = '$pageview' AND properties.page = 'play' AND ${SINCE_SQL}), 1) AS 點擊率百分比,
-  o.c AS 點擊次數,
-  round(100 * c.quick / c.n, 1) AS 十秒內關閉百分比,
-  round(100 * c.done / c.n, 1) AS 看完百分比,
-  round(c.pct, 1) AS 平均觀看百分比
-FROM (SELECT toString(properties.game) AS g, count(DISTINCT person_id) AS u, count() AS c FROM events
-  WHERE event = 'trailer_open' AND ${SINCE_SQL} GROUP BY g) AS o
-LEFT JOIN (SELECT toString(properties.game) AS g, count() AS n,
-    countIf(toFloat(properties.open_ms) < 10000) AS quick,
-    countIf(toString(properties.completed) = 'true') AS done,
-    avg(toFloat(properties.watched_pct)) AS pct
-  FROM events WHERE event = 'trailer_close' AND ${SINCE_SQL} GROUP BY g) AS c ON o.g = c.g
-ORDER BY 點擊人數 DESC`);
+// 30 秒介紹影片: 每人每款只算一次, 歸到他看得最多的那一次, 四組不重疊:
+// 看完 = 有一次播到結尾或最遠看到 95% 以上(拉進度條跳著看也算); 看了一段 = 沒看完但有一次實際播放 10 秒以上;
+// 只看一下就關掉 = 每次實際播放都不到 10 秒; 沒播起來 = 點開了但影片一秒都沒播(多半是網路慢或載入失敗)
+// 「全部」那列 = 至少看過一支的人
+const TR_PCT = (cond, name) => `round(100 * countIf(${cond}) / count(), 1) AS ${name}`;
+const TR_COLS = `count() AS 看影片人數,
+  round(100 * count() / (SELECT count(DISTINCT person_id) FROM events
+    WHERE event = '$pageview' AND properties.page = 'play' AND ${SINCE_SQL}), 1) AS 佔試玩頁人數百分比`;
+await upsert('各遊戲 30 秒介紹影片', '每人每款只算一次, 歸到看得最多的那一次。佔試玩頁 = 看影片的人 / 到過試玩頁的人。看完 = 播到結尾或最遠看到 95% 以上(跳著看也算); 看了一段 = 沒看完但實際播放 10 秒以上; 只看一下就關掉 = 每次實際播放都不到 10 秒; 沒播起來 = 影片一秒都沒播(多半是網路慢或載入失敗)。四組加起來是看影片的人(關掉時沒送出紀錄的少數人不在四組裡)。「全部」= 至少看過一支的人', `
+SELECT 遊戲, 看影片人數, 佔試玩頁人數百分比, 沒播起來百分比, 只看一下就關掉百分比, 看了一段百分比, 看完百分比 FROM (
+  SELECT g AS 遊戲, 0 AS k, ${TR_COLS},
+    ${TR_PCT('nc > 0 AND NOT d AND mp = 0', '沒播起來百分比')},
+    ${TR_PCT('NOT d AND mp > 0 AND mp < 10000', '只看一下就關掉百分比')},
+    ${TR_PCT('NOT d AND mp >= 10000', '看了一段百分比')},
+    ${TR_PCT('d', '看完百分比')}
+  FROM (SELECT toString(properties.game) AS g, person_id,
+      countIf(event = 'trailer_close') AS nc,
+      maxIf(toFloat(properties.played_ms), event = 'trailer_close') AS mp,
+      max(event = 'trailer_close' AND (toString(properties.completed) = 'true' OR toFloat(properties.watched_pct) >= 95)) AS d
+    FROM events WHERE event IN ('trailer_open', 'trailer_close') AND ${SINCE_SQL}
+    GROUP BY g, person_id)
+  GROUP BY g
+  UNION ALL
+  SELECT '全部(至少看一支)' AS 遊戲, 1 AS k, ${TR_COLS}, NULL, NULL, NULL, NULL
+  FROM (SELECT DISTINCT person_id FROM events WHERE event = 'trailer_open' AND ${SINCE_SQL})
+) ORDER BY k, 看影片人數 DESC`);
 
 // 首頁影片: 進首頁 → 按播放 → 看完(中途關掉不算看完); 同一人當天內完成才算
 {
