@@ -15,7 +15,7 @@ const FAKE = flag => `window.posthog = { calls: [],
   onFeatureFlags(cb) { setTimeout(cb, 50); },
   getFeatureFlag() { return ${JSON.stringify(flag)}; } };`;
 
-async function open(flag, url = '?utm_source=threads&utm_content=p1#play') {
+async function open(flag, url = '?utm_source=threads&utm_content=p1#play', pre) {
   const ctx = await browser.newContext(PC);
   const page = await ctx.newPage();
   await page.route('**/js/config.js', async r => {
@@ -23,6 +23,7 @@ async function open(flag, url = '?utm_source=threads&utm_content=p1#play') {
     r.fulfill({ response: res, body: (await res.text()).replace("posthogKey: ''", "posthogKey: 'phc_test'").replace('analyticsHosts: [', "analyticsHosts: ['localhost', ") });
   });
   await page.route('**/static/array.full.js', r => r.fulfill({ contentType: 'text/javascript', body: FAKE(flag) }));
+  await pre?.(page);
   await page.goto(srv.url + url);
   return { ctx, page, calls: () => page.evaluate(() => window.posthog?.calls || []) };
 }
@@ -281,5 +282,37 @@ test('透明人連結: 進站後完全不載入 PostHog, 角落顯示透明模�
   await page.click('.ghostbar a');
   await page.waitForFunction(() => window.posthog?.calls.some(c => c[1] === '$pageview'));
   assert.equal(await page.locator('.ghostbar').count(), 0);
+  await ctx.close();
+});
+
+test('30 秒介紹: 點開送一筆, 關掉送一筆開了多久、看到幾 %、有沒有看完、怎麼關的; 開著直接離開也會送', async () => {
+  const { ctx, page, calls } = await open('dark', '#play', p => p.route('**/js/games.js', async r => { // 假裝這款已經有影片
+    const res = await r.fetch();
+    r.fulfill({ response: res, body: (await res.text()).replace("code: 'bubble-tempo',", "code: 'bubble-tempo', trailer: 'media/trailer-bubble-tempo.mp4',") });
+  }));
+  const ev = async name => events(await calls()).filter(c => c[1] === name).map(c => c[2]);
+  const btn = page.locator('#glist .gi:has-text("節奏＋分色") .vb');
+  await page.waitForFunction(() => window.posthog?.calls.some(c => c[1] === '$pageview'));
+  await btn.click();
+  await page.locator('.trl.on').waitFor();
+  assert.deepEqual(await ev('trailer_open'), [{ game: 'bubble-tempo' }]);
+  await page.keyboard.press('Escape');
+  let [c] = await ev('trailer_close');
+  assert.equal(c.game, 'bubble-tempo'); assert.equal(c.how, 'esc'); assert.equal(c.completed, false); assert.equal(c.watched_pct, 0);
+  assert.ok(c.open_ms >= 0 && c.open_ms < 10000, `開了 ${c.open_ms}ms`);
+
+  await btn.click();
+  await page.locator('.trl.on video').evaluate(v => v.dispatchEvent(new Event('ended'))); // 播到結尾
+  await page.locator('.trl .x').click();
+  c = (await ev('trailer_close'))[1];
+  assert.equal(c.how, 'x'); assert.equal(c.completed, true); assert.equal(c.watched_pct, 100);
+
+  await btn.click();
+  await page.locator('.trl.on').waitFor();
+  await page.evaluate(() => dispatchEvent(new PageTransitionEvent('pagehide')));
+  const all = events(await calls()).filter(x => x[1] === 'trailer_close');
+  assert.equal(all.length, 3); assert.equal(all[2][2].how, 'leave'); assert.deepEqual(all[2][3], { transport: 'sendBeacon' });
+  await page.mouse.click(5, 5); // 之後再關掉不重複送
+  assert.equal((await ev('trailer_close')).length, 3);
   await ctx.close();
 });

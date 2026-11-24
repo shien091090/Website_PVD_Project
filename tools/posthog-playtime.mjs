@@ -1,4 +1,4 @@
-// PostHog 補設定: 儀表板「PVD計畫」加上全局通關時間、各關通關時間、每人停留時間、各頁停留時間; 主題 AB 的停留時間改成每人加總;
+// PostHog 補設定: 儀表板「PVD計畫」加上全局通關時間、各關通關時間、每人停留時間、各頁停留時間、30 秒介紹影片; 主題 AB 的停留時間改成每人加總;
 // 順便修好第一次設定時中文欄位名沒加引號、跑不起來的圖表
 // 用法: node tools/posthog-playtime.mjs [--dry-run] [--since="YYYY-MM-DD HH:mm"]。已有同名圖表就跳過, 可以重跑
 // 需要 .secrets.env: POSTHOG_PERSONAL_KEY、POSTHOG_PROJECT_ID、POSTHOG_HOST(例 https://us.posthog.com)
@@ -120,6 +120,23 @@ FROM (
   FROM events WHERE event = 'engaged' AND ${SINCE_SQL}
   GROUP BY person_id
 ) GROUP BY theme ORDER BY theme`);
+
+// 30 秒介紹影片: 點擊看 trailer_open; 關閉方式、觀看進度看 trailer_close(每開一次送一筆, 關分頁也會送)
+await upsert('各遊戲 30 秒介紹影片', '點擊率 = 點擊人數 / 到過試玩頁的人數; 十秒內關閉 = 從點開到關掉不到 10 秒(含載入時間); 看完 = 播到結尾; 平均觀看 = 每次關掉時看到影片的幾 %, 拖拉跳過的也算看到', `
+SELECT o.g AS 遊戲, o.u AS 點擊人數, round(100 * o.u / (SELECT count(DISTINCT person_id) FROM events
+    WHERE event = '$pageview' AND properties.page = 'play' AND ${SINCE_SQL}), 1) AS 點擊率百分比,
+  o.c AS 點擊次數,
+  round(100 * c.quick / c.n, 1) AS 十秒內關閉百分比,
+  round(100 * c.done / c.n, 1) AS 看完百分比,
+  round(c.pct, 1) AS 平均觀看百分比
+FROM (SELECT toString(properties.game) AS g, count(DISTINCT person_id) AS u, count() AS c FROM events
+  WHERE event = 'trailer_open' AND ${SINCE_SQL} GROUP BY g) AS o
+LEFT JOIN (SELECT toString(properties.game) AS g, count() AS n,
+    countIf(toFloat(properties.open_ms) < 10000) AS quick,
+    countIf(toString(properties.completed) = 'true') AS done,
+    avg(toFloat(properties.watched_pct)) AS pct
+  FROM events WHERE event = 'trailer_close' AND ${SINCE_SQL} GROUP BY g) AS c ON o.g = c.g
+ORDER BY 點擊人數 DESC`);
 
 // 首頁影片: 進首頁 → 按播放 → 看完(中途關掉不算看完); 同一人當天內完成才算
 {
