@@ -567,7 +567,7 @@ function tutStartReplay() {
   if (T.off || T.rep) return;
   T.rep = 1; T.stage = 'replay'; T.lockMap = true; T.flightSeen = false; T.branch = null;
   // 觸控模式: 照電腦版相對第 1 關卡(中心 (370,365)、卡底 456)的位置平移; 大地圖被教學鎖住時不畫方向鍵
-  if (isTouch()) tutOpen('map_replay', 'map', '接著會不斷重演剛剛的通關歷程', 360, 591, 'below', [tutArrow(356, 468, 370, 365, 'top', 264)]);
+  if (isTouch()) tutOpen('map_replay', 'map', '接著會不斷重演剛剛的通關歷程', 360, 540, 'below', [tutArrow(356, 468, 370, 365, 'top', 264)]);
   else tutOpen('map_replay', 'map', '接著會不斷重演剛剛的通關歷程', 470, 575, 'below', [tutArrow(466, 429, 480, 349, 'top', 374)]);
 }
 function tutToUpgrade() {
@@ -597,7 +597,7 @@ function replayTick() {
       T.branch = 'b';
       tutSwap(function () {
         // 觸控模式: 秒數右緣在第 1 關卡 (442, 371); 電腦版的兩行板子與箭頭照相對秒數的位置平移
-        if (isTouch()) tutOpen('map_slow', 'map', '但這次通關花比較多時間,\n[素材累積的比較慢],可以考慮重刷一次關卡', 352, 551, 'below', [tutArrow(425, 387, 422, 371, 'top', 474)], '繼續');
+        if (isTouch()) tutOpen('map_slow', 'map', '但這次通關花比較多時間,\n[素材累積的比較慢],可以考慮重刷一次關卡', 352, 530, 'below', [tutArrow(425, 387, 422, 371, 'top', 474)], '繼續');
         else tutOpen('map_slow', 'map', '但這次通關花比較多時間,\n[素材累積的比較慢],可以考慮重刷一次關卡', 470, 575, 'below', [tutArrow(543, 411, 540, 395, 'top', 592)], '繼續');
       });
       return;
