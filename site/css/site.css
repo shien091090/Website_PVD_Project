@@ -193,20 +193,21 @@ body.vend .pmain { --vn: 60px; }
 /* 上方與左側留空間給往外突出的類型標籤 */
 .glist { display: flex; flex-direction: column; gap: 26px; min-height: 0; padding: 14px 20px 8px 8px; margin: -10px -20px 0 -8px; }
 .gi { flex: none; display: flex; flex-direction: column; position: relative; }
+/* 橫幅、類型標籤、30 秒介紹三者共用同一個位移量, 動態才會完全同步: 滑過推 6、選中推 14(選中時滑過不再變) */
+.gi:not(.sel):has(.gh:hover) { --dx: 6px; }
+.gi.sel { --dx: 14px; }
 /* 橫幅右下角的「30 秒介紹」: 跟橫幅一起位移, 點它不會選取遊戲 */
-.gi .vb { position: absolute; right: 11px; bottom: 11px; display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,.94); color: #2d2144; border: 2px solid #2d2144; border-radius: 999px; padding: 4px 11px 4px 5px; font: 700 13px/1 var(--font); box-shadow: 0 2px 0 rgba(0,0,0,.25); cursor: pointer; transition: transform .2s, background .15s; }
+.gi .vb { transform: translateX(var(--dx, 0px)); position: absolute; right: 11px; bottom: 11px; display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,.94); color: #2d2144; border: 2px solid #2d2144; border-radius: 999px; padding: 4px 11px 4px 5px; font: 700 13px/1 var(--font); box-shadow: 0 2px 0 rgba(0,0,0,.25); cursor: pointer; transition: transform .2s, background .15s; }
 .gi .vb .p { width: 20px; height: 20px; border-radius: 50%; background: var(--red); display: grid; place-items: center; flex: none; }
 .gi .vb .p::before { content: ""; margin-left: 2px; border-style: solid; border-width: 4.5px 0 4.5px 7px; border-color: transparent transparent transparent #fff; }
 .gi .vb:hover { background: #fff; }
 .gi .vb:focus-visible { outline: 3px solid var(--teal); outline-offset: 2px; }
-.gi:has(.gh:hover) :is(.vb, .tagp) { transform: translateX(6px); }
-.gi.sel :is(.vb, .tagp) { transform: translateX(14px); }
 .gh { width: 100%; border: 3px solid var(--ink); border-radius: 20px; cursor: pointer; transition: transform .2s, box-shadow .2s; box-sizing: border-box; }
 .gh.bn { position: relative; display: block; padding: 0; overflow: hidden; background: var(--c); aspect-ratio: 21 / 9; }
 .gh.bn .cv { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
 .gh.bn .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 /* 類型標籤: 左上角往外突出, 外圈用頁面底色描邊跟卡片分開; 暗色主題反過來用亮底深字 */
-.gi .tagp { position: absolute; left: -8px; top: -14px; z-index: 1; max-width: calc(100% - 8px); box-sizing: border-box; display: inline-flex; align-items: center; gap: 7px; background: var(--dk); color: #fff; border: 3px solid var(--page); border-radius: 999px; padding: 6px 13px 7px 10px; font: 900 15px/1 var(--font); box-shadow: 2px 3px 0 rgba(0,0,0,.18); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; transition: transform .2s; }
+.gi .tagp { position: absolute; left: -8px; top: -14px; z-index: 1; max-width: calc(100% - 8px); box-sizing: border-box; display: inline-flex; align-items: center; gap: 7px; background: var(--dk); color: #fff; border: 3px solid var(--page); border-radius: 999px; padding: 6px 13px 7px 10px; font: 900 15px/1 var(--font); box-shadow: 2px 3px 0 rgba(0,0,0,.18); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; transform: translateX(var(--dx, 0px)); transition: transform .2s; }
 .gi .tagp i { width: 10px; height: 10px; border-radius: 50%; background: var(--c); box-shadow: 0 0 0 2px #fff; flex: none; }
 :root.dark .page .gi .tagp { background: var(--fg); color: var(--on-ink); }
 :root.dark .page .gi .tagp i { box-shadow: 0 0 0 2px var(--on-ink); }
@@ -215,8 +216,7 @@ body.vend .pmain { --vn: 60px; }
 .gh.bn .fb .icon { width: 64px; height: 64px; font-size: 36px; background: #fff; color: var(--dk); flex: none; }
 .gh.bn .fb b { font: 900 22px/1.15 var(--font); }
 .gh.bn .chip { position: absolute; left: 8px; bottom: 8px; display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,.92); color: #2d2144; border: 2px solid #2d2144; border-radius: 999px; padding: 5px 10px; font: 700 13px/1 var(--font); }
-.gh:hover { transform: translateX(6px); }
-.gi.sel .gh { transform: translateX(14px); }
+.gh { transform: translateX(var(--dx, 0px)); }
 .gh:focus-visible { outline: 3px solid var(--teal); outline-offset: 3px; }
 /* 介紹頂端: 主題色圖樣色帶(不放字), 圖示壓在色帶下緣, 名稱和時長在下方白底 */
 .band { flex: none; position: relative; border-bottom: 3px solid var(--ink); background-color: var(--c); background-size: 128px 128px; background-repeat: repeat; }
@@ -304,7 +304,7 @@ body.trl-on { overflow: hidden; }
   .glist { flex: 1; gap: 24px; padding: 14px 0 0 8px; margin: -6px 0 0 -8px; }
   .gi { flex: 1; min-height: 0; max-height: calc((100vw - 32px) * 9 / 21); } /* 款數少時不撐高, 維持橫幅比例 */
   .gh.bn { flex: 1; aspect-ratio: auto; }
-  .gh:hover { transform: none; }
+  .gi, .gi:not(.sel):has(.gh:hover) { --dx: 0px; } /* 手機點完會殘留滑過狀態, 不位移 */
   /* 展開一款: 它撐滿剩餘高度, 其他收成矮條 */
   /* 手機: 點一款從底部拉出抽屜 (方案 1a), 清單本身不變 */
   .psheet.on { display: block; }

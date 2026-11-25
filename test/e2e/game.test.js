@@ -382,3 +382,37 @@ test('30 秒介紹: 清單橫幅開彈窗, 不是全螢幕, Esc 關掉後焦點�
     await ctx.close();
   }
 });
+
+test('遊戲清單: 類型標籤與 30 秒介紹跟著橫幅一起位移, 選中時滑過、再點一次都不會錯開', async () => {
+  const ctx = await browser.newContext(PC);
+  const page = await ctx.newPage();
+  await editGames(page, js => js.replace("code: 'dungeon-zoo',", "code: 'dungeon-zoo', trailer: 'media/trailer-dungeon-zoo.mp4',"));
+  await page.goto(srv.url + '#play/dungeon-zoo');
+  const gi = page.locator('#glist .gi.sel');
+  await gi.waitFor();
+  // 連續取樣 400ms(含位移動畫中), 每一格橫幅、標籤、介紹鈕的位移都要一樣
+  const sample = () => gi.evaluate(async el => {
+    const dx = s => new DOMMatrix(getComputedStyle(el.querySelector(s)).transform).e, out = [];
+    const t0 = performance.now();
+    while (performance.now() - t0 < 400) { out.push([dx('.gh'), dx('.tagp'), dx('.vb')]); await new Promise(r => requestAnimationFrame(r)); }
+    return out;
+  });
+  const same = (frames, want, what) => {
+    for (const [a, b, c] of frames) assert.ok(Math.abs(a - b) < 0.5 && Math.abs(a - c) < 0.5, `${what}: 橫幅 ${a}、標籤 ${b}、介紹鈕 ${c}`);
+    assert.equal(Math.round(frames.at(-1)[0]), want, `${what}: 最後停在 ${want}`);
+  };
+  same(await sample(), 14, '選中');
+  await gi.locator('.gh').hover();
+  same(await sample(), 14, '選中時滑過');
+  await gi.locator('.gh').click();
+  same(await sample(), 14, '選中時再點一次');
+  const other = page.locator('#glist .gi:not(.sel)').first();
+  await other.locator('.gh').hover();
+  same(await other.evaluate(async el => {
+    const dx = s => new DOMMatrix(getComputedStyle(el.querySelector(s)).transform).e, out = [];
+    const t0 = performance.now();
+    while (performance.now() - t0 < 400) { out.push([dx('.gh'), dx('.tagp'), dx(el.querySelector('.vb') ? '.vb' : '.gh')]); await new Promise(r => requestAnimationFrame(r)); }
+    return out;
+  }), 6, '沒選中的滑過');
+  await ctx.close();
+});
