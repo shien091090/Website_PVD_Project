@@ -1,4 +1,4 @@
-// PostHog 補設定: 儀表板「PVD計畫」加上全局通關時間、各關通關時間、每人停留時間、各頁停留時間、30 秒介紹影片; 主題 AB 的停留時間改成每人加總;
+// PostHog 補設定: 儀表板「PVD計畫」加上全局通關時間、各關通關時間、每人停留時間、各頁停留時間、30 秒介紹影片、每天進站人數; 主題 AB 的停留時間改成每人加總;
 // 順便修好第一次設定時中文欄位名沒加引號、跑不起來的圖表
 // 用法: node tools/posthog-playtime.mjs [--dry-run] [--since="YYYY-MM-DD HH:mm"]。已有同名圖表就跳過, 可以重跑
 // 需要 .secrets.env: POSTHOG_PERSONAL_KEY、POSTHOG_PROJECT_ID、POSTHOG_HOST(例 https://us.posthog.com)
@@ -158,6 +158,20 @@ SELECT 遊戲, 看影片人數, 佔試玩頁人數百分比, 沒播起來百分�
     funnelsFilter: { funnelWindowInterval: 1, funnelWindowIntervalUnit: 'day', funnelVizType: 'steps' } } };
   query.source.series[0].custom_name = '進首頁'; query.source.series[1].custom_name = '播放影片'; query.source.series[2].custom_name = '看完影片';
   const description = '進首頁的人裡有幾成按播放、按播放的人裡有幾成看完; 一天內完成才算';
+  const old = existing.find(i => i.name === name);
+  if (old) { await ph(`/insights/${old.id}/`, { description, query }, 'PATCH'); console.log(`已更新: ${name}`); }
+  else { await ph('/insights/', { name, description, dashboards: [dash?.id], query }); console.log(`已新增: ${name}`); }
+}
+
+// 每天進站人數: 折線圖, 用台灣時間切日期(趨勢圖只能照專案時區 UTC 切, 早上 8 點會斷成兩天, 所以用查詢語法畫)
+{
+  const name = '每天進站人數';
+  const query = { ...hogql(`
+SELECT toDate(toTimeZone(timestamp, 'Asia/Taipei')) AS 日期, count(DISTINCT person_id) AS 進站人數
+FROM events WHERE event = '$pageview' AND ${SINCE_SQL}
+GROUP BY 日期 ORDER BY 日期`),
+    display: 'ActionsLineGraph', chartSettings: { xAxis: { column: '日期' }, yAxis: [{ column: '進站人數' }] } };
+  const description = '每天有幾個人進網站(任何一頁都算, 同一人一天只算一次; 日期照台灣時間)';
   const old = existing.find(i => i.name === name);
   if (old) { await ph(`/insights/${old.id}/`, { description, query }, 'PATCH'); console.log(`已更新: ${name}`); }
   else { await ph('/insights/', { name, description, dashboards: [dash?.id], query }); console.log(`已新增: ${name}`); }
