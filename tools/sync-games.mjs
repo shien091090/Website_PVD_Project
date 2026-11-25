@@ -9,6 +9,7 @@ const RELEASE = {
   'bubble-tempo': 'E:/Project/Game/WebGame_BubbleCatcher/release',
   'dungeon-zoo': 'E:/Project/Game/WebGame_DungeonZoo/release',
   'jelly-jinni': 'E:/Project/Game/WebGame_GhostEchoV2/release',
+  'loop-raider': 'E:/Project/Game/WebGame_LoopRaider/release',
   'soul-smith-defense': 'E:/Project/Game/WebGame_SoulSmithDefense/release',
 };
 const SRC = {};
