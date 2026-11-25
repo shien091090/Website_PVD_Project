@@ -2825,7 +2825,7 @@
     var cx = 14, cy = 40, marks = [0.2, 0.45, 0.7], landed = 0, bump = 1;
     drawLevelCard(ctx, { x: cx, y: cy, index: 1, name: '翠林入口', theme: 'forest', state: 'cleared', recordCls: 'sword', recordTime: 18.4, rates: { wood: 9.8, stone: 3.3, crystal: 0, core: 0 }, devices: [null, null], repairedCount: 3, siteCount: 3 });
     tsThumb(ctx, cx, cy, u, 'forest');
-    drawCardOverlay(ctx, { x: cx, y: cy, speedMul: 1, newArea: false, selected: false, replayP: u, marks: [{ p: marks[0], kind: 'wood' }, { p: marks[1], kind: 'wood' }, { p: marks[2], kind: 'wood' }], regions: [] });
+    drawCardOverlay(ctx, { x: cx, y: cy, devices: [null, null], speedMul: 1, newArea: false, selected: false, replayP: u, marks: [{ p: marks[0], kind: 'wood' }, { p: marks[1], kind: 'wood' }, { p: marks[2], kind: 'wood' }], regions: [] });
     var fl = [];
     for (i = 0; i < marks.length; i++) { var since = (u - marks[i]) * 3; if (since >= 0.6) { landed++; bump = Math.min(bump, since - 0.6); } else if (since >= 0) fl.push([cx + 8 + 160 * marks[i], since / 0.6]); }
     // 小資訊列格(同 drawHud 的木材格長相)
@@ -2855,7 +2855,7 @@
       var open = v >= 0.5, shake = (v > 0.3 && v < 0.5) ? Math.sin(v * 90) * 3 : 0, cx = 77 + shake, cy = 24;
       drawLevelCard(ctx, { x: cx, y: cy, index: 2, name: '藤蔓小徑', theme: 'forest', state: open ? 'open' : 'buyable', cost: { wood: 50, stone: 0, crystal: 0, core: 0 }, stock: { wood: 80, stone: 0, crystal: 0, core: 0 }, devices: open ? [null, null] : null, repairedCount: 0, siteCount: 3 });
       if (open) {
-        tsThumb(ctx, cx, cy, null, 'forest');
+        tsThumb(ctx, cx, cy, null, 'forest'); devSockets(ctx, cx, cy, [null, null]);
         var fq = seg(v, 0.5, 0.85); if (fq < 1) { rr(ctx, cx, cy, 176, 136, 8); ctx.fillStyle = 'rgba(255,248,220,' + (0.85 * (1 - fq)).toFixed(3) + ')'; ctx.fill(); }
         var lq = seg(v, 0.5, 1.0); if (lq < 1) { ctx.save(); ctx.globalAlpha *= 1 - lq; lockIcon(ctx, cx + 88, cy + 38 - 50 * eOut(lq), 30 * (1 + 0.5 * lq), K.select); ctx.restore(); }
         var bq = seg(v, 0.5, 0.95); if (bq > 0 && bq < 1) { ctx.save(); ctx.globalAlpha *= 1 - bq; ctx.fillStyle = K.select; for (i = 0; i < 8; i++) { var a = i * TAU / 8, d = 60 + 30 * eOut(bq); star4(ctx, cx + 88 + Math.cos(a) * d, cy + 68 + Math.sin(a) * d * 0.6, 7); ctx.fill(); } ctx.restore(); }
@@ -2988,18 +2988,18 @@
     // polish 第 5 輪: 通關秒數固定右對齊(右緣卡片內 x 168、中心 y 114, 新手教學箭頭指它), 名稱不推動它。
     // 裝置格因此左移到卡片內 (97,108)、(119,108)(介面原寫 (123,108)/(146,108), 會和秒數重疊; 見 style.md 判讀約定 25)
     // 版面: 第一行 名稱 x+11~x+94 | 裝置格 x+97~x+140(兩行高) | 秒數 x+143~x+168; 第二行 四種產量 x+8~x+94 | 職業小圖示在秒數正下方
-    var tR = hasDev ? 94 : 168, nmMax = tR - 11;
-    var secR = 168, secMax = hasDev ? 25 : 60;
-    fitText(ctx, idx + ' ' + name, x + 11, y + 113.5, 12, inkN, state === 'cleared' && !hasDev ? Math.max(20, nmMax - secMax - 4) : nmMax);
+    // 裝置格移到卡片左上角破框(見 devSockets), 底下名稱條不再讓位: 名稱 x+11~x+168、四種產量每格 27 寬
+    var nmMax = 157, secR = 168, secMax = 60;
+    fitText(ctx, idx + ' ' + name, x + 11, y + 113.5, 12, inkN, state === 'cleared' ? Math.max(20, nmMax - secMax - 4) : nmMax);
     if (state === 'cleared') {
       if (st.recordTime != null) fitText(ctx, fmt1(st.recordTime) + 's', x + secR, y + 114, 11, K.ink, secMax, 'right');
       if (st.recordCls != null) clsIcon(ctx, st.recordCls, x + 156, y + 127, 12);
-      var rt = mats(st.rates), stp = hasDev ? 21.5 : 27;
+      var rt = mats(st.rates), stp = 27;
       for (var i = 0; i < 4; i++) { var k = KINDS[i]; matIcon(ctx, k, x + 12 + i * stp, y + 126.5, 8, true); fitText(ctx, fmt1(clamp(rt[k], 0, 9999)), x + 17 + i * stp, y + 127, 10, K.ink, stp - 9.5); }
     } else if (state === 'open') text(ctx, '未過關', x + 11, y + 127, 11, K.inkDim, 'left', true);
     else if (state === 'buyable') kline(ctx, [{ t: '可解鎖 ·', col: K.selectDeep }, { key: 'z' }], x + 11, y + 127, 11, 'left', 'parch');
     else text(ctx, boss ? '7 關全過才開放' : '前一關未過', x + 11, y + 127, 11, '#5e5240', 'left', true);
-    if (hasDev) devSockets(ctx, x, y, st.devices);
+    // 裝置格改在 drawCardOverlay 最後畫(縮圖與選取框之後), 破框的部分才不會被蓋住
     if (state === 'sealed') { rr(ctx, x, y, 176, 136, 8); ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fill(); }
     ctx.restore();
   }
@@ -3010,10 +3010,12 @@
     if (w <= maxW || w <= 0) { text(ctx, s, x, y, px, col, align || 'left', true); return; }
     ctx.save(); ctx.translate(x, y); ctx.scale(maxW / w, 1); text(ctx, s, 0, 0, px, col, align || 'left', true); ctx.restore();
   }
-  // 卡片裝置格: 卡片內 (97,108) 與 (119,108) 各 21×24(polish 第 5 輪讓位給右對齊的秒數); null = 深色凹槽 + 虛線框 + 淡色「+」, 有值 = 較亮凹槽 + 裝置小圖示(邊長 17)
+  // 卡片裝置格: 卡片左上角破框 (-7,-9) 與 (17,-9) 各 22×24, 只壓到縮圖左上一小角, 讓底下產量列有空間、縮圖盡量露出;
+  // 下方落影讓它浮在框上。null = 深色凹槽 + 虛線框 + 淡色「+」, 有值 = 較亮凹槽 + 裝置小圖示(邊長 17)
   function devSockets(ctx, x, y, devs) {
     for (var j = 0; j < 2; j++) {
-      var d = ITEMS.indexOf(devs[j]) >= 0 ? devs[j] : null, sx = x + 97 + j * 22, sy = y + 108, w = 21, h = 24;
+      var d = ITEMS.indexOf(devs[j]) >= 0 ? devs[j] : null, sx = x - 7 + j * 24, sy = y - 9, w = 22, h = 24;
+      rr(ctx, sx + 1.5, sy + 3, w, h, 3); ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fill();
       rr(ctx, sx, sy, w, h, 3); ctx.fillStyle = d ? '#5a4f44' : '#3a3632'; ctx.fill();
       ctx.lineWidth = 1.5; ctx.strokeStyle = K.edge; ctx.stroke();
       ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(sx + 1.5, sy + 1.5, w - 3, 2);
@@ -3155,6 +3157,7 @@
       ctx.globalAlpha = 1; ctx.fillStyle = '#ffffff'; ctx.fillRect(bx + 160 * p - 1, by - 1, 2, 6);
     }
     if (st.selected === true) selFrame(ctx, x, y, 176, 136);
+    if (Array.isArray(st.devices)) devSockets(ctx, x, y, st.devices);
     ctx.restore();
   }
   // 修復灰幕(map-card B「褪色舊照片」): 縮圖 (x+8,y+8,160,90) 內除了已修工程的區域外全部去色 + 霧面灰 + 舊照片斜紋;

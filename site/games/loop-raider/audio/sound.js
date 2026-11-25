@@ -198,14 +198,30 @@
     if (!busy && fadeTimer) { clearInterval(fadeTimer); fadeTimer = null; }
   }
   function startFade() { if (!fadeTimer && typeof setInterval !== 'undefined') fadeTimer = setInterval(tickFade, 50); }
+  function tryPlay(a) {
+    a._tryAt = now();
+    try { var r = a.play(); if (r && r.catch) r.catch(function () {}); } catch (e) {}
+  }
   function startMusic(name) {
     var a = musicEl(name);
+    if (a.error) { delete els[name]; a = musicEl(name); } // 載入失敗的元素不會再播, 換一個新的
     a._target = 1;
     if (a.paused) {
       try { a.currentTime = 0; } catch (e) {}
-      try { var r = a.play(); if (r && r.catch) r.catch(function () {}); } catch (e) {}
+      tryPlay(a);
     }
-    applyMusicVol(); startFade();
+    applyMusicVol(); startFade(); startWatch();
+  }
+  // 保險: 該播的曲子若停著(play 被瀏覽器拒絕 / 中斷、載入失敗), 每秒重試一次, 不必等換曲才恢復
+  var watchTimer = null;
+  function startWatch() {
+    if (watchTimer || typeof setInterval === 'undefined') return;
+    watchTimer = setInterval(function () {
+      var name = music.cur, a = name && els[name];
+      if (!a || a._target <= 0) return;
+      if (a.error) { var f = a._fade; a._target = 0; try { a.pause(); } catch (e) {} delete els[name]; a = musicEl(name); a._fade = f; a._target = 1; }
+      if (a.paused && now() - (a._tryAt || 0) >= 1) { tryPlay(a); applyMusicVol(); }
+    }, 1000);
   }
   function setPaused(on) {
     paused = !!on; pausedAt = on ? now() : -1;

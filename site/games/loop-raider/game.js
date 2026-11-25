@@ -2660,7 +2660,7 @@ function renderMap(c) {
       drawThumb(c, l, S, function (id) { return rec.pickF[id] !== undefined && rec.pickF[id] <= fi; }, rec.chestF >= 0 ? fi >= rec.chestF : G.chestTaken[l]);
       rp = Math.max(0, Math.min(1, G.rp[l].pos / Math.max(1, rec.N))); marks = rec.marks;
     }
-    Art.drawCardOverlay(c, { x: CARD_POS[l][0], y: CARD_POS[l][1], live: built, speedMul: rec ? speedMul(l) : 1, newArea: !!rec && rec.ver < G.repairVer[l], selected: G.mapSel === l, replayP: rp, marks: marks,
+    Art.drawCardOverlay(c, { x: CARD_POS[l][0], y: CARD_POS[l][1], devices: built ? G.slots[l].slice() : null, live: built, speedMul: rec ? speedMul(l) : 1, newArea: !!rec && rec.ver < G.repairVer[l], selected: G.mapSel === l, replayP: rp, marks: marks,
       regions: (built && LEVELS[l].sites.length) ? cardRegions(l) : [] });
   }
   Art.drawWorkshopCard(c, { x: CARD_POS[8][0], y: CARD_POS[8][1], anyAffordable: anyAffordable(), allDone: allUpgraded(), selected: G.mapSel === 8 });
