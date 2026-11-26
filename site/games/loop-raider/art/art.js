@@ -1408,15 +1408,14 @@
     var big = st.big === true, weak = st.weak === true;
     var Wd = Math.min(96, Math.max(16, 6 * tot + 4)), hh = big ? 7 : 5, x0 = x - Wd / 2, y0 = y - hh, u = Wd / tot;
     ctx.save();
-    // 盾值段畫在盾牌那一側: 有傳 shieldSide=1(盾在右)時左右翻轉, 預設盾值在左
-    if (st.shieldSide === 1) { ctx.translate(x, 0); ctx.scale(-1, 1); ctx.translate(-x, 0); }
+    // 版面固定: 血量在左、盾值在右(不依盾牌朝向翻轉)。傷害先扣盾再扣血, 整條一律由右往左扣
     rr(ctx, x0, y0, Wd, hh, hh / 2); ctx.fillStyle = 'rgba(10,6,14,0.82)'; ctx.fill();
     ctx.save(); rr(ctx, x0, y0, Wd, hh, hh / 2); ctx.clip();
     var lost = (chip - (hp + sh)) * (1 - cT / cDur);
-    if (lost > 0.01) { var ws = hp < maxHp ? maxS + hp : sh; ctx.fillStyle = '#ffffff'; ctx.fillRect(x0 + ws * u, y0, lost * u, hh); }
-    if (sh > 0) { ctx.fillStyle = lin(ctx, 0, y0, 0, y0 + hh, [0, '#c4d6ee', 1, '#6f8fb8']); ctx.fillRect(x0, y0, sh * u, hh); }
-    if (hp > 0) { ctx.fillStyle = lin(ctx, 0, y0, 0, y0 + hh, weak ? [0, '#fff09a', 1, '#e8b020'] : [0, '#ff8a8a', 1, '#e02a3c']); ctx.fillRect(x0 + maxS * u, y0, hp * u, hh); }
-    if (maxS > 0) { ctx.fillStyle = '#1a1420'; ctx.fillRect(x0 + maxS * u - 0.75, y0, 1.5, hh); }
+    if (lost > 0.01) { var ws = hp < maxHp ? hp : maxHp + sh; ctx.fillStyle = '#ffffff'; ctx.fillRect(x0 + ws * u, y0, lost * u, hh); }
+    if (hp > 0) { ctx.fillStyle = lin(ctx, 0, y0, 0, y0 + hh, weak ? [0, '#fff09a', 1, '#e8b020'] : [0, '#ff8a8a', 1, '#e02a3c']); ctx.fillRect(x0, y0, hp * u, hh); }
+    if (sh > 0) { ctx.fillStyle = lin(ctx, 0, y0, 0, y0 + hh, [0, '#c4d6ee', 1, '#6f8fb8']); ctx.fillRect(x0 + maxHp * u, y0, sh * u, hh); }
+    if (maxS > 0) { ctx.fillStyle = '#1a1420'; ctx.fillRect(x0 + maxHp * u - 0.75, y0, 1.5, hh); }
     ctx.restore();
     if (weak) { rr(ctx, x0 + 0.75, y0 + 0.75, Wd - 1.5, hh - 1.5, hh / 2); ctx.lineWidth = 1.5; ctx.strokeStyle = PAL.weak; ctx.stroke(); }
     ctx.restore();
